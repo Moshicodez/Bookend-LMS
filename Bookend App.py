@@ -33,42 +33,130 @@ class User:
         self.active = active
 
     def check_pass(self, password):
-        # Add conditions/logic
         return check_password_hash (self.password_hash, password)
 
     def perms(self, permission):
-        permission = {"patron" :{"search_book", "view_book", "borrow_book", "return_book", "view_loans", 
+        permission = {"patron" :{"search_book", "view_book", "borrow_book", "return_book", 
                                  "view_payments", "pay_late_fee", "pay_loss"},
                     "librarian":{"search_book", "view_book", "add_book", "edit_book", "archive_book", 
-                                 "update_return_status", "manage_mem", "manage_loans"}}
+                                 "update_return_status", "manage_mem"}}
         return permission in permission.get(self.role, set())
 
     def is_patron(self):
-        # Condition if user is patron
         return self.role == "patron"
 
     def is_librarian(self):
-        # Condition if user is librarian
         return self.role == "librarian"
 
 
 
             # Authentication, login, and password verification and strength
 class AuthService:
+    @staticmethod
     def pass_strength(password_hash):
-        ...
+        UpperC = any([1 if c in string.ascii_uppercase else 0 for c in password_hash])
+        LowerC = any([1 if c in string.ascii_lowercase else 0 for c in password_hash])
+        SpecialC = any([1 if c in string.punctuation else 0 for c in password_hash])
+        Digits = any([1 if c in string.digits else 0 for c in password_hash])
 
+        pass_char = [UpperC, LowerC, SpecialC, Digits]
+        pass_length = len(password_hash)
+        strength_score = 0
+
+        if pass_length >= 8:
+            strength_score += 1
+        if pass_length >= 10:
+            strength_score += 1
+        if pass_length >= 12:
+            strength_score += 1
+        if pass_length >= 14:
+            strength_score += 1
+
+        if sum(pass_char) > 1:
+            strength_score += 1
+        if sum(pass_char) > 2:
+            strength_score += 1
+        if sum(pass_char) > 3:
+            strength_score += 1
+
+    @staticmethod
     def pass_feedback(password_hash):
-        ...
+        strength_score = AuthService.pass_strength(password_hash)
 
-    def Register(self):
-        ...
+        if strength_score < 4:
+            message = ("Weak password, add a unique mix of uppercase/lowercase letters, digits, and special characters.")
+        elif strength_score == 4:
+            message = ("Sufficient password, consider making it longer.")
+        elif 4 < strength_score < 7:
+            message = ("Moderately strong password, still has room for improvement")
+        else:
+            message = ("Strong password!, Filled the minimum requirements.")
 
-    def Login(self):
-        ...
+        return strength_score, message
+
+    def Register(self, email, username, password_hash, confirm_pass, role = "patron", staff_code = ""):
+        email = email.strip()
+        username = username.strip()
+
+        if not email or not username or not password_hash:
+            return False, "All fields are required to be filled."
+
+        if password_hash != confirm_pass:
+            return False, "Passwords do not match"
+
+        strength_score = self.pass_strength(password_hash)
+
+        if strength_score < 4:
+            message = ("Weak password, add a unique mix of uppercase/lowercase letters, digits, and special characters.")
+        elif strength_score == 4:
+            message = ("Sufficient password, consider making it longer.")
+        elif 4 < strength_score < 7:
+            message = ("Moderately strong password, still has room for improvement")
+        else:
+            message = ("Strong password!, Filled the minimum requirements.")
+
+        if staff_code:
+            if staff_code != staff_code:
+                return False, "Incorrect staff code"
+            role = "librarian"
+        else:
+            role = "patron"
+
+        hashed_password = generate_password_hash(password_hash)
+
+        user_repository = User_repo()
+
+        if user_repository.email_exists(email):
+            return False, "Email already exists."
+
+        if user_repository.username_exist(username):
+            return False, "Username already exists, try another."
+
+        user_repository.create(
+            email=email,
+            username=username,
+            password_hash=hashed_password,
+            role=role
+        )
+        return True, "Account created successfully."
+
+    def Login(self, username, password_hash):
+        user_repository = User_repo()
+        user = user_repository.find_username(username)
+
+        if user is None:
+            return None
+
+        if not user.active:
+            return None
+
+        if not user.check_pass(password_hash):
+            return None
+
+        return user
 
 
-
+        
             # Book data and rules
 class Book: 
     def __init__(self, book_id, title, author, genre, description, available = True, catalog = True):
