@@ -2,17 +2,25 @@ import os
 import string
 import sqlite3
 
+            # For due dates, loans and late fee settlement in real time
 from datetime import date, timedelta
-from functools import wraps
 
-from flask import (Flask, render_template, request, redirect, url_for, flash, session)
+            # For login/registration section (password hashing for security)
 from werkzeug.security import (generate_password_hash, check_password_hash)
+
+            # Flask integration
+from flask import (Flask, render_template, request, redirect, url_for, flash, session)
+
 from functools import wraps
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
+            # Source of Bookend data (users, books, loans, registered information)
 database = "bookend.db"
+
+            # Required code for librarian in login/registration to access 
+            # librarian exclusive permissions and privileges
 staff_code = "B0ok3nd Nvr Ends!"
 
 def db_connect():
@@ -20,7 +28,8 @@ def db_connect():
     connection = sqlite3.connect(database)
     connection.row_factory = sqlite3.Row
 
-
+            # Disclaimer: All code logic and conditions are subject to change
+            #             once system is subject to testing 
 
             # General permissions and actions applied to both patron(reader)/librarian(staff)
 class User:
@@ -156,7 +165,7 @@ class AuthService:
         return user
 
 
-        
+
             # Book data and rules
 class Book: 
     def __init__(self, book_id, title, author, genre, description, available = True, catalog = True):
@@ -168,16 +177,35 @@ class Book:
         self.catalog = catalog
 
     def search_book(self, search_term):
-        ...
+        if not search_term:
+            return False
+
+        term = search_term.lower()
+        fields = [self.title, self.author]
+
+        for field in fields:
+            if field and term in str(field).lower():
+                return True
+        return False
 
     def display_book_info(self):
-        ...
+        return f"{self.title} by {self.author}\n{self.description}"
 
     def borrow(self):
-        ...
+        if not self.available:
+            return "This book is currently borrowed"
+
+        self.available = False
+
+        return True, "Book marked as borrowed"
 
     def return_book(self):
-        ...
+        if self.available:
+            return False, "This book is already available"
+
+        self.available = True
+
+        return True, "Book has been recently returned and is now available"
 
 
 
@@ -193,16 +221,32 @@ class Loan:
         self.late_fee = late_fee
 
     def is_returned(self):
-        ...
+        return self.returned_at is not None
 
     def is_overdue(self, current_date):
-        ...
+        if self.is_returned():
+            return self.returned_at > self.due_date
+        return current_date > self.due_date
 
     def calculate_late_fee(self, current_date, daily_fee):
-        ...
+        if not self.is_overdue(current_date):
+            self.late_fee = 0
+            return 0
+
+        if self.is_returned():
+            end_date = self.returned_at
+        else:
+            end_date = current_date
+
+        end_date = self.returned_at or current_date
+        overdue = (end_date - self.due_date).days
+        self.late_fee = overdue * daily_fee
+        return self.late_fee
 
     def mark_returned(self, returned_at):
-        ...
+        if self.returned_at is not None:
+            return
+        self.returned_at = returned_at
 
 
 
