@@ -9,13 +9,16 @@ books_bp = Blueprint("books", __name__)
 @books_bp.route("/books")
 def index():
     search = request.args.get("q", "")
+    genre  = request.args.get("genre", "")
+    query  = Book.query.filter_by(catalog=True)
     if search:
-        books = Book.query.filter(
+        query = query.filter(
             (Book.title.ilike(f"%{search}%")) | (Book.author.ilike(f"%{search}%"))
-        ).filter_by(catalog=True).all()
-    else:
-        books = Book.query.filter_by(catalog=True).all()
-    return render_template("books/index.html", books=books, search=search)
+        )
+    if genre:
+        query = query.filter_by(genre=genre)
+    books = query.all()
+    return render_template("books/index.html", books=books, search=search, genre=genre)
 
 
 @books_bp.route("/books/add", methods=["GET", "POST"])

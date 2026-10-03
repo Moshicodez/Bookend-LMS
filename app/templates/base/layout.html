@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Bookend LMS{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Top Auth Bar -->
+    <div class="top-bar">
+        <div class="top-bar-inner">
+            <span><i class="fa fa-phone"></i> Have Questions? Call Us: 1 900 123 4567</span>
+            <div class="top-bar-links">
+                {% if session.user_id %}
+                    <span>Welcome, <strong>{{ session.username }}</strong></span>
+                    <a href="{{ url_for('auth.logout') }}">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('auth.login') }}">Login</a>
+                    <a href="{{ url_for('auth.register') }}">Create an Account</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Brand Banner -->
+    <div class="brand-banner">
+        <div class="brand-inner">
+            <div class="brand-logo">
+                <h1>Bookend</h1>
+                <p>YOUR LIBRARY, YOUR WORLD</p>
+            </div>
+            <!-- Search Bar -->
+            <form class="search-bar" action="{{ url_for('books.index') }}" method="GET">
+                <select name="genre">
+                    <option value="">All Genres</option>
+                    <option value="Fiction">Fiction</option>
+                    <option value="Non-Fiction">Non-Fiction</option>
+                    <option value="Textbook">Textbook</option>
+                    <option value="Children">Children</option>
+                    <option value="Business">Business</option>
+                    <option value="Science">Science</option>
+                </select>
+                <input type="text" name="q" placeholder="Search by title or author..." value="{{ request.args.get('q', '') }}">
+                <button type="submit"><i class="fa fa-search"></i></button>
+            </form>
+            <!-- Account Nav -->
+            <div class="account-nav">
+                <a href="{{ url_for('loans.dashboard') }}">
+                    <i class="fa fa-book-open"></i>
+                    <span>My Loans</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Nav -->
+    <nav class="category-nav">
+        <ul>
+            <li><a href="{{ url_for('books.index') }}">All Books</a></li>
+            <li><a href="{{ url_for('books.index') }}?genre=Fiction">Fiction</a></li>
+            <li><a href="{{ url_for('books.index') }}?genre=Non-Fiction">Non-Fiction</a></li>
+            <li><a href="{{ url_for('books.index') }}?genre=Textbook">Textbooks</a></li>
+            <li><a href="{{ url_for('books.index') }}?genre=Children">Children</a></li>
+            <li><a href="{{ url_for('books.index') }}?genre=Business">Business</a></li>
+            <li><a href="{{ url_for('books.index') }}?genre=Science">Science</a></li>
+            {% if session.role == 'librarian' %}
+            <li class="librarian-nav"><a href="{{ url_for('books.add') }}"><i class="fa fa-plus"></i> Add Book</a></li>
+            <li class="librarian-nav"><a href="{{ url_for('auth.manage_members') }}"><i class="fa fa-users"></i> Members</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-container">
+                {% for category, message in messages %}
+                    <div class="flash flash-{{ category }}">
+                        {{ message }}
+                        <span class="flash-close" onclick="this.parentElement.remove()">&times;</span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-col">
+                <h4>Information</h4>
+                <ul>
+                    <li><a href="#">About Us</a></li>
+                    <li><a href="#">Library Policy</a></li>
+                    <li><a href="#">Contact Us</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Member Services</h4>
+                <ul>
+                    <li><a href="{{ url_for('loans.dashboard') }}">My Loans</a></li>
+                    <li><a href="#">Late Fee Info</a></li>
+                    <li><a href="#">Renew Book</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Catalog</h4>
+                <ul>
+                    <li><a href="{{ url_for('books.index') }}">Browse All</a></li>
+                    <li><a href="{{ url_for('books.index') }}?genre=Textbook">Textbooks</a></li>
+                    <li><a href="{{ url_for('books.index') }}?genre=Fiction">Fiction</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>My Account</h4>
+                <ul>
+                    {% if session.user_id %}
+                        <li><a href="{{ url_for('loans.dashboard') }}">Dashboard</a></li>
+                        <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
+                    {% else %}
+                        <li><a href="{{ url_for('auth.login') }}">Login</a></li>
+                        <li><a href="{{ url_for('auth.register') }}">Register</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2025 Bookend LMS. All rights reserved.</p>
+            <div class="social-icons">
+                <a href="#"><i class="fab fa-facebook"></i></a>
+                <a href="#"><i class="fab fa-twitter"></i></a>
+                <a href="#"><i class="fab fa-instagram"></i></a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

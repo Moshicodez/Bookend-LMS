@@ -28,8 +28,9 @@ def login():
             password=request.form.get("password"),
         )
         if user:
-            session["user_id"] = user.user_id
-            session["role"]    = user.role
+            session["user_id"]  = user.user_id
+            session["role"]     = user.role
+            session["username"] = user.username
             return redirect(url_for("books.index"))
         flash("Invalid username or password.", "danger")
     return render_template("auth/login.html")
@@ -39,3 +40,21 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for("auth.login"))
+
+
+@auth_bp.route("/members")
+def manage_members():
+    from app.models import User
+    members = User.query.all()
+    return render_template("auth/members.html", members=members)
+
+
+@auth_bp.route("/members/toggle/<int:user_id>")
+def toggle_member(user_id):
+    from app.models import User
+    from app import db
+    user = User.query.get_or_404(user_id)
+    user.active = not user.active
+    db.session.commit()
+    flash(f"{'Activated' if user.active else 'Deactivated'} {user.username}.", "success")
+    return redirect(url_for("auth.manage_members"))

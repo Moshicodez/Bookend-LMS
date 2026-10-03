@@ -1,0 +1,125 @@
+{% extends "base/layout.html" %}
+{% block title %}My Dashboard — Bookend{% endblock %}
+
+{% block content %}
+
+<div class="dashboard-header">
+    <h2><i class="fa fa-tachometer-alt"></i> My Dashboard</h2>
+    <a href="{{ url_for('books.index') }}" class="btn btn-primary">Browse Books</a>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+    <div class="stat-card">
+        <div class="stat-num">{{ loans | selectattr('returned_at', 'none') | list | length }}</div>
+        <div class="stat-label">Active Loans</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-num">{{ loans | selectattr('returned_at') | list | length }}</div>
+        <div class="stat-label">Returned</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-num">
+            {{ loans | selectattr('returned_at', 'none') | selectattr('due_date', 'lt', today) | list | length }}
+        </div>
+        <div class="stat-label">Overdue</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-num">
+            ₱{{ "%.2f" | format(loans | sum(attribute='late_fee')) }}
+        </div>
+        <div class="stat-label">Total Fees</div>
+    </div>
+</div>
+
+<!-- Active Loans -->
+<div class="shelf-sign" style="margin-bottom:12px;">Active Loans</div>
+<div class="table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th>Book</th>
+                <th>Author</th>
+                <th>Borrowed</th>
+                <th>Due Date</th>
+                <th>Status</th>
+                <th>Late Fee</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% set active = loans | selectattr('returned_at', 'none') | list %}
+            {% if active %}
+                {% for loan in active %}
+                <tr>
+                    <td><strong>{{ loan.book.title }}</strong></td>
+                    <td>{{ loan.book.author }}</td>
+                    <td>{{ loan.borrowed_at }}</td>
+                    <td>{{ loan.due_date }}</td>
+                    <td>
+                        {% if loan.due_date < today %}
+                            <span class="badge badge-overdue">Overdue</span>
+                        {% else %}
+                            <span class="badge badge-available">On Time</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if loan.late_fee > 0 %}
+                            <span style="color:var(--overdue); font-weight:bold;">₱{{ "%.2f" | format(loan.late_fee) }}</span>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="actions">
+                            <a href="{{ url_for('loans.return_book', loan_id=loan.loan_id) }}"
+                               class="btn btn-return"
+                               onclick="return confirm('Return this book?')">Return</a>
+                            {% if loan.late_fee > 0 %}
+                                <a href="{{ url_for('loans.pay', loan_id=loan.loan_id) }}"
+                                   class="btn btn-pay">Pay Fee</a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr><td colspan="7" style="text-align:center; color:#999; padding:24px;">No active loans.</td></tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Loan History -->
+<div class="shelf-sign" style="margin: 32px 0 12px;">Loan History</div>
+<div class="table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th>Book</th>
+                <th>Author</th>
+                <th>Borrowed</th>
+                <th>Returned</th>
+                <th>Late Fee Paid</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% set history = loans | selectattr('returned_at') | list %}
+            {% if history %}
+                {% for loan in history %}
+                <tr>
+                    <td><strong>{{ loan.book.title }}</strong></td>
+                    <td>{{ loan.book.author }}</td>
+                    <td>{{ loan.borrowed_at }}</td>
+                    <td>{{ loan.returned_at }}</td>
+                    <td>₱{{ "%.2f" | format(loan.late_fee) }}</td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr><td colspan="5" style="text-align:center; color:#999; padding:24px;">No loan history yet.</td></tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

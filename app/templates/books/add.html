@@ -1,0 +1,38 @@
+{% extends "base/layout.html" %}
+{% block title %}Add Book — Bookend{% endblock %}
+
+{% block content %}
+<div class="form-card" style="max-width: 560px;">
+    <h2><i class="fa fa-plus-circle"></i> Add New Book</h2>
+    <form method="POST">
+        <div class="form-group">
+            <label>Title</label>
+            <input type="text" name="title" required placeholder="Book title">
+        </div>
+        <div class="form-group">
+            <label>Author</label>
+            <input type="text" name="author" required placeholder="Author name">
+        </div>
+        <div class="form-group">
+            <label>Genre</label>
+            <select name="genre">
+                <option value="">— Select Genre —</option>
+                <option>Fiction</option>
+                <option>Non-Fiction</option>
+                <option>Textbook</option>
+                <option>Children</option>
+                <option>Business</option>
+                <option>Science</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Description</label>
+            <textarea name="description" placeholder="Short description..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;">Add Book</button>
+    </form>
+    <div class="form-footer">
+        <a href="{{ url_for('books.index') }}">← Back to Catalog</a>
+    </div>
+</div>
+{% endblock %}

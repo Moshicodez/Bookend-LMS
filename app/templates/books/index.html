@@ -1,0 +1,86 @@
+{% extends "base/layout.html" %}
+{% block title %}Browse Books — Bookend{% endblock %}
+
+{% block content %}
+
+<div class="announcement">
+    <i class="fa fa-bullhorn"></i>
+    <span>Welcome to Bookend Library! Borrow up to 3 books at a time. Loan period is 14 days.</span>
+</div>
+
+<!-- Featured / New Arrivals Section -->
+<div class="shelf-section">
+    <div class="shelf-header">
+        <div class="shelf-sign">
+            {% if search %}
+                Results for "{{ search }}"
+            {% elif genre %}
+                {{ genre }}
+            {% else %}
+                📚 All Books
+            {% endif %}
+        </div>
+        {% if session.role == 'librarian' %}
+            <a href="{{ url_for('books.add') }}" class="btn btn-primary">
+                <i class="fa fa-plus"></i> Add Book
+            </a>
+        {% endif %}
+    </div>
+
+    <div class="shelf-wrapper">
+        {% if books %}
+            <div class="book-grid">
+                {% for book in books %}
+                <div class="book-card">
+                    <!-- Cover -->
+                    <div class="book-cover" style="background: hsl({{ (book.book_id * 47) % 360 }}, 45%, 35%);">
+                        {{ book.title[:30] }}
+                    </div>
+
+                    <!-- Availability Badge -->
+                    {% if book.available %}
+                        <span class="badge badge-available">Available</span>
+                    {% else %}
+                        <span class="badge badge-borrowed">Checked Out</span>
+                    {% endif %}
+
+                    <!-- Hover Overlay -->
+                    <div class="book-overlay">
+                        <div class="book-title">{{ book.title }}</div>
+                        <div class="book-author">by {{ book.author }}</div>
+                        {% if book.genre %}
+                            <div style="color:#aaa; font-size:0.7rem;">{{ book.genre }}</div>
+                        {% endif %}
+
+                        {% if session.user_id %}
+                            {% if session.role == 'patron' and book.available %}
+                                <a href="{{ url_for('loans.borrow', book_id=book.book_id) }}"
+                                   class="btn btn-borrow">Borrow</a>
+                            {% endif %}
+                            {% if session.role == 'librarian' %}
+                                <a href="{{ url_for('books.edit', book_id=book.book_id) }}"
+                                   class="btn btn-edit">Edit</a>
+                                <a href="{{ url_for('books.archive', book_id=book.book_id) }}"
+                                   class="btn btn-archive"
+                                   onclick="return confirm('Archive this book?')">Archive</a>
+                            {% endif %}
+                        {% else %}
+                            <a href="{{ url_for('auth.login') }}" class="btn btn-primary">Login to Borrow</a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div style="padding: 40px; text-align:center; color: var(--text-mid);">
+                <i class="fa fa-search" style="font-size:2rem; margin-bottom:12px; display:block;"></i>
+                No books found{% if search %} for "{{ search }}"{% endif %}.
+                {% if session.role == 'librarian' %}
+                    <br><a href="{{ url_for('books.add') }}" class="btn btn-primary" style="margin-top:12px;">Add a Book</a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
