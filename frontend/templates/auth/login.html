@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f4ee">
+  <title>Sign in | Bookend Library</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
+</head>
+<body class="login-page">
+  <main class="login-screen">
+    <section class="form-panel" aria-labelledby="login-title">
+      <div class="book-login-stage" data-book-stage>
+        <div class="book-invitation" data-book-invitation>
+          <a class="brand book-brand" href="/" aria-label="Bookend Library">
+            <span class="brand-mark" aria-hidden="true">B</span>
+            <span>bookend<span class="brand-period">.</span>            </span>
+          </a>
+          <button
+            class="book-trigger"
+            type="button"
+            aria-label="Open Bookend to reveal the sign-in form"
+            aria-expanded="false"
+            aria-controls="login-card"
+            data-book-trigger
+          >
+            <span class="interactive-book" aria-hidden="true">
+              <span class="interactive-book-pages"></span>
+              <span class="interactive-book-back"></span>
+              <span class="interactive-book-spine"></span>
+              <span class="interactive-book-cover">
+                <span class="cover-frame cover-front">
+                  <span class="cover-emblem">B</span>
+                  <span class="cover-title">BOOKEND</span>
+                  <span class="cover-subtitle">A LIBRARY OF YOUR OWN</span>
+                  <span class="cover-ornament" aria-hidden="true">✳</span>
+                </span>
+                <span class="cover-frame cover-inside" aria-hidden="true">
+                  <span class="inside-emblem">B</span>
+                  <span class="inside-lines"></span>
+                </span>
+              </span>
+            </span>
+          </button>
+        </div>
+
+        <div class="opened-book" id="login-card" inert aria-hidden="true">
+          <div class="open-book-shadow">
+            <div class="book-pages">
+              <section class="open-page left-page" aria-label="Inside cover of Bookend Library">
+                <span class="page-corner-ornament" aria-hidden="true">✳</span>
+              </section>
+
+              <section class="open-page right-page" aria-labelledby="login-title">
+                <div class="login-card">
+                  <a class="brand form-brand" href="/" aria-label="Bookend Library">
+                    <span class="brand-mark" aria-hidden="true">B</span>
+                    <span>bookend<span class="brand-period">.</span></span>
+                  </a>
+
+                  <p class="eyebrow form-eyebrow">WELCOME BACK</p>
+                  <h2 id="login-title">Sign in to your account</h2>
+                  <p class="form-intro">Your books are waiting right where you left them.</p>
+
+                  {% if preview_message %}
+                  <p class="preview-message" role="status">{{ preview_message }}</p>
+                  {% endif %}
+
+                  <form class="login-form" method="post">
+                    <div class="form-field">
+                      <label for="username">Username</label>
+                      <input
+                        id="username"
+                        name="username"
+                        type="text"
+                        placeholder="Enter your username"
+                        autocomplete="username"
+                        required
+                      >
+                    </div>
+
+                    <div class="form-field">
+                      <div class="label-row">
+                        <label for="password">Password</label>
+                        <span class="field-hint">Keep it private</span>
+                      </div>
+                      <div class="password-input">
+                        <input
+                          id="password"
+                          name="password"
+                          type="password"
+                          placeholder="Enter your password"
+                          autocomplete="current-password"
+                          required
+                        >
+                        <button
+                          class="password-toggle"
+                          type="button"
+                          aria-label="Show password"
+                          aria-pressed="false"
+                          data-password-toggle
+                        >Show</button>
+                      </div>
+                    </div>
+
+                    <button class="submit-button" type="submit">
+                      <span>Sign in</span>
+                      <span class="button-arrow" aria-hidden="true">→</span>
+                    </button>
+                  </form>
+
+                  <div class="form-note">
+                    <span class="note-icon" aria-hidden="true">i</span>
+                    <p>Having trouble signing in? Please ask a librarian for help.</p>
+                  </div>
+
+                  <p class="copyright">© Bookend Library</p>
+                </div>
+              </section>
+            </div>
+
+            <div class="open-book-cover" aria-hidden="true">
+              <div class="open-cover-front">
+                <span class="cover-emblem">B</span>
+                <span class="cover-title">BOOKEND</span>
+                <span class="cover-subtitle">A LIBRARY OF YOUR OWN</span>
+                <span class="cover-ornament">✳</span>
+              </div>
+              <div class="open-cover-inside">
+                <div class="inside-cover-frame">
+                  <span class="inside-emblem">B</span>
+                  <span class="inside-brand">bookend<span>.</span></span>
+                  <span class="inside-message">Every book<br>brings us<br><em>together.</em></span>
+                  <span class="inside-lines"></span>
+                  <span class="inside-caption">A PLACE FOR EVERY STORY</span>
+                </div>
+              </div>
+            </div>
+            <span class="book-spine-shadow" aria-hidden="true"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
