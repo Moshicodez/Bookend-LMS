@@ -11,6 +11,7 @@ bookTrigger?.addEventListener("click", () => {
 
   bookStage.classList.add("is-open");
   bookTrigger.setAttribute("aria-expanded", "true");
+  bookTrigger.blur();
   bookInvitation?.setAttribute("aria-hidden", "true");
   bookInvitation?.setAttribute("inert", "");
   loginCard.removeAttribute("inert");
@@ -18,9 +19,13 @@ bookTrigger?.addEventListener("click", () => {
 
   const focusDelay = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 900;
   window.setTimeout(() => {
-    document.querySelector("#username")?.focus();
+    document.querySelector("[data-initial-focus]")?.focus();
   }, focusDelay);
 });
+
+if (bookStage?.classList.contains("is-open")) {
+  document.querySelector("[data-initial-focus]")?.focus();
+}
 
 passwordToggle?.addEventListener("click", () => {
   const passwordInput = document.querySelector("#password");

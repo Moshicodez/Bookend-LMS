@@ -58,6 +58,35 @@ class AuthRouteTests(unittest.TestCase):
         self.assertEqual(login_response.status_code, 302)
         self.assertEqual(login_response.location, "/patron")
 
+    def test_signup_page_uses_openable_book_layout(self):
+        response = self.client.get("/register")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'data-book-stage', response.data)
+        self.assertIn(b'data-book-trigger', response.data)
+        self.assertIn(b'id="email"', response.data)
+        self.assertIn(b'id="role"', response.data)
+        self.assertIn(b'id="staff_code"', response.data)
+
+    def test_signup_validation_error_reopens_book_and_preserves_nonsecret_fields(self):
+        response = self.client.post(
+            "/register",
+            data={
+                "email": "reader@example.com",
+                "username": "reader",
+                "password": "weak",
+                "confirm_password": "weak",
+                "role": "librarian",
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b'class="book-login-stage is-open"', response.data)
+        self.assertIn(b'value="reader@example.com"', response.data)
+        self.assertIn(b'value="reader"', response.data)
+        self.assertIn(b'<option value="librarian" selected>', response.data)
+        self.assertNotIn(b'value="weak"', response.data)
+
     def test_librarian_signup_requires_staff_code_and_uses_librarian_dashboard(self):
         form_data = {
             "email": "librarian@example.com",
@@ -119,6 +148,19 @@ class AuthRouteTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 401)
         self.assertIn(b"Invalid username or password.", response.data)
+        self.assertIn(b'class="book-login-stage is-open"', response.data)
+        self.assertIn(b'aria-hidden="false"', response.data)
+
+    def test_first_time_sign_in_error_reveals_signup_link_and_keeps_username(self):
+        response = self.client.post(
+            "/login",
+            data={"username": "new-reader", "password": "some-password"},
+        )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertIn(b'aria-hidden="false"', response.data)
+        self.assertIn(b'href="/register">Create an account</a>', response.data)
+        self.assertIn(b'value="new-reader"', response.data)
 
     def test_deactivated_account_cannot_log_in(self):
         self.client.post(

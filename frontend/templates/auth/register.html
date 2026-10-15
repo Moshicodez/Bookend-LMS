@@ -3,56 +3,181 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f4ee">
   <title>Create an account | Bookend Library</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
 </head>
 <body class="login-page">
   <main class="login-screen">
-    <section class="form-panel">
-      <div class="login-card">
-        <a class="brand form-brand" href="{{ url_for('auth.login') }}" aria-label="Bookend Library">
-          <span class="brand-mark" aria-hidden="true">B</span>
-          <span>bookend<span class="brand-period">.</span></span>
-        </a>
-        <p class="eyebrow form-eyebrow">JOIN BOOKEND</p>
-        <h1>Create your account</h1>
-        {% if error_message %}
-        <p class="preview-message" role="alert">{{ error_message }}</p>
-        {% endif %}
-        <form class="login-form" method="post">
-          <div class="form-field">
-            <label for="email">Email</label>
-            <input id="email" name="email" type="email" autocomplete="email" required>
-          </div>
-          <div class="form-field">
-            <label for="username">Username</label>
-            <input id="username" name="username" type="text" minlength="3" maxlength="30" autocomplete="username" required>
-          </div>
-          <div class="form-field">
-            <label for="password">Password</label>
-            <input id="password" name="password" type="password" autocomplete="new-password" required>
-          </div>
-          <div class="form-field">
-            <label for="confirm_password">Confirm password</label>
-            <input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" required>
-          </div>
-          <div class="form-field">
-            <label for="role">Account type</label>
-            <select id="role" name="role" required>
-              <option value="patron">Patron</option>
-              <option value="librarian">Librarian</option>
-            </select>
-          </div>
-          <div class="form-field">
-            <label for="staff_code">Librarian staff code</label>
-            <input id="staff_code" name="staff_code" type="password" autocomplete="off">
-          </div>
-          <button class="submit-button" type="submit">
-            <span>Create account</span>
-            <span class="button-arrow" aria-hidden="true">→</span>
+    <section class="form-panel" aria-labelledby="register-title">
+      <div class="book-login-stage{% if error_message %} is-open{% endif %}" data-book-stage>
+        <div
+          class="book-invitation"
+          data-book-invitation
+          {% if error_message %}aria-hidden="true" inert{% endif %}
+        >
+          <a class="brand book-brand" href="{{ url_for('auth.login') }}" aria-label="Bookend Library">
+            <span class="brand-mark" aria-hidden="true">B</span>
+            <span>bookend<span class="brand-period">.</span></span>
+          </a>
+          <button
+            class="book-trigger"
+            type="button"
+            aria-label="Open Bookend to reveal the account creation form"
+            aria-expanded="{{ 'true' if error_message else 'false' }}"
+            aria-controls="login-card"
+            data-book-trigger
+          >
+            <span class="interactive-book" aria-hidden="true">
+              <span class="interactive-book-pages"></span>
+              <span class="interactive-book-back"></span>
+              <span class="interactive-book-spine"></span>
+              <span class="interactive-book-cover">
+                <span class="cover-frame cover-front">
+                  <span class="cover-emblem">B</span>
+                  <span class="cover-title">BOOKEND</span>
+                  <span class="cover-subtitle">A LIBRARY OF YOUR OWN</span>
+                  <span class="cover-ornament" aria-hidden="true">✳</span>
+                </span>
+                <span class="cover-frame cover-inside" aria-hidden="true">
+                  <span class="inside-emblem">B</span>
+                  <span class="inside-lines"></span>
+                </span>
+              </span>
+            </span>
           </button>
-        </form>
-        <p><a href="{{ url_for('auth.login') }}">Back to sign in</a></p>
+        </div>
+
+        <div
+          class="opened-book"
+          id="login-card"
+          {% if error_message %}aria-hidden="false"{% else %}inert aria-hidden="true"{% endif %}
+        >
+          <div class="open-book-shadow">
+            <div class="book-pages">
+              <section class="open-page left-page" aria-label="Inside cover of Bookend Library">
+                <span class="page-corner-ornament" aria-hidden="true">✳</span>
+              </section>
+
+              <section class="open-page right-page" aria-labelledby="register-title">
+                <div class="login-card register-card">
+                  <a class="brand form-brand" href="{{ url_for('auth.login') }}" aria-label="Bookend Library">
+                    <span class="brand-mark" aria-hidden="true">B</span>
+                    <span>bookend<span class="brand-period">.</span></span>
+                  </a>
+
+                  <p class="eyebrow form-eyebrow">JOIN BOOKEND</p>
+                  <h2 id="register-title">Create your account</h2>
+                  <p class="form-intro">A place for every story, starting with yours.</p>
+
+                  {% if error_message %}
+                  <p class="preview-message" role="alert">{{ error_message }}</p>
+                  {% endif %}
+
+                  <form class="login-form register-form" method="post">
+                    <div class="form-field">
+                      <label for="email">Email</label>
+                      <input
+                        id="email"
+                        name="email"
+                        type="email"
+                        value="{{ form_data.email if form_data else '' }}"
+                        autocomplete="email"
+                        data-initial-focus
+                        required
+                      >
+                    </div>
+
+                    <div class="form-field">
+                      <label for="username">Username</label>
+                      <input
+                        id="username"
+                        name="username"
+                        type="text"
+                        value="{{ form_data.username if form_data else '' }}"
+                        minlength="3"
+                        maxlength="30"
+                        autocomplete="username"
+                        required
+                      >
+                    </div>
+
+                    <div class="form-field">
+                      <label for="password">Password</label>
+                      <div class="password-input">
+                        <input
+                          id="password"
+                          name="password"
+                          type="password"
+                          autocomplete="new-password"
+                          required
+                        >
+                        <button
+                          class="password-toggle"
+                          type="button"
+                          aria-label="Show password"
+                          aria-pressed="false"
+                          data-password-toggle
+                        >Show</button>
+                      </div>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="confirm_password">Confirm password</label>
+                      <input
+                        id="confirm_password"
+                        name="confirm_password"
+                        type="password"
+                        autocomplete="new-password"
+                        required
+                      >
+                    </div>
+
+                    <div class="form-field">
+                      <label for="role">Account type</label>
+                      <select id="role" name="role" required>
+                        <option value="patron" {% if not form_data or form_data.role == 'patron' %}selected{% endif %}>Patron</option>
+                        <option value="librarian" {% if form_data and form_data.role == 'librarian' %}selected{% endif %}>Librarian</option>
+                      </select>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="staff_code">Librarian staff code</label>
+                      <input id="staff_code" name="staff_code" type="password" autocomplete="off">
+                    </div>
+
+                    <button class="submit-button" type="submit">
+                      <span>Create account</span>
+                      <span class="button-arrow" aria-hidden="true">→</span>
+                    </button>
+                  </form>
+
+                  <p class="copyright">Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+                </div>
+              </section>
+            </div>
+
+            <div class="open-book-cover" aria-hidden="true">
+              <div class="open-cover-front">
+                <span class="cover-emblem">B</span>
+                <span class="cover-title">BOOKEND</span>
+                <span class="cover-subtitle">A LIBRARY OF YOUR OWN</span>
+                <span class="cover-ornament">✳</span>
+              </div>
+              <div class="open-cover-inside">
+                <div class="inside-cover-frame">
+                  <span class="inside-emblem">B</span>
+                  <span class="inside-brand">bookend<span>.</span></span>
+                  <span class="inside-message">Every book<br>brings us<br><em>together.</em></span>
+                  <span class="inside-lines"></span>
+                  <span class="inside-caption">A PLACE FOR EVERY STORY</span>
+                </div>
+              </div>
+            </div>
+            <span class="book-spine-shadow" aria-hidden="true"></span>
+          </div>
+        </div>
       </div>
     </section>
   </main>

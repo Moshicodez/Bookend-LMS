@@ -36,7 +36,11 @@ def login():
         )
     except ValidationError as error:
         status_code = 403 if "deactivated" in str(error).lower() else 401
-        return render_template("auth/login.html", error_message=str(error)), status_code
+        return render_template(
+            "auth/login.html",
+            error_message=str(error),
+            username=request.form.get("username", ""),
+        ), status_code
 
     session.clear()
     session["user_id"] = user.user_id
@@ -63,6 +67,11 @@ def register():
         return render_template(
             "auth/register.html",
             error_message=str(error),
+            form_data={
+                "email": request.form.get("email", ""),
+                "username": request.form.get("username", ""),
+                "role": request.form.get("role", "patron"),
+            },
         ), 400
 
     session.clear()

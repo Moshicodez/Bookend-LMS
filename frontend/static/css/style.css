@@ -410,6 +410,22 @@ input {
   transition: opacity 450ms ease 550ms, transform 450ms ease 550ms;
 }
 
+.register-card {
+  padding: 24px 0;
+}
+
+.register-card .form-brand {
+  margin-bottom: 16px;
+}
+
+.register-card .form-intro {
+  margin-bottom: 16px;
+}
+
+.register-form {
+  gap: 10px;
+}
+
 .book-login-stage.is-open .book-invitation {
   opacity: 0;
   visibility: hidden;
@@ -649,7 +665,8 @@ input {
   font-size: 11px;
 }
 
-.form-field input {
+.form-field input,
+.form-field select {
   width: 100%;
   height: 45px;
   padding: 0 12px;
@@ -662,13 +679,31 @@ input {
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
+.form-field select {
+  cursor: pointer;
+}
+
 .form-field input::placeholder {
   color: #a3a49c;
 }
 
-.form-field input:focus {
+.form-field input:focus,
+.form-field select:focus {
   border-color: #788b72;
   box-shadow: 0 0 0 3px rgb(67 91 67 / 11%);
+}
+
+.register-form .form-field input,
+.register-form .form-field select {
+  height: 38px;
+}
+
+.register-form .form-field label {
+  margin-bottom: 4px;
+}
+
+.register-form .submit-button {
+  min-height: 42px;
 }
 
 .password-input {

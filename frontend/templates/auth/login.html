@@ -11,8 +11,12 @@
 <body class="login-page">
   <main class="login-screen">
     <section class="form-panel" aria-labelledby="login-title">
-      <div class="book-login-stage" data-book-stage>
-        <div class="book-invitation" data-book-invitation>
+      <div class="book-login-stage{% if error_message %} is-open{% endif %}" data-book-stage>
+        <div
+          class="book-invitation"
+          data-book-invitation
+          {% if error_message %}aria-hidden="true" inert{% endif %}
+        >
           <a class="brand book-brand" href="/" aria-label="Bookend Library">
             <span class="brand-mark" aria-hidden="true">B</span>
             <span>bookend<span class="brand-period">.</span>            </span>
@@ -21,7 +25,7 @@
             class="book-trigger"
             type="button"
             aria-label="Open Bookend to reveal the sign-in form"
-            aria-expanded="false"
+            aria-expanded="{{ 'true' if error_message else 'false' }}"
             aria-controls="login-card"
             data-book-trigger
           >
@@ -45,7 +49,11 @@
           </button>
         </div>
 
-        <div class="opened-book" id="login-card" inert aria-hidden="true">
+        <div
+          class="opened-book"
+          id="login-card"
+          {% if error_message %}aria-hidden="false"{% else %}inert aria-hidden="true"{% endif %}
+        >
           <div class="open-book-shadow">
             <div class="book-pages">
               <section class="open-page left-page" aria-label="Inside cover of Bookend Library">
@@ -74,6 +82,7 @@
                         id="username"
                         name="username"
                         type="text"
+                        value="{{ username or '' }}"
                         placeholder="Enter your username"
                         autocomplete="username"
                         required
