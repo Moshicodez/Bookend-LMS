@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
 
-from config import Config
-from utils.errors import ValidationError, PermissionDenied
-from utils.security import verify_password
+from werkzeug.security import check_password_hash
+
+from ..config import Config
+from ..exceptions import PermissionDenied, ValidationError
 
 
 class User(ABC):
@@ -56,7 +57,7 @@ class User(ABC):
     def check_pass(self, password):
         if not self._active or not password:
             return False
-        return verify_password(self._password_hash, password)
+        return check_password_hash(self._password_hash, password)
 
     def change_password(self, old_password, new_password_hash):
         if not self.check_pass(old_password):

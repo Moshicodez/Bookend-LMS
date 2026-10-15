@@ -1,8 +1,10 @@
-from models.password_rule import PASSWORD_RULES
-from models.user import Patron, Librarian
-from utils.errors import ValidationError
-from utils.security import hash_password, is_correct_staff_code
-from utils.validators import is_valid_email, is_valid_username
+from werkzeug.security import generate_password_hash
+
+from ..config import Config
+from ..exceptions import ValidationError
+from ..models.password_rule import PASSWORD_RULES
+from ..models.user import Librarian, Patron
+from ..utils.validators import is_correct_staff_code, is_valid_email, is_valid_username
 
 
 class AuthService:
@@ -30,9 +32,10 @@ class AuthService:
         password = password or ""
         return [rule.message for rule in PASSWORD_RULES if not rule.passes(password)]
 
-    def register(self, email, username, password, confirm_password, code=None):
+    def register(self, email, username, password, confirm_password, code=None, role=None):
         email = (email or "").strip().lower()
         username = (username or "").strip()
+        role = (role or Patron.ROLE).strip().lower()
 
         if not is_valid_email(email):
             raise ValidationError("Please enter a valid email address.")
@@ -53,15 +56,20 @@ class AuthService:
         if self._user_repo.username_exist(username):
             raise ValidationError("That username is taken.")
 
-        role = Patron.ROLE
+        if role not in {Patron.ROLE, Librarian.ROLE}:
+            raise ValidationError("Please select a valid account role.")
+        if role == Librarian.ROLE:
+            if not is_correct_staff_code(code):
+                if Config.STAFF_CODE:
+                    raise ValidationError("A valid staff code is required for a librarian account.")
+                raise ValidationError("Librarian registration is not configured.")
 
-        if code:
-            if is_correct_staff_code(code):
-                role = Librarian.ROLE
-            else:
-                raise ValidationError("Invalid staff code.")
-
-        return self._user_repo.create(email, username, hash_password(password), role)
+        return self._user_repo.create(
+            email,
+            username,
+            generate_password_hash(password),
+            role,
+        )
 
     def login(self, username, password):
         user = self._user_repo.find_username((username or "").strip())
