@@ -341,10 +341,9 @@ input {
 .book-pages {
   position: relative;
   display: grid;
-  height: min(690px, calc(100vh - 100px));
+  height: min(740px, calc(100vh - 80px));
   min-height: 0;
   grid-template-columns: 1fr 1fr;
-  overflow: hidden;
   border: 1px solid #b9a987;
   border-radius: 15px 19px 13px 14px;
   background: #dfd3b8;
@@ -353,6 +352,7 @@ input {
     0 10px 0 #bbaa88,
     0 13px 0 #ded2b8,
     inset 0 0 0 5px rgb(255 255 255 / 22%);
+  perspective: 1500px;
 }
 
 .open-page {
@@ -402,55 +402,63 @@ input {
     repeating-linear-gradient(0deg, transparent 0 7px, rgb(133 114 78 / 3%) 7px 8px),
     linear-gradient(90deg, #f0e8d5, #fffdf5 9%, #fffdf5 100%);
   box-shadow: inset 18px 0 24px -24px rgb(43 36 25 / 70%);
-  backface-visibility: hidden;
-  transform-origin: left center;
-  transform-style: preserve-3d;
   overflow-y: auto;
+  transform-origin: left center;
 }
 
-.book-pages.is-turning-next .right-page,
-.book-pages.is-turning-previous .right-page {
-  z-index: 4;
+/* both faces sit on top of each other; only one visible at a time */
+.page-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(28px, 4.2vw, 64px);
+  background:
+    repeating-linear-gradient(0deg, transparent 0 7px, rgb(133 114 78 / 3%) 7px 8px),
+    linear-gradient(90deg, #f0e8d5, #fffdf5 9%, #fffdf5 100%);
+  overflow-y: auto;
+  transition: opacity 120ms ease;
 }
 
-.book-pages.is-turning-next .right-page {
-  animation: page-turn-forward 600ms cubic-bezier(0.45, 0, 0.55, 1) forwards;
+.page-back-face {
+  opacity: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 7px, rgb(133 114 78 / 3%) 7px 8px),
+    linear-gradient(90deg, #fffdf5, #fffdf5 91%, #f0e8d5 100%);
 }
 
-.book-pages.is-turning-previous .right-page {
-  animation: page-turn-backward 600ms cubic-bezier(0.45, 0, 0.55, 1) forwards;
+/* when showing register page, swap which face is visible */
+.book-pages[data-page="register"] .page-front {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.book-pages[data-page="register"] .page-back-face {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* page flip animation — rotates from the spine (left edge) */
+.book-pages.is-turning .right-page {
+  animation: page-turn-forward 800ms ease-in-out forwards;
+}
+
+.book-pages.is-turning-back .right-page {
+  animation: page-turn-backward 800ms ease-in-out forwards;
 }
 
 @keyframes page-turn-forward {
-  0% {
-    transform: rotateY(0);
-    filter: brightness(1);
-  }
-
-  45% {
-    filter: brightness(0.78);
-  }
-
-  100% {
-    transform: rotateY(-180deg);
-    filter: brightness(0.92);
-  }
+  0%   { transform: rotateY(0deg);    box-shadow: inset 18px 0 24px -24px rgb(43 36 25 / 70%); }
+  40%  { transform: rotateY(-90deg);  box-shadow: inset 0px 0 40px -10px rgb(43 36 25 / 50%); }
+  100% { transform: rotateY(-180deg); box-shadow: inset -18px 0 24px -24px rgb(43 36 25 / 70%); }
 }
 
 @keyframes page-turn-backward {
-  0% {
-    transform: rotateY(0);
-    filter: brightness(1);
-  }
-
-  45% {
-    filter: brightness(0.78);
-  }
-
-  100% {
-    transform: rotateY(180deg);
-    filter: brightness(0.92);
-  }
+  0%   { transform: rotateY(-180deg); box-shadow: inset -18px 0 24px -24px rgb(43 36 25 / 70%); }
+  60%  { transform: rotateY(-90deg);  box-shadow: inset 0px 0 40px -10px rgb(43 36 25 / 50%); }
+  100% { transform: rotateY(0deg);    box-shadow: inset 18px 0 24px -24px rgb(43 36 25 / 70%); }
 }
 
 .login-card {
@@ -459,6 +467,11 @@ input {
   opacity: 0;
   transform: translateY(12px);
   transition: opacity 450ms ease 550ms, transform 450ms ease 550ms;
+}
+
+.book-login-stage.is-open .login-card {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .register-card {
@@ -470,6 +483,7 @@ input {
 }
 
 .register-form {
+  display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px 16px;
 }
@@ -498,10 +512,6 @@ input {
   transform: translateZ(10px) rotateY(-168deg);
 }
 
-.book-login-stage.is-open .login-card {
-  opacity: 1;
-  transform: translateY(0);
-}
 
 .open-book-cover {
   position: absolute;
@@ -748,6 +758,8 @@ input {
 .register-form .submit-button {
   grid-column: 1 / -1;
   min-height: 42px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .page-turn-link {
@@ -791,29 +803,44 @@ input {
 
 .submit-button {
   display: flex;
+  width: 100%;
   min-height: 46px;
   align-items: center;
   justify-content: space-between;
-  margin-top: 2px;
-  padding: 0 15px;
-  border: 0;
+  margin-top: 6px;
+  padding: 0 18px;
+  border: 1px solid var(--green-dark);
   border-radius: 7px;
-  background: var(--green);
+  background: linear-gradient(160deg, var(--green) 0%, var(--green-dark) 100%);
   color: #fffefa;
   cursor: pointer;
+  font-family: var(--serif);
   font-size: 13px;
-  font-weight: 650;
-  transition: background 160ms ease, transform 160ms ease;
+  font-weight: 400;
+  letter-spacing: 0.3px;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 14%),
+    0 2px 6px rgb(52 73 54 / 22%);
+  transition: background 180ms ease, transform 160ms ease, box-shadow 160ms ease;
 }
 
 .submit-button:hover {
   transform: translateY(-1px);
-  background: var(--green-dark);
+  background: linear-gradient(160deg, var(--green-dark) 0%, #243529 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 10%),
+    0 4px 10px rgb(52 73 54 / 30%);
+}
+
+.submit-button:active {
+  transform: translateY(0);
+  box-shadow: inset 0 1px 4px rgb(0 0 0 / 18%);
 }
 
 .button-arrow {
-  font-size: 19px;
+  font-size: 17px;
   font-weight: 400;
+  opacity: 0.75;
 }
 
 .form-note {
@@ -891,7 +918,7 @@ input {
   }
 
   .book-pages {
-    height: min(700px, calc(100vh - 70px));
+    height: min(740px, calc(100vh - 50px));
     grid-template-columns: 1fr;
   }
 
@@ -945,8 +972,8 @@ input {
     transform: none;
   }
 
-  .book-pages.is-turning-next .right-page,
-  .book-pages.is-turning-previous .right-page {
+  .book-pages.is-turning .right-page,
+  .book-pages.is-turning-back .right-page {
     animation-duration: 0.01ms;
   }
 }
