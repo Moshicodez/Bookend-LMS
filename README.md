@@ -14,5 +14,7 @@ instance folder. Set `BOOKEND_DATABASE_URL` to use a different SQLAlchemy
 database URL, and set `BOOKEND_SECRET_KEY` to a long, random value before
 deploying.
 
-Users can create patron accounts from the sign-in page. To enable librarian
-registration, configure a private `BOOKEND_STAFF_CODE` environment variable.
+Public signup creates patron accounts only. Librarian accounts must be added
+directly to the `users` table by an administrator, with `role` set to
+`librarian` and `password_hash` generated with Werkzeug's
+`werkzeug.security.generate_password_hash` (never store a plain-text password).

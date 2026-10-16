@@ -1,10 +1,8 @@
 import unittest
-from unittest.mock import patch
 
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from backend.app import create_app
-from backend.app.config import Config
 from backend.app.extensions import db
 from backend.app.models.user_record import UserRecord
 
@@ -58,15 +56,16 @@ class AuthRouteTests(unittest.TestCase):
         self.assertEqual(login_response.status_code, 302)
         self.assertEqual(login_response.location, "/patron")
 
-    def test_signup_page_uses_openable_book_layout(self):
+    def test_signup_page_has_patron_only_form_and_page_turn_link(self):
         response = self.client.get("/register")
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'data-book-stage', response.data)
         self.assertIn(b'data-book-trigger', response.data)
         self.assertIn(b'id="email"', response.data)
-        self.assertIn(b'id="role"', response.data)
-        self.assertIn(b'id="staff_code"', response.data)
+        self.assertIn(b'data-page-turn="previous"', response.data)
+        self.assertNotIn(b'name="role"', response.data)
+        self.assertNotIn(b'name="staff_code"', response.data)
 
     def test_signup_validation_error_reopens_book_and_preserves_nonsecret_fields(self):
         response = self.client.post(
@@ -76,7 +75,6 @@ class AuthRouteTests(unittest.TestCase):
                 "username": "reader",
                 "password": "weak",
                 "confirm_password": "weak",
-                "role": "librarian",
             },
         )
 
@@ -84,37 +82,45 @@ class AuthRouteTests(unittest.TestCase):
         self.assertIn(b'class="book-login-stage is-open"', response.data)
         self.assertIn(b'value="reader@example.com"', response.data)
         self.assertIn(b'value="reader"', response.data)
-        self.assertIn(b'<option value="librarian" selected>', response.data)
         self.assertNotIn(b'value="weak"', response.data)
 
-    def test_librarian_signup_requires_staff_code_and_uses_librarian_dashboard(self):
-        form_data = {
-            "email": "librarian@example.com",
-            "username": "librarian",
-            "password": "StrongPass1!",
-            "confirm_password": "StrongPass1!",
-            "role": "librarian",
-        }
-        with patch.object(Config, "STAFF_CODE", "test-staff-code"):
-            denied = self.client.post("/register", data=form_data)
-            self.assertEqual(denied.status_code, 400)
+    def test_registration_ignores_forged_librarian_role(self):
+        response = self.client.post(
+            "/register",
+            data={
+                "email": "reader@example.com",
+                "username": "reader",
+                "password": "StrongPass1!",
+                "confirm_password": "StrongPass1!",
+                "role": "librarian",
+                "staff_code": "anything",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.location, "/patron")
+        record = db.session.execute(
+            db.select(UserRecord).where(UserRecord.username == "reader")
+        ).scalar_one()
+        self.assertEqual(record.role, "patron")
 
-            response = self.client.post(
-                "/register",
-                data={**form_data, "staff_code": "test-staff-code"},
-            )
+    def test_manually_created_librarian_can_log_in_and_open_dashboard(self):
+        record = UserRecord(
+            email="librarian@example.com",
+            username="librarian",
+            password_hash=generate_password_hash("StrongPass1!"),
+            role="librarian",
+        )
+        db.session.add(record)
+        db.session.commit()
+
+        response = self.client.post(
+            "/login",
+            data={"username": "librarian", "password": "StrongPass1!"},
+        )
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.location, "/librarian")
         self.assertIn(b"manage the library", self.client.get("/librarian").data)
-        self.client.post("/logout")
-        with patch.object(Config, "STAFF_CODE", "test-staff-code"):
-            login_response = self.client.post(
-                "/login",
-                data={"username": "librarian", "password": "StrongPass1!"},
-            )
-        self.assertEqual(login_response.status_code, 302)
-        self.assertEqual(login_response.location, "/librarian")
 
     def test_users_cannot_open_another_role_dashboard(self):
         self.client.post(
@@ -159,7 +165,7 @@ class AuthRouteTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 401)
         self.assertIn(b'aria-hidden="false"', response.data)
-        self.assertIn(b'href="/register">Create an account</a>', response.data)
+        self.assertIn(b'href="/register" data-page-turn="next">Create an account</a>', response.data)
         self.assertIn(b'value="new-reader"', response.data)
 
     def test_deactivated_account_cannot_log_in(self):

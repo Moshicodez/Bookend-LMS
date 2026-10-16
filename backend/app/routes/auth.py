@@ -60,8 +60,6 @@ def register():
             request.form.get("username"),
             request.form.get("password"),
             request.form.get("confirm_password"),
-            request.form.get("staff_code"),
-            request.form.get("role"),
         )
     except ValidationError as error:
         return render_template(
@@ -70,7 +68,6 @@ def register():
             form_data={
                 "email": request.form.get("email", ""),
                 "username": request.form.get("username", ""),
-                "role": request.form.get("role", "patron"),
             },
         ), 400
 

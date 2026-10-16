@@ -11,11 +11,12 @@
 <body class="login-page">
   <main class="login-screen">
     <section class="form-panel" aria-labelledby="register-title">
-      <div class="book-login-stage{% if error_message %} is-open{% endif %}" data-book-stage>
+      <div class="book-login-stage is-open" data-book-stage>
         <div
           class="book-invitation"
           data-book-invitation
-          {% if error_message %}aria-hidden="true" inert{% endif %}
+          aria-hidden="true"
+          inert
         >
           <a class="brand book-brand" href="{{ url_for('auth.login') }}" aria-label="Bookend Library">
             <span class="brand-mark" aria-hidden="true">B</span>
@@ -25,7 +26,7 @@
             class="book-trigger"
             type="button"
             aria-label="Open Bookend to reveal the account creation form"
-            aria-expanded="{{ 'true' if error_message else 'false' }}"
+            aria-expanded="true"
             aria-controls="login-card"
             data-book-trigger
           >
@@ -52,7 +53,7 @@
         <div
           class="opened-book"
           id="login-card"
-          {% if error_message %}aria-hidden="false"{% else %}inert aria-hidden="true"{% endif %}
+          aria-hidden="false"
         >
           <div class="open-book-shadow">
             <div class="book-pages">
@@ -134,26 +135,13 @@
                       >
                     </div>
 
-                    <div class="form-field">
-                      <label for="role">Account type</label>
-                      <select id="role" name="role" required>
-                        <option value="patron" {% if not form_data or form_data.role == 'patron' %}selected{% endif %}>Patron</option>
-                        <option value="librarian" {% if form_data and form_data.role == 'librarian' %}selected{% endif %}>Librarian</option>
-                      </select>
-                    </div>
-
-                    <div class="form-field">
-                      <label for="staff_code">Librarian staff code</label>
-                      <input id="staff_code" name="staff_code" type="password" autocomplete="off">
-                    </div>
-
                     <button class="submit-button" type="submit">
                       <span>Create account</span>
                       <span class="button-arrow" aria-hidden="true">→</span>
                     </button>
                   </form>
 
-                  <p class="copyright">Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+                  <p class="copyright">Already have an account? <a class="page-turn-link" href="{{ url_for('auth.login') }}" data-page-turn="previous">Sign in</a></p>
                 </div>
               </section>
             </div>

@@ -3,6 +3,7 @@ const bookTrigger = document.querySelector("[data-book-trigger]");
 const bookInvitation = document.querySelector("[data-book-invitation]");
 const loginCard = document.querySelector("#login-card");
 const passwordToggle = document.querySelector("[data-password-toggle]");
+const pageTurnLinks = document.querySelectorAll("[data-page-turn]");
 
 bookTrigger?.addEventListener("click", () => {
   if (!(bookStage instanceof HTMLElement) || !(loginCard instanceof HTMLElement)) {
@@ -26,6 +27,34 @@ bookTrigger?.addEventListener("click", () => {
 if (bookStage?.classList.contains("is-open")) {
   document.querySelector("[data-initial-focus]")?.focus();
 }
+
+pageTurnLinks.forEach((link) => {
+  link.addEventListener("click", (event) => {
+    if (
+      !(link instanceof HTMLAnchorElement) ||
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    const openedBook = document.querySelector(".book-pages");
+    const direction = link.dataset.pageTurn === "previous" ? "previous" : "next";
+    if (!(openedBook instanceof HTMLElement)) {
+      window.location.assign(link.href);
+      return;
+    }
+
+    openedBook.classList.add(`is-turning-${direction}`);
+    const turnDelay = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 600;
+    window.setTimeout(() => window.location.assign(link.href), turnDelay);
+  });
+});
 
 passwordToggle?.addEventListener("click", () => {
   const passwordInput = document.querySelector("#password");

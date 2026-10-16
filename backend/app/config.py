@@ -8,7 +8,6 @@ class Config:
         "sqlite:///bookend.db",
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    STAFF_CODE = os.environ.get("BOOKEND_STAFF_CODE")
 
     LOAN_DAYS = 14
     MAX_ACTIVE_LOANS = 5
