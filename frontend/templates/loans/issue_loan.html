@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Borrow a book | Bookend Library{% endblock %}
+{% block content %}
+  <h1>Borrow a book</h1>
+  <ul>
+    {% for book in books %}
+      <li>
+        {{ book.title }} by {{ book.author }}
+        {% if book.can_borrow() %}
+          <form method="post" action="{{ url_for('loans.borrow', book_id=book.book_id) }}">
+            <button type="submit">Borrow</button>
+          </form>
+        {% else %}
+          <span>Unavailable</span>
+        {% endif %}
+      </li>
+    {% else %}
+      <li>No books are currently available.</li>
+    {% endfor %}
+  </ul>
+{% endblock %}

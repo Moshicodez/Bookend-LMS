@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-from config import Config
-from utils.errors import ValidationError
+from ..config import Config
+from ..exceptions import ValidationError
 
 class Fee(ABC):
     label = "Fee"

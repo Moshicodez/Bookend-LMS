@@ -1,8 +1,6 @@
-from datetime import date
-
-from config import Config
-from utils.date_utils import add_days, today
-from utils.exceptions import NotFoundError, ValidationError
+from ..config import Config
+from ..exceptions import NotFoundError, ValidationError
+from ..utils.date_utils import add_days, today
 
 
 class LoanService:

@@ -10,6 +10,8 @@
   <main>
     <h1>Welcome, {{ username }}</h1>
     <p>Your patron account is ready. Browse the catalog to find your next book.</p>
+    <p><a href="{{ url_for('books.catalog') }}">Browse the catalog</a></p>
+    <p><a href="{{ url_for('loans.index') }}">View your loans and fees</a></p>
     <form method="post" action="{{ url_for('auth.logout') }}">
       <button type="submit">Sign out</button>
     </form>

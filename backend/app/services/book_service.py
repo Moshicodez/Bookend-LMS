@@ -1,5 +1,5 @@
-from models.book import Book
-from utils.exceptions import NotFoundError, ValidationError
+from ..exceptions import NotFoundError
+from ..models.book import Book
 
 
 class BookService:

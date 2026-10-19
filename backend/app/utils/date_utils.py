@@ -1,8 +1,12 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 
 def to_date(value):
-    if value is None or isinstance(value, date):
+    if value is None:
+        return value
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
         return value
     return date.fromisoformat(str(value)[:10])
 

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Catalog | Bookend Library{% endblock %}
+{% block content %}
+  <h1>Library catalog</h1>
+  <form method="get" action="{{ url_for('books.catalog') }}">
+    <label for="catalog-search">Search books</label>
+    <input id="catalog-search" name="q" value="{{ search_term }}" type="search">
+    <button type="submit">Search</button>
+  </form>
+  {% if user.is_librarian() %}
+    <p><a href="{{ url_for('books.add') }}">Add a book</a></p>
+  {% endif %}
+  {% if books %}
+    <ul>
+      {% for book in books %}
+        <li>
+          <a href="{{ url_for('books.detail', book_id=book.book_id) }}">{{ book.title }}</a>
+          <span>by {{ book.author }}{% if book.genre %} · {{ book.genre }}{% endif %}</span>
+          <span>
+            {% if not book.catalog %}Archived
+            {% elif book.can_borrow() %}Available
+            {% elif book.available %}In-library use
+            {% else %}On loan
+            {% endif %}
+          </span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No matching books found.</p>
+  {% endif %}
+{% endblock %}

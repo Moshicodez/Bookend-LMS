@@ -2,7 +2,7 @@ from werkzeug.security import generate_password_hash
 
 from ..exceptions import ValidationError
 from ..models.password_rule import PASSWORD_RULES
-from ..models.user import Patron
+from ..models.patron import Patron
 from ..utils.validators import is_valid_email, is_valid_username
 
 

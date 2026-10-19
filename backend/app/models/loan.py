@@ -1,9 +1,9 @@
 from datetime import date
 
-from config import Config
-from models.fee import LateFee, LossFee
-from utils.errors import ValidationError
-from utils.validators import to_date
+from ..config import Config
+from ..exceptions import ValidationError
+from ..utils.date_utils import to_date
+from .fine import LateFee, LossFee
 
 
 class Loan:
@@ -66,12 +66,13 @@ class Loan:
             raise ValidationError("This loan has already been returned.")
         self._returned_at = to_date(returned_at)
 
-    def mark_lost(self, loss_fee=Config.LOSS_FEE):
+    def mark_lost(self, loss_fee=Config.LOSS_FEE, returned_at=None):
         if self.is_returned():
             raise ValidationError("This loan has already been returned.")
         if self.lost:
             raise ValidationError("This loan is already marked as lost.")
         self._loss_fee = LossFee(loss_fee)
+        self._returned_at = to_date(returned_at) or date.today()
 
     def outstanding(self, current_date=None):
         today = to_date(current_date) or date.today()

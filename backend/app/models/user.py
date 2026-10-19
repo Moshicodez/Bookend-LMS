@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 
 from werkzeug.security import check_password_hash
 
-from ..config import Config
 from ..exceptions import PermissionDenied, ValidationError
 
 
@@ -78,10 +77,10 @@ class User(ABC):
             raise PermissionDenied(f"You don't have permission to do that ({permission}).")
 
     def is_patron(self):
-        return self.ROLE == Patron.ROLE
+        return self.ROLE == "patron"
 
     def is_librarian(self):
-        return self.ROLE == Librarian.ROLE
+        return self.ROLE == "librarian"
 
     @abstractmethod
     def home_endpoint(self):
@@ -95,39 +94,3 @@ class User(ABC):
     @abstractmethod
     def can_be_managed_by(self, actor):
         ...
-
-
-class Patron(User):
-    ROLE = "patron"
-    PERMISSIONS = frozenset({
-        "search_book", "view_book", "borrow_book", "return_book",
-        "view_loans", "view_payments", "pay_late_fee", "pay_loss"
-    })
-
-    def home_endpoint(self):
-        return "patron_dashboard"
-
-    @property
-    def loan_limit(self):
-        return Config.MAX_ACTIVE_LOANS
-
-    def can_be_managed_by(self, actor):
-        return actor.perms("manage_mem")
-
-
-class Librarian(User):
-    ROLE = "librarian"
-    PERMISSIONS = frozenset({
-        "search_book", "view_book", "add_book", "edit_book",
-        "archive_book", "update_return_status", "manage_mem", "manage_loans"
-    })
-
-    def home_endpoint(self):
-        return "librarian_dashboard"
-
-    @property
-    def loan_limit(self):
-        return 0
-
-    def can_be_managed_by(self, actor):
-        return False

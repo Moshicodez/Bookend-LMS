@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Members | Bookend Library{% endblock %}
+{% block content %}
+  <h1>Patron accounts</h1>
+  {% if members %}
+    <ul>
+      {% for member in members %}
+        <li>
+          <strong>{{ member.username }}</strong> — {{ member.email }}
+          <span>{{ "Active" if member.active else "Deactivated" }}</span>
+          <form method="post" action="{{ url_for('members.toggle', user_id=member.user_id) }}">
+            <button type="submit">{{ "Deactivate" if member.active else "Reactivate" }}</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No patron accounts yet.</p>
+  {% endif %}
+{% endblock %}

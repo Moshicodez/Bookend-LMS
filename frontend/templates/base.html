@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Bookend Library{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <header>
+    <a href="{{ url_for('books.catalog') }}">Bookend Library</a>
+    <nav aria-label="Main navigation">
+      <a href="{{ url_for('books.catalog') }}">Catalog</a>
+      {% if session.get('user_id') %}
+        <a href="{{ url_for('loans.index') }}">Loans</a>
+        {% if session.get('role') == 'librarian' %}
+          <a href="{{ url_for('members.index') }}">Members</a>
+        {% endif %}
+        <form method="post" action="{{ url_for('auth.logout') }}">
+          <button type="submit">Sign out</button>
+        </form>
+      {% else %}
+        <a href="{{ url_for('auth.login') }}">Sign in</a>
+      {% endif %}
+    </nav>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

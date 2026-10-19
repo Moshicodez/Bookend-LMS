@@ -1,67 +1,29 @@
-from datetime import date
-
-from config import Config
-from models.book import Book
-from utils.errors import NotFoundError, ValidationError, PermissionDenied
+from ..exceptions import NotFoundError, PermissionDenied
+from .book_service import BookService
+from .loan_service import LoanService
 
 
 class LibrarianService:
     def __init__(self, book_repo, loan_repo, user_repo):
-        self._book_repo = book_repo
-        self._loan_repo = loan_repo
+        self._books = BookService(book_repo)
+        self._loans = LoanService(book_repo, loan_repo)
         self._user_repo = user_repo
 
-    def _get_book(self, book_id):
-        book = self._book_repo.find_book(book_id)
-        if book is None:
-            raise NotFoundError("Book not found.")
-        return book
-
     def add_book(self, librarian, title, author, genre, description, kind="standard"):
-        librarian.require("add_book")
-
-        book = Book.create(kind, None, title, author, genre, description)
-        return self._book_repo.create(book)
+        return self._books.add_book(
+            librarian, title, author, genre, description, kind
+        )
 
     def edit_book(self, librarian, book_id, title, author, genre, description):
-        librarian.require("edit_book")
-        book = self._get_book(book_id)
-
-        book.update_details(title, author, genre, description)
-        self._book_repo.update_book(book)
-
-        return book
+        return self._books.edit_book(
+            librarian, book_id, title, author, genre, description
+        )
 
     def archive_book(self, librarian, book_id):
-        librarian.require("archive_book")
-        book = self._get_book(book_id)
-
-        book.archive()
-        self._book_repo.update_book(book)
-
-        return book
+        return self._books.archive_book(librarian, book_id)
 
     def update_return_status(self, librarian, book_id, lost=False):
-        librarian.require("update_return_status")
-        book = self._get_book(book_id)
-
-        loan = self._loan_repo.find_active_loan_by_book(book_id)
-
-        if loan is None:
-            raise NotFoundError("That book has no active loan.")
-
-        if lost:
-            loan.mark_lost(Config.LOSS_FEE)
-            book.mark_lost()
-        else:
-            loan.mark_returned(date.today())
-            self._loan_repo.return_record(loan.loan_id, loan.returned_at)
-            book.return_book()
-
-        self._loan_repo.update_loan(loan)
-        self._book_repo.update_book(book)
-
-        return loan
+        return self._loans.process_return(librarian, book_id, lost)
 
     def manage_member(self, librarian, user_id, active=None):
         librarian.require("manage_mem")

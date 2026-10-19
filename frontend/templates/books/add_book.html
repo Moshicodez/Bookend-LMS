@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Add a book | Bookend Library{% endblock %}
+{% block content %}
+  <h1>Add a book</h1>
+  <form method="post" action="{{ url_for('books.add') }}">
+    <label for="title">Title</label>
+    <input id="title" name="title" maxlength="250" required>
+    <label for="author">Author</label>
+    <input id="author" name="author" maxlength="160" required>
+    <label for="genre">Genre</label>
+    <input id="genre" name="genre" maxlength="100">
+    <label for="description">Description</label>
+    <textarea id="description" name="description"></textarea>
+    <label for="kind">Book type</label>
+    <select id="kind" name="kind">
+      <option value="standard">Standard</option>
+      <option value="new_release">New release</option>
+      <option value="reference">Reference (in-library use)</option>
+    </select>
+    <button type="submit">Save book</button>
+  </form>
+{% endblock %}

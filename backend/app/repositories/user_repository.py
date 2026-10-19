@@ -40,6 +40,15 @@ class UserRepository:
             db.select(UserRecord.user_id).where(UserRecord.username == username)
         ).first() is not None
 
+    def username_exists(self, username):
+        return self.username_exist(username)
+
+    def find_all(self):
+        records = db.session.execute(
+            db.select(UserRecord).order_by(UserRecord.username)
+        ).scalars()
+        return [self._to_domain_user(record) for record in records]
+
     def find_by_id(self, user_id):
         record = db.session.get(UserRecord, user_id)
         return self._to_domain_user(record) if record else None

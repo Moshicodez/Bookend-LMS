@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Loans | Bookend Library{% endblock %}
+{% block content %}
+  <h1>{{ "Overdue loans" if overdue else "Loans" }}</h1>
+  {% if not user.is_librarian() %}
+    <p><a href="{{ url_for('loans.issue') }}">Borrow a book</a></p>
+  {% elif not overdue %}
+    <p><a href="{{ url_for('loans.overdue') }}">View overdue loans</a></p>
+  {% endif %}
+  {% if loans %}
+    <ul>
+      {% for loan in loans %}
+        <li>
+          <h2>Book #{{ loan.book_id }}</h2>
+          <p>Borrowed {{ loan.borrowed_at }} · due {{ loan.due_date }}</p>
+          {% if loan.returned_at %}<p>Returned {{ loan.returned_at }}</p>{% else %}<p>Currently on loan</p>{% endif %}
+          {% if loan.lost %}<p>Marked lost · loss fee {{ "%.2f"|format(loan.outstanding()) }}</p>{% endif %}
+          {% if loan.outstanding() > 0 %}
+            <p>Outstanding: {{ "%.2f"|format(loan.outstanding()) }}</p>
+            {% if user.is_patron() %}
+              {% for fee in loan.fee_breakdown() %}
+                {% if fee.amount > 0 and not fee.paid %}
+                  <form method="post" action="{{ url_for('loans.pay_loss_fee' if fee.type == 'Loss fee' else 'loans.pay_late_fee', loan_id=loan.loan_id) }}">
+                    <button type="submit">Pay {{ fee.type|lower }} ({{ "%.2f"|format(fee.amount) }})</button>
+                  </form>
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No loans to show.</p>
+  {% endif %}
+{% endblock %}

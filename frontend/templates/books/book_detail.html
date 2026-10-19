@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}{{ book.title }} | Bookend Library{% endblock %}
+{% block content %}
+  <p><a href="{{ url_for('books.catalog') }}">Back to catalog</a></p>
+  <article>
+    <h1>{{ book.title }}</h1>
+    <p>By {{ book.author }}</p>
+    {% if book.genre %}<p>Genre: {{ book.genre }}</p>{% endif %}
+    {% if book.description %}<p>{{ book.description }}</p>{% endif %}
+    <p>Status:
+      {% if not book.catalog %}Archived
+      {% elif book.can_borrow() %}Available
+      {% elif book.available %}In-library use
+      {% else %}On loan
+      {% endif %}
+    </p>
+    {% if book.can_borrow() %}<p>Loan period: {{ book.loan_days }} days</p>{% endif %}
+  </article>
+  {% if user.is_patron() and book.can_borrow() %}
+    <form method="post" action="{{ url_for('loans.borrow', book_id=book.book_id) }}">
+      <button type="submit">Borrow this book</button>
+    </form>
+  {% endif %}
+  {% if user.is_patron() and active_loan and active_loan.patron_id == user.user_id %}
+    <form method="post" action="{{ url_for('loans.return_book', book_id=book.book_id) }}">
+      <button type="submit">Return this book</button>
+    </form>
+  {% endif %}
+  {% if user.is_librarian() %}
+    <p><a href="{{ url_for('books.edit', book_id=book.book_id) }}">Edit details</a></p>
+    {% if book.available and book.catalog %}
+      <form method="post" action="{{ url_for('books.archive', book_id=book.book_id) }}">
+        <button type="submit">Archive book</button>
+      </form>
+    {% endif %}
+  {% endif %}
+{% endblock %}

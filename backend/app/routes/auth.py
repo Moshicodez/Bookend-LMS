@@ -27,7 +27,7 @@ def _signed_in_user(required_role=None):
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "GET":
-        return render_template("auth/login.html")
+        return render_template("auth/login.html", page=request.args.get("page", "login"))
 
     try:
         user = auth_service.login(
@@ -40,19 +40,20 @@ def login():
             "auth/login.html",
             error_message=str(error),
             username=request.form.get("username", ""),
+            page="login",
         ), status_code
 
     session.clear()
     session["user_id"] = user.user_id
     session["username"] = user.username
     session["role"] = user.role
-    return redirect(url_for(f"auth.{user.home_endpoint()}"))
+    return redirect(url_for(f"dashboard.{user.home_endpoint()}"))
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "GET":
-        return render_template("auth/register.html")
+        return render_template("auth/login.html", page="register")
 
     try:
         user = auth_service.register(
@@ -63,49 +64,20 @@ def register():
         )
     except ValidationError as error:
         return render_template(
-            "auth/register.html",
+            "auth/login.html",
             error_message=str(error),
             form_data={
                 "email": request.form.get("email", ""),
                 "username": request.form.get("username", ""),
             },
+            page="register",
         ), 400
 
     session.clear()
     session["user_id"] = user.user_id
     session["username"] = user.username
     session["role"] = user.role
-    return redirect(url_for(f"auth.{user.home_endpoint()}"))
-
-
-@auth_bp.route("/dashboard")
-def dashboard():
-    user = _signed_in_user()
-    if user is None:
-        return redirect(url_for("auth.login"))
-    return redirect(url_for(f"auth.{user.home_endpoint()}"))
-
-
-@auth_bp.route("/patron")
-def patron_dashboard():
-    user = _signed_in_user("patron")
-    if user is None:
-        return redirect(url_for("auth.login"))
-    return render_template(
-        "dashboard/patron_dashboard.html",
-        username=user.username,
-    )
-
-
-@auth_bp.route("/librarian")
-def librarian_dashboard():
-    user = _signed_in_user("librarian")
-    if user is None:
-        return redirect(url_for("auth.login"))
-    return render_template(
-        "dashboard/librarian_dashboard.html",
-        username=user.username,
-    )
+    return redirect(url_for(f"dashboard.{user.home_endpoint()}"))
 
 
 @auth_bp.route("/logout", methods=["POST"])

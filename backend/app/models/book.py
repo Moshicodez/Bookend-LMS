@@ -1,6 +1,5 @@
-from config import Config
-
-from utils.errors import ValidationError # still needs fix
+from ..config import Config
+from ..exceptions import ValidationError
 
 
 class Book:
@@ -20,7 +19,13 @@ class Book:
 
     @classmethod
     def create(cls, kind, *args, **kwargs):
-        return cls._registry.get(kind, Book)(*args, **kwargs)
+        if kind == Book.KIND:
+            book_class = Book
+        else:
+            book_class = cls._registry.get(kind)
+        if book_class is None:
+            raise ValidationError(f"Unknown book kind: {kind}")
+        return book_class(*args, **kwargs)
 
     def _set_details(self, title, author, genre, description):
         title = (title or "").strip()
@@ -84,8 +89,10 @@ class Book:
     def display_book_info(self):
         if not self._catalog:
             status = "Archived"
-        elif self._available:
+        elif self.can_borrow():
             status = "Available"
+        elif self._available:
+            status = "In-library use"
         else:
             status = "On loan"
 

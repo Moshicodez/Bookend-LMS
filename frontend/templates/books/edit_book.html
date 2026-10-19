@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ book.title }} | Bookend Library{% endblock %}
+{% block content %}
+  <h1>Edit book</h1>
+  <form method="post" action="{{ url_for('books.edit', book_id=book.book_id) }}">
+    <label for="title">Title</label>
+    <input id="title" name="title" value="{{ book.title }}" maxlength="250" required>
+    <label for="author">Author</label>
+    <input id="author" name="author" value="{{ book.author }}" maxlength="160" required>
+    <label for="genre">Genre</label>
+    <input id="genre" name="genre" value="{{ book.genre }}" maxlength="100">
+    <label for="description">Description</label>
+    <textarea id="description" name="description">{{ book.description }}</textarea>
+    <button type="submit">Save changes</button>
+  </form>
+{% endblock %}

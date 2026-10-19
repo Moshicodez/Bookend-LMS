@@ -1,5 +1,5 @@
-from config import Config
-from models.user import User
+from ..config import Config
+from .user import User
 
 
 class Patron(User):

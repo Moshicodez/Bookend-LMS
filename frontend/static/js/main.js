@@ -23,13 +23,14 @@ if (bookStage?.classList.contains("is-open")) {
 }
 
 // ── in-place page flip ────────────────────────────────────────────────────────
-document.querySelectorAll("[data-flip]").forEach((link) => {
+document.querySelectorAll("[data-flip], [data-page-turn]").forEach((link) => {
   link.addEventListener("click", (e) => {
     e.preventDefault();
     if (!(bookPages instanceof HTMLElement) || !(rightPage instanceof HTMLElement)) return;
 
     const currentPage = bookPages.dataset.page ?? "login";
-    const targetPage  = link.dataset.flip;
+    const targetPage  = link.dataset.flip
+      ?? (link.dataset.pageTurn === "next" ? "register" : "login");
     if (currentPage === targetPage) return;
 
     const goingForward = targetPage === "register";
