@@ -1,0 +1,35 @@
+<header class="landing-navbar" id="top">
+  <a class="brand landing-brand" href="{{ url_for('landing.index') }}" aria-label="Bookend Library home">
+    <span class="brand-mark" aria-hidden="true">B</span>
+    <span>bookend<span class="brand-period">.</span></span>
+  </a>
+
+  <button
+    class="landing-menu-toggle"
+    type="button"
+    aria-label="Open navigation menu"
+    aria-expanded="false"
+    aria-controls="landing-navigation"
+    data-menu-toggle
+  >
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+
+  <nav class="landing-navigation" id="landing-navigation" aria-label="Main navigation" data-navigation>
+    <a href="#trending-books">Browse</a>
+    <a href="#genre-browser">Genres</a>
+    <a href="#about">About</a>
+    <a class="nav-search" href="#hero-search" aria-label="Go to book search">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="10.8" cy="10.8" r="6.8"></circle>
+        <path d="m16 16 5 5"></path>
+      </svg>
+    </a>
+    <div class="nav-auth-actions">
+      <a class="nav-login" href="{{ url_for('auth.login') }}">Login</a>
+      <a class="landing-button nav-signup" href="{{ url_for('auth.register') }}">Sign up</a>
+    </div>
+  </nav>
+</header>

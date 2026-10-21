@@ -23,7 +23,6 @@ def _signed_in_user(required_role=None):
     return user
 
 
-@auth_bp.route("/", methods=["GET", "POST"])
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "GET":

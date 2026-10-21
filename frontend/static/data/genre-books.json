@@ -1,0 +1,186 @@
+{
+  "genres": [
+    "Featured",
+    "History",
+    "Kids",
+    "Mystery",
+    "Crime",
+    "Horror",
+    "Thriller",
+    "Romance",
+    "Drama"
+  ],
+  "books": [
+    {
+      "title": "The Cartographer's Garden",
+      "author": "Mara Ellery",
+      "coverUrl": null,
+      "genre": "Drama",
+      "coverColor": "#78907b",
+      "featured": true
+    },
+    {
+      "title": "A Map of Small Wonders",
+      "author": "Theo Bell",
+      "coverUrl": null,
+      "genre": "Kids",
+      "coverColor": "#cf9f62",
+      "featured": true
+    },
+    {
+      "title": "The Quiet Archive",
+      "author": "Nina Vale",
+      "coverUrl": null,
+      "genre": "Mystery",
+      "coverColor": "#637b84",
+      "featured": true
+    },
+    {
+      "title": "Letters from the Old Harbor",
+      "author": "Celia North",
+      "coverUrl": null,
+      "genre": "History",
+      "coverColor": "#9b775e"
+    },
+    {
+      "title": "The Clockmaker's Ledger",
+      "author": "Jonas Reed",
+      "coverUrl": null,
+      "genre": "History",
+      "coverColor": "#777d69"
+    },
+    {
+      "title": "A Year in the Lantern House",
+      "author": "Amara Finch",
+      "coverUrl": null,
+      "genre": "History",
+      "coverColor": "#a67e72"
+    },
+    {
+      "title": "The Fox Who Found the Moon",
+      "author": "Lena Moss",
+      "coverUrl": null,
+      "genre": "Kids",
+      "coverColor": "#c47b54"
+    },
+    {
+      "title": "Pip and the Paper Kingdom",
+      "author": "Owen Maple",
+      "coverUrl": null,
+      "genre": "Kids",
+      "coverColor": "#6e8f92"
+    },
+    {
+      "title": "The House at Juniper Lane",
+      "author": "Iris Rowan",
+      "coverUrl": null,
+      "genre": "Mystery",
+      "coverColor": "#7d6c85"
+    },
+    {
+      "title": "A Study in Missing Things",
+      "author": "Elliot March",
+      "coverUrl": null,
+      "genre": "Mystery",
+      "coverColor": "#967c59"
+    },
+    {
+      "title": "The Last Page Turned",
+      "author": "Sasha Wren",
+      "coverUrl": null,
+      "genre": "Crime",
+      "coverColor": "#665f5d"
+    },
+    {
+      "title": "No One Saw the River",
+      "author": "Calder Wynn",
+      "coverUrl": null,
+      "genre": "Crime",
+      "coverColor": "#8d695a"
+    },
+    {
+      "title": "The Night Clerk",
+      "author": "Maeve Sutton",
+      "coverUrl": null,
+      "genre": "Crime",
+      "coverColor": "#747f72"
+    },
+    {
+      "title": "The Hollow Orchard",
+      "author": "Tessa Crow",
+      "coverUrl": null,
+      "genre": "Horror",
+      "coverColor": "#59634f"
+    },
+    {
+      "title": "When the Bell Stops",
+      "author": "Dorian Pike",
+      "coverUrl": null,
+      "genre": "Horror",
+      "coverColor": "#765b68"
+    },
+    {
+      "title": "The House Beneath the Lake",
+      "author": "Willa Graves",
+      "coverUrl": null,
+      "genre": "Horror",
+      "coverColor": "#536d78"
+    },
+    {
+      "title": "The Second Exit",
+      "author": "R. M. Hale",
+      "coverUrl": null,
+      "genre": "Thriller",
+      "coverColor": "#a56650"
+    },
+    {
+      "title": "Before the Morning Train",
+      "author": "Kieran Lowe",
+      "coverUrl": null,
+      "genre": "Thriller",
+      "coverColor": "#63716d"
+    },
+    {
+      "title": "The Borrowed Hour",
+      "author": "Noelle Hart",
+      "coverUrl": null,
+      "genre": "Thriller",
+      "coverColor": "#8a7358"
+    },
+    {
+      "title": "An April for Two",
+      "author": "Mila Hartwell",
+      "coverUrl": null,
+      "genre": "Romance",
+      "coverColor": "#b97979"
+    },
+    {
+      "title": "The Bookshop on Linden Street",
+      "author": "Eden Clarke",
+      "coverUrl": null,
+      "genre": "Romance",
+      "coverColor": "#b28b64"
+    },
+    {
+      "title": "Somewhere Between Seasons",
+      "author": "Avery Lane",
+      "coverUrl": null,
+      "genre": "Romance",
+      "coverColor": "#8e7185"
+    },
+    {
+      "title": "The Shape of Returning",
+      "author": "June Ashford",
+      "coverUrl": null,
+      "genre": "Drama",
+      "coverColor": "#8b765e"
+    },
+    {
+      "title": "All the Rooms We Kept",
+      "author": "Micah Sol",
+      "coverUrl": null,
+      "genre": "Drama",
+      "coverColor": "#6d7f8a"
+    }
+  ]
+}

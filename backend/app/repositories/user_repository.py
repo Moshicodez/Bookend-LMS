@@ -30,6 +30,12 @@ class UserRepository:
         ).scalar_one_or_none()
         return self._to_domain_user(record) if record else None
 
+    def find_email(self, email):
+        record = db.session.execute(
+            db.select(UserRecord).where(UserRecord.email == email)
+        ).scalar_one_or_none()
+        return self._to_domain_user(record) if record else None
+
     def email_exists(self, email):
         return db.session.execute(
             db.select(UserRecord.user_id).where(UserRecord.email == email)

@@ -5,8 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Bookend Library{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block page_styles %}{% endblock %}
+  {% block page_scripts %}{% endblock %}
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
+  {% block site_header %}
   <header>
     <a href="{{ url_for('books.catalog') }}">Bookend Library</a>
     <nav aria-label="Main navigation">
@@ -24,8 +27,10 @@
       {% endif %}
     </nav>
   </header>
-  <main>
+  {% endblock %}
+  <main class="{% block main_class %}{% endblock %}">
     {% block content %}{% endblock %}
   </main>
+  {% block page_footer %}{% endblock %}
 </body>
 </html>

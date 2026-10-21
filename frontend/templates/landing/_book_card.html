@@ -1,0 +1,21 @@
+{% set book_url = url_for('books.detail', book_id=book.book_id) if session.get('user_id') else url_for('auth.login') %}
+<article class="landing-book-card">
+  <a class="book-cover-link" href="{{ book_url }}" aria-label="View {{ book.title }} by {{ book.author }}">
+    <span class="book-cover-art" style="--cover-color: {{ cover_color }}">
+      {% if book.cover_url is defined and book.cover_url %}
+        <img src="{{ book.cover_url }}" alt="Cover of {{ book.title }}" loading="lazy">
+      {% else %}
+        <span class="book-cover-placeholder">{{ book.title }}</span>
+      {% endif %}
+      <span class="cover-spine" aria-hidden="true"></span>
+    </span>
+  </a>
+  <div class="book-card-copy">
+    <span class="availability-badge{% if not book.available %} is-borrowed{% endif %}">
+      {{ "Available" if book.available else "Borrowed" }}
+    </span>
+    <h3><a href="{{ book_url }}">{{ book.title }}</a></h3>
+    <p>{{ book.author }}</p>
+    {% if book.genre %}<span class="book-genre-label">{{ book.genre }}</span>{% endif %}
+  </div>
+</article>

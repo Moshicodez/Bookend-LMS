@@ -56,6 +56,26 @@ class AuthRouteTests(unittest.TestCase):
         self.assertEqual(login_response.status_code, 302)
         self.assertEqual(login_response.location, "/patron")
 
+    def test_registered_patron_can_sign_in_with_email(self):
+        self.client.post(
+            "/register",
+            data={
+                "email": "reader@example.com",
+                "username": "reader",
+                "password": "StrongPass1!",
+                "confirm_password": "StrongPass1!",
+            },
+        )
+        self.client.post("/logout")
+
+        response = self.client.post(
+            "/login",
+            data={"username": "READER@example.com", "password": "StrongPass1!"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.location, "/patron")
+
     def test_signup_page_has_patron_only_form_and_page_turn_link(self):
         response = self.client.get("/register")
 

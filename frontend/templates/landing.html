@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Bookend Library | Find your next read{% endblock %}
+{% block body_class %}landing-page{% endblock %}
+{% block main_class %}landing-main{% endblock %}
+{% block page_styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/genre-carousel.css') }}">
+{% endblock %}
+{% block page_scripts %}
+  <script src="{{ url_for('static', filename='js/landing.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/genre-carousel.js') }}" defer></script>
+{% endblock %}
+{% block site_header %}
+  {% include "landing/_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+  {% include "landing/_hero.html" %}
+
+  {% if search_term %}
+  <section class="landing-section search-results-section" aria-labelledby="search-results-title">
+    <div class="section-heading">
+      <div>
+        <p class="section-kicker">YOUR SEARCH</p>
+        <h2 id="search-results-title">Results for “{{ search_term }}”</h2>
+      </div>
+      <span class="section-count">{{ search_results|length }} found</span>
+    </div>
+    {% if search_results %}
+      <div class="landing-book-grid">
+        {% for book in search_results %}
+          {% set cover_color = cover_colors[loop.index0 % cover_colors|length] %}
+          {% include "landing/_book_card.html" %}
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="landing-empty">We couldn't find a matching book. Try another title, author, or genre.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <section class="stats-strip" aria-label="Library at a glance">
+    <div class="stat-item">
+      <span class="stat-value">{{ stats.books }}</span>
+      <span class="stat-label">Books in the collection</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-value">{{ stats.patrons }}</span>
+      <span class="stat-label">Active patrons</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-value">{{ stats.borrowed }}</span>
+      <span class="stat-label">Books borrowed</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-value">{{ stats.genres }}</span>
+      <span class="stat-label">Genres to explore</span>
+    </div>
+  </section>
+
+  {% include "landing/_genre_browser.html" %}
+
+  <section class="landing-section carousel-section" id="trending-books" aria-labelledby="trending-heading">
+    {% set carousel_title = "Trending Books" %}
+    {% set carousel_id = "trending" %}
+    {% set carousel_books = trending_books %}
+    {% include "landing/_book_carousel.html" %}
+  </section>
+
+  <section class="landing-section carousel-section" id="new-arrivals" aria-labelledby="arrivals-heading">
+    {% set carousel_title = "New Arrivals" %}
+    {% set carousel_id = "arrivals" %}
+    {% set carousel_books = new_arrivals %}
+    {% include "landing/_book_carousel.html" %}
+  </section>
+
+  <section class="landing-section carousel-section" id="available-books" aria-labelledby="available-heading">
+    {% set carousel_title = "Available Now" %}
+    {% set carousel_id = "available" %}
+    {% set carousel_books = available_books %}
+    {% include "landing/_book_carousel.html" %}
+  </section>
+
+  <section class="landing-section features-section" id="about" aria-labelledby="features-heading">
+    <div class="section-heading feature-heading">
+      <div>
+        <p class="section-kicker">MADE FOR READERS</p>
+        <h2 id="features-heading">A library that works for you.</h2>
+      </div>
+      <p class="section-description">Everything you need to find a book, borrow it, and keep your reading life in order.</p>
+    </div>
+    <div class="feature-grid">
+      <article class="feature-card">
+        <span class="feature-number">01</span>
+        <h3>Borrow and return with ease</h3>
+        <p>Find an available title and keep track of your books from one simple place.</p>
+      </article>
+      <article class="feature-card">
+        <span class="feature-number">02</span>
+        <h3>Keep up with your loans</h3>
+        <p>See your due dates and loan history so every book finds its way back on time.</p>
+      </article>
+      <article class="feature-card">
+        <span class="feature-number">03</span>
+        <h3>Search the shelves</h3>
+        <p>Explore by title, author, or genre and discover something you didn't expect.</p>
+      </article>
+      <article class="feature-card">
+        <span class="feature-number">04</span>
+        <h3>Tools for librarians</h3>
+        <p>Keep the catalog organized and help your community find its next good read.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="landing-section how-section" aria-labelledby="how-heading">
+    <div class="section-heading">
+      <div>
+        <p class="section-kicker">THREE EASY STEPS</p>
+        <h2 id="how-heading">Your next read is closer than you think.</h2>
+      </div>
+    </div>
+    <ol class="steps-list">
+      <li class="step-card">
+        <span class="step-number">1</span>
+        <h3>Create an account</h3>
+        <p>Join Bookend as a patron in just a moment.</p>
+      </li>
+      <li class="step-card">
+        <span class="step-number">2</span>
+        <h3>Find a book</h3>
+        <p>Browse the collection and choose a story for your shelf.</p>
+      </li>
+      <li class="step-card">
+        <span class="step-number">3</span>
+        <h3>Borrow and return</h3>
+        <p>Enjoy your book, then return it when you're done.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="landing-cta" aria-labelledby="cta-heading">
+    <div>
+      <p class="section-kicker">YOUR NEXT CHAPTER STARTS HERE</p>
+      <h2 id="cta-heading">Start borrowing today.</h2>
+      <p>A new favorite is waiting somewhere on the shelves.</p>
+    </div>
+    <a class="landing-button landing-button-light" href="{{ url_for('auth.register') }}">Sign up <span aria-hidden="true">→</span></a>
+  </section>
+{% endblock %}
+
+{% block page_footer %}
+  {% include "landing/_footer.html" %}
+{% endblock %}

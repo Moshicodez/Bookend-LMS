@@ -84,10 +84,10 @@
                     {% endif %}
                     <form class="login-form" method="post" action="{{ url_for('auth.login') }}">
                       <div class="form-field">
-                        <label for="login-username">Username</label>
+                        <label for="login-username">Username or email</label>
                         <input id="login-username" name="username" type="text"
-                          value="{{ username or '' }}" placeholder="Enter your username"
-                          autocomplete="username" required>
+                          value="{{ username or '' }}" placeholder="Enter your username or email"
+                          autocomplete="username email" required>
                       </div>
                       <div class="form-field">
                         <div class="label-row">

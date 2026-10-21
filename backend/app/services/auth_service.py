@@ -62,7 +62,10 @@ class AuthService:
         )
 
     def login(self, username, password):
-        user = self._user_repo.find_username((username or "").strip())
+        login_identifier = (username or "").strip()
+        user = self._user_repo.find_username(login_identifier)
+        if user is None and "@" in login_identifier:
+            user = self._user_repo.find_email(login_identifier.lower())
 
         if user is not None and not user.active:
             raise ValidationError("This account has been deactivated. Please contact a librarian.")

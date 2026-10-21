@@ -25,12 +25,16 @@ def create_app(test_config=None):
     from .routes.auth import auth_bp
     from .routes.books import books_bp
     from .routes.dashboard import dashboard_bp
+    from .routes.landing import landing_bp
     from .routes.loans import loans_bp
     from .routes.members import members_bp
+    from .schema_migrations import upgrade_legacy_sqlite_schema
 
     with app.app_context():
         db.create_all()
+        upgrade_legacy_sqlite_schema()
 
+    app.register_blueprint(landing_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(books_bp)

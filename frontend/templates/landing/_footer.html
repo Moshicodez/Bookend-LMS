@@ -1,0 +1,31 @@
+<footer class="landing-footer">
+  <div class="footer-main">
+    <div class="footer-about">
+      <a class="brand landing-brand footer-brand" href="{{ url_for('landing.index') }}" aria-label="Bookend Library home">
+        <span class="brand-mark" aria-hidden="true">B</span>
+        <span>bookend<span class="brand-period">.</span></span>
+      </a>
+      <p>A friendly library management system that brings readers and stories together.</p>
+    </div>
+    <div class="footer-links">
+      <h2>Explore</h2>
+      <a href="#trending-books">Browse books</a>
+      <a href="#genre-browser">Genres</a>
+      <a href="#about">About Bookend</a>
+    </div>
+    <div class="footer-links">
+      <h2>Your account</h2>
+      <a href="{{ url_for('auth.login') }}">Login</a>
+      <a href="{{ url_for('auth.register') }}">Sign up</a>
+    </div>
+    <div class="footer-links footer-team">
+      <h2>Made by</h2>
+      <p>Project group</p>
+      <p>Member name · Member name · Member name</p>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© {{ current_year }} Bookend Library</p>
+    <a href="#top">Back to top ↑</a>
+  </div>
+</footer>

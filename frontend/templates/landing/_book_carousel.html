@@ -1,0 +1,40 @@
+<div class="section-heading carousel-heading">
+  <div>
+    <p class="section-kicker">FROM THE CATALOG</p>
+    <h2 id="{{ carousel_id }}-heading">{{ carousel_title }}</h2>
+  </div>
+  {% if carousel_books %}
+  <div class="carousel-controls" aria-label="{{ carousel_title }} controls">
+    <button
+      class="carousel-arrow"
+      type="button"
+      data-carousel-direction="-1"
+      data-carousel-target="{{ carousel_id }}-track"
+      aria-label="Scroll {{ carousel_title }} left"
+      disabled
+    >
+      <span aria-hidden="true">←</span>
+    </button>
+    <button
+      class="carousel-arrow"
+      type="button"
+      data-carousel-direction="1"
+      data-carousel-target="{{ carousel_id }}-track"
+      aria-label="Scroll {{ carousel_title }} right"
+    >
+      <span aria-hidden="true">→</span>
+    </button>
+  </div>
+  {% endif %}
+</div>
+
+{% if carousel_books %}
+<div class="book-carousel" id="{{ carousel_id }}-track" tabindex="0" aria-labelledby="{{ carousel_id }}-heading">
+  {% for book in carousel_books %}
+    {% set cover_color = cover_colors[loop.index0 % cover_colors|length] %}
+    {% include "landing/_book_card.html" %}
+  {% endfor %}
+</div>
+{% else %}
+<p class="landing-empty carousel-empty">No books to show here just yet. Check back after the catalog grows.</p>
+{% endif %}

@@ -1,0 +1,88 @@
+<section class="landing-section genre-section" id="genre-browser" aria-labelledby="genre-heading">
+  <div class="section-heading">
+    <div>
+      <p class="section-kicker">PICK A MOOD</p>
+      <h2 id="genre-heading">Browse the stacks</h2>
+    </div>
+    <span class="section-note">A shelf for every kind of story</span>
+  </div>
+
+  <div class="genre-carousel" data-genre-carousel>
+    <button
+      class="genre-carousel-arrow genre-carousel-previous"
+      type="button"
+      data-genre-direction="-1"
+      aria-label="Previous genre"
+    ><span aria-hidden="true">←</span></button>
+    <div
+      class="genre-row"
+      data-genre-row
+      role="group"
+      aria-label="Browse books by genre"
+      aria-roledescription="carousel"
+      tabindex="0"
+    >
+      <div class="genre-ring" data-genre-ring>
+        {% for genre in genre_sections %}
+        <button
+          class="genre-card{% if loop.first %} is-selected{% endif %}"
+          type="button"
+          data-genre-card
+          data-genre-name="{{ genre.name }}"
+          aria-label="{{ genre.name }}, {{ loop.index }} of {{ loop.length }}"
+          aria-pressed="{{ 'true' if loop.first else 'false' }}"
+          aria-controls="genre-books-panel"
+        >
+          <span class="genre-stack" aria-hidden="true">
+            {% for book in genre.books %}
+              {% set cover_color = cover_colors[loop.index0 % cover_colors|length] %}
+              <span class="genre-cover genre-cover-{{ loop.index0 }}" style="--cover-color: {{ cover_color }}">
+                <span>{{ book.title }}</span>
+              </span>
+            {% endfor %}
+          </span>
+          <span class="genre-name">{{ genre.name }}</span>
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+    <button
+      class="genre-carousel-arrow genre-carousel-next"
+      type="button"
+      data-genre-direction="1"
+      aria-label="Next genre"
+    ><span aria-hidden="true">→</span></button>
+  </div>
+
+  <div class="genre-panel">
+    <span class="genre-caret" data-genre-caret aria-hidden="true"></span>
+    <div id="genre-books-panel" class="genre-panel-content" aria-live="polite">
+      {% for genre in genre_sections %}
+      <section
+        class="genre-panel-section"
+        data-genre-panel
+        data-genre-name="{{ genre.name }}"
+        aria-label="{{ genre.name }} books"
+        {% if not loop.first %}hidden{% endif %}
+      >
+        <div class="section-heading genre-panel-heading">
+          <h3>{{ "Featured books" if genre.name == "Featured" else genre.name + " books" }}</h3>
+          {% if genre.all_books %}
+          <span class="section-count">{{ genre.all_books|length }} books</span>
+          {% endif %}
+        </div>
+        {% if genre.all_books %}
+        <div class="landing-book-grid">
+          {% for book in genre.all_books %}
+            {% set cover_color = cover_colors[loop.index0 % cover_colors|length] %}
+            {% include "landing/_book_card.html" %}
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="landing-empty">No books in this stack yet. Ask your librarian to add some.</p>
+        {% endif %}
+      </section>
+      {% endfor %}
+    </div>
+  </div>
+</section>
