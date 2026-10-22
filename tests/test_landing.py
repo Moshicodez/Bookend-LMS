@@ -1,5 +1,8 @@
 import unittest
 from datetime import date, timedelta
+from html import unescape
+import json
+import re
 
 from werkzeug.security import generate_password_hash
 
@@ -37,7 +40,22 @@ class LandingRouteTests(unittest.TestCase):
         self.assertIn(b"Browse the stacks", response.data)
         self.assertIn(b"No books to show here just yet", response.data)
         self.assertIn(b"No books in this stack yet", response.data)
-        self.assertIn(b"css/genre-carousel.css", response.data)
+        self.assertIn(b"dist/genre-carousel.css", response.data)
+        self.assertIn(b"dist/genre-carousel.js", response.data)
+        self.assertIn(b'id="genre-carousel-root"', response.data)
+        self.assertIn(b"data:image/svg+xml", response.data)
+        items_attribute = re.search(rb'data-items="([^"]+)"', response.data)
+        self.assertIsNotNone(items_attribute)
+        carousel_items = json.loads(unescape(items_attribute.group(1).decode()))
+        self.assertEqual(
+            [item["title"] for item in carousel_items],
+            ["Featured", "History", "Kids", "Mystery", "Crime", "Horror", "Thriller", "Romance", "Drama"],
+        )
+        self.assertTrue(all(item["src"].startswith("data:image/svg+xml,") for item in carousel_items))
+        for asset in ("css", "js"):
+            response = self.client.get(f"/static/dist/genre-carousel.{asset}")
+            self.assertEqual(response.status_code, 200)
+            response.close()
 
     def test_landing_shows_database_books_and_statistics(self):
         reader = UserRecord(

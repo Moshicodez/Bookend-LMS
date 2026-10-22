@@ -5,11 +5,11 @@
 {% block main_class %}landing-main{% endblock %}
 {% block page_styles %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/genre-carousel.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='dist/genre-carousel.css') }}">
 {% endblock %}
 {% block page_scripts %}
   <script src="{{ url_for('static', filename='js/landing.js') }}" defer></script>
-  <script src="{{ url_for('static', filename='js/genre-carousel.js') }}" defer></script>
+  <script type="module" src="{{ url_for('static', filename='dist/genre-carousel.js') }}"></script>
 {% endblock %}
 {% block site_header %}
   {% include "landing/_navbar.html" %}

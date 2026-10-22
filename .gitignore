@@ -156,6 +156,7 @@ activemq-data/
 env/
 venv/
 ENV/
+frontend/react/node_modules/
 env.bak/
 venv.bak/
 
@@ -218,3 +219,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Keep the built carousel available to Flask when the frontend is not rebuilt.
+!frontend/static/dist/
+!frontend/static/dist/**

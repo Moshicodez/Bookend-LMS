@@ -1,0 +1,32 @@
+.genre-carousel-host {
+  position: relative;
+  width: 100%;
+  height: 560px;
+}
+
+.genre-carousel-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.genre-carousel-host .circular-carousel {
+  --cc-fade: #f6f4ee;
+}
+
+.genre-carousel-host .circular-carousel:focus-visible {
+  outline: 3px solid #9cae8f;
+  outline-offset: 4px;
+}
+
+@media (max-width: 680px) {
+  .genre-carousel-host {
+    height: 420px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .genre-carousel-host .circular-carousel__stage {
+    transition-duration: 0.01ms;
+  }
+}

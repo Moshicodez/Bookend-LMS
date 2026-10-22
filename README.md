@@ -2,12 +2,20 @@
 
 ## Run the application
 
-Install the dependencies and start the Flask app:
+Install the Python dependencies, build the ReactBits genre carousel, and start the Flask app:
 
 ```powershell
 pip install -r requirements.txt
+cd frontend/react
+npm install
+npm run build
+cd ../..
 python main.py
 ```
+
+The landing-page genre carousel uses the ReactBits CircularCarousel component.
+Its source and license are in `frontend/react`; rebuild its static assets with
+`npm run build` from that directory after changing the component.
 
 The app creates its SQLite database and its `users`, `books`, and `loans` tables
 automatically in Flask's instance folder. Set `BOOKEND_DATABASE_URL` to use a

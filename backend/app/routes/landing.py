@@ -1,6 +1,8 @@
 from datetime import date
+from html import escape
+from urllib.parse import quote
 
-from flask import Blueprint, redirect, render_template, request, session, url_for
+from flask import Blueprint, render_template, request
 
 from ..extensions import db
 from ..models.loan_record import LoanRecord
@@ -28,6 +30,60 @@ SEARCH_FIELDS = {
     "isbn": ("isbn",),
 }
 COVER_COLORS = ("#a44235", "#476d57", "#536779", "#98713f", "#695676", "#9a5947")
+
+
+def _genre_carousel_items(genre_sections):
+    items = []
+    for index, genre in enumerate(genre_sections):
+        books = genre["books"]
+        cover_titles = [
+            escape((book.title or genre["name"])[:22])
+            for book in books[:3]
+        ] or [escape(genre["name"])]
+        while len(cover_titles) < 3:
+            cover_titles.append(escape(genre["name"]))
+
+        cover_groups = []
+        cover_positions = (
+            (95, 178, -12),
+            (205, 145, 0),
+            (315, 178, 12),
+        )
+        for cover_index, (x, y, angle) in enumerate(cover_positions):
+            cover_color = COVER_COLORS[(index + cover_index) % len(COVER_COLORS)]
+            cover_groups.append(
+                f'<g transform="translate({x} {y}) rotate({angle} 85 135)">'
+                f'<rect width="170" height="270" rx="8" fill="{cover_color}"/>'
+                '<rect x="11" y="11" width="148" height="248" rx="3" '
+                'fill="none" stroke="#fffefa" stroke-opacity=".6"/>'
+                f'<text x="85" y="132" fill="#fffefa" font-family="Georgia,serif" '
+                f'font-size="16" text-anchor="middle">{cover_titles[cover_index]}</text>'
+                '</g>'
+            )
+
+        genre_name = escape(genre["name"])
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">'
+            '<rect width="600" height="600" fill="#f6f4ee"/>'
+            '<circle cx="300" cy="275" r="238" fill="#eeece3"/>'
+            '<text x="300" y="74" fill="#435b43" font-family="Arial,sans-serif" '
+            'font-size="14" letter-spacing="5" text-anchor="middle">BOOKEND LIBRARY</text>'
+            f'{"".join(cover_groups)}'
+            f'<text x="300" y="526" fill="#252a25" font-family="Georgia,serif" '
+            f'font-size="34" text-anchor="middle">{genre_name}</text>'
+            '<text x="300" y="557" fill="#777b70" font-family="Arial,sans-serif" '
+            'font-size="13" letter-spacing="3" text-anchor="middle">BROWSE THE STACKS</text>'
+            '</svg>'
+        )
+        items.append(
+            {
+                "src": f"data:image/svg+xml,{quote(svg, safe='')}",
+                "alt": f"{genre['name']} book covers from the Bookend library",
+                "title": genre["name"],
+                "subtitle": f"{len(genre['all_books'])} books",
+            }
+        )
+    return items
 
 
 @landing_bp.route("/")
@@ -108,6 +164,7 @@ def index():
         new_arrivals=new_arrivals,
         available_books=available_books,
         genre_sections=genre_sections,
+        genre_carousel_items=_genre_carousel_items(genre_sections),
         cover_colors=COVER_COLORS,
         stats={
             "books": len(books),
