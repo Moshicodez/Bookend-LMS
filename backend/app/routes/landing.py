@@ -32,9 +32,6 @@ COVER_COLORS = ("#a44235", "#476d57", "#536779", "#98713f", "#695676", "#9a5947"
 
 @landing_bp.route("/")
 def index():
-    if session.get("user_id"):
-        return redirect(url_for("dashboard.dashboard"))
-
     books = BookRepository().find_all()
     loan_counts = dict(
         db.session.execute(

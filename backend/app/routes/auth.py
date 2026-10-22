@@ -46,7 +46,7 @@ def login():
     session["user_id"] = user.user_id
     session["username"] = user.username
     session["role"] = user.role
-    return redirect(url_for(f"dashboard.{user.home_endpoint()}"))
+    return redirect(url_for("landing.index"))
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])

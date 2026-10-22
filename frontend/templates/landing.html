@@ -143,10 +143,14 @@
   <section class="landing-cta" aria-labelledby="cta-heading">
     <div>
       <p class="section-kicker">YOUR NEXT CHAPTER STARTS HERE</p>
-      <h2 id="cta-heading">Start borrowing today.</h2>
+      <h2 id="cta-heading">{% if session.get('user_id') %}Keep exploring the shelves.{% else %}Start borrowing today.{% endif %}</h2>
       <p>A new favorite is waiting somewhere on the shelves.</p>
     </div>
+    {% if session.get('user_id') %}
+    <a class="landing-button landing-button-light" href="{{ url_for('dashboard.patron_dashboard' if session.get('role') == 'patron' else 'dashboard.librarian_dashboard') }}">Go to dashboard <span aria-hidden="true">→</span></a>
+    {% else %}
     <a class="landing-button landing-button-light" href="{{ url_for('auth.register') }}">Sign up <span aria-hidden="true">→</span></a>
+    {% endif %}
   </section>
 {% endblock %}
 

@@ -15,8 +15,12 @@
     </div>
     <div class="footer-links">
       <h2>Your account</h2>
+      {% if session.get('user_id') %}
+      <a href="{{ url_for('dashboard.patron_dashboard' if session.get('role') == 'patron' else 'dashboard.librarian_dashboard') }}">Dashboard</a>
+      {% else %}
       <a href="{{ url_for('auth.login') }}">Login</a>
       <a href="{{ url_for('auth.register') }}">Sign up</a>
+      {% endif %}
     </div>
     <div class="footer-links footer-team">
       <h2>Made by</h2>

@@ -35,7 +35,11 @@
 
   <div class="hero-actions">
     <a class="landing-button" href="#trending-books">Browse Books <span aria-hidden="true">→</span></a>
+    {% if session.get('user_id') %}
+    <a class="landing-button landing-button-outline" href="{{ url_for('dashboard.patron_dashboard' if session.get('role') == 'patron' else 'dashboard.librarian_dashboard') }}">Dashboard</a>
+    {% else %}
     <a class="landing-button landing-button-outline" href="{{ url_for('auth.login') }}">Login</a>
+    {% endif %}
   </div>
-  <p class="hero-note">A welcoming place for every reader.</p>
+  <p class="hero-note">{% if session.get('user_id') %}Welcome back, {{ session.get('username', 'reader') }}.{% else %}A welcoming place for every reader.{% endif %}</p>
 </section>

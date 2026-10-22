@@ -54,7 +54,11 @@ class AuthRouteTests(unittest.TestCase):
             data={"username": "reader", "password": "StrongPass1!"},
         )
         self.assertEqual(login_response.status_code, 302)
-        self.assertEqual(login_response.location, "/patron")
+        self.assertEqual(login_response.location, "/")
+        landing_response = self.client.get("/")
+        self.assertEqual(landing_response.status_code, 200)
+        self.assertIn(b"Hi, reader", landing_response.data)
+        self.assertIn(b"Log out", landing_response.data)
 
     def test_registered_patron_can_sign_in_with_email(self):
         self.client.post(
@@ -74,7 +78,7 @@ class AuthRouteTests(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.location, "/patron")
+        self.assertEqual(response.location, "/")
 
     def test_signup_page_has_patron_only_form_and_page_turn_link(self):
         response = self.client.get("/register")
@@ -139,7 +143,8 @@ class AuthRouteTests(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.location, "/librarian")
+        self.assertEqual(response.location, "/")
+        self.assertEqual(self.client.get("/librarian").status_code, 200)
         self.assertIn(b"manage the library", self.client.get("/librarian").data)
 
     def test_users_cannot_open_another_role_dashboard(self):

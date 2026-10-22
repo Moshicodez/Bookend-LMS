@@ -103,7 +103,7 @@ class LandingRouteTests(unittest.TestCase):
         self.assertIn(b"The Quiet Room", results_html)
         self.assertNotIn(b"The Harbor Archive", results_html)
 
-    def test_signed_in_user_is_redirected_to_role_dashboard(self):
+    def test_signed_in_user_can_view_landing_page_and_dashboard_link(self):
         patron = UserRecord(
             email="reader@example.com",
             username="reader",
@@ -118,8 +118,10 @@ class LandingRouteTests(unittest.TestCase):
 
         response = self.client.get("/")
 
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.location, "/dashboard")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Hi, reader", response.data)
+        self.assertIn(b'href="/patron">Dashboard</a>', response.data)
+        self.assertIn(b"Log out", response.data)
 
 
 if __name__ == "__main__":
