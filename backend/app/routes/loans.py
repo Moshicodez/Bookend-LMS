@@ -25,8 +25,8 @@ def index():
         return response
     if user.is_librarian():
         user.require("manage_loans")
-        loans = loan_repository.find_all()
-        loan_cards = None
+        loans = []
+        loan_cards = loan_service.management_cards(user)
     else:
         loans = []
         loan_cards = loan_service.loan_cards(user)
@@ -66,6 +66,24 @@ def return_book(book_id):
     return redirect(url_for("loans.index"))
 
 
+@loans_bp.route("/manage/<int:book_id>/return", methods=["POST"])
+def librarian_return_book(book_id):
+    user, response = _require_user()
+    if response:
+        return response
+    loan_service.process_return(user, book_id)
+    return redirect(url_for("loans.index"))
+
+
+@loans_bp.route("/manage/<int:book_id>/lost", methods=["POST"])
+def librarian_mark_lost(book_id):
+    user, response = _require_user()
+    if response:
+        return response
+    loan_service.process_return(user, book_id, lost=True)
+    return redirect(url_for("loans.index"))
+
+
 @loans_bp.route("/<int:loan_id>/pay-late-fee", methods=["POST"])
 def pay_late_fee(loan_id):
     user, response = _require_user()
@@ -90,11 +108,11 @@ def overdue():
     if response:
         return response
     user.require("manage_loans")
-    loans = loan_repository.find_overdue()
+    loans = []
     return render_template(
         "loans/loans.html",
         loans=loans,
-        loan_cards=None,
+        loan_cards=loan_service.management_cards(user, overdue_only=True),
         user=user,
         overdue=True,
     )

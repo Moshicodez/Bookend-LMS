@@ -32,6 +32,10 @@ class BookService:
         librarian.require("archive_book")
         return self._book_repo.find_archived()
 
+    def management_books(self, librarian):
+        librarian.require("edit_book")
+        return self._book_repo.find_all(include_archived=True)
+
     def seed_demo(self, books):
         seeded_count = 0
         for item in books:

@@ -87,14 +87,7 @@ class LoanService:
         cards = []
         for loan in self._loan_repo.find_patron_loans(patron.user_id):
             book = self._book_repo.find_book(loan.book_id)
-            if loan.lost:
-                status = "Lost"
-            elif loan.is_returned():
-                status = "Returned"
-            elif loan.due_date < current_date:
-                status = "Overdue"
-            else:
-                status = "On loan"
+            status = self._loan_status(loan, current_date)
             cards.append(
                 {
                     "loan": loan,
@@ -102,6 +95,35 @@ class LoanService:
                     "status": status,
                     "outstanding": loan.outstanding(current_date),
                     "fees": loan.fee_breakdown(current_date),
+                }
+            )
+        return cards
+
+    @staticmethod
+    def _loan_status(loan, current_date):
+        if loan.lost:
+            return "Lost"
+        if loan.is_returned():
+            return "Returned"
+        if loan.due_date < current_date:
+            return "Overdue"
+        return "On loan"
+
+    def management_cards(self, librarian, overdue_only=False):
+        librarian.require("manage_loans")
+        loans = (
+            self._loan_repo.find_overdue()
+            if overdue_only
+            else self._loan_repo.find_all()
+        )
+        cards = []
+        for loan in loans:
+            cards.append(
+                {
+                    "loan": loan,
+                    "book": self._book_repo.find_book(loan.book_id),
+                    "status": self._loan_status(loan, today()),
+                    "outstanding": loan.outstanding(today()),
                 }
             )
         return cards

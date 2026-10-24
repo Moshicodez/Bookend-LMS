@@ -107,6 +107,15 @@ def add():
     return redirect(url_for("books.detail", book_id=book.book_id))
 
 
+@books_bp.route("/manage")
+def manage():
+    user, response = _require_user()
+    if response:
+        return response
+    books = book_service.management_books(user)
+    return render_template("books/manage.html", books=books, user=user)
+
+
 @books_bp.route("/<int:book_id>/edit", methods=["GET", "POST"])
 def edit(book_id):
     user, response = _require_user()
@@ -136,6 +145,15 @@ def archive(book_id):
         return response
     book_service.archive_book(user, book_id)
     return redirect(url_for("books.catalog"))
+
+
+@books_bp.route("/<int:book_id>/delete", methods=["POST"])
+def delete(book_id):
+    user, response = _require_user()
+    if response:
+        return response
+    book_service.archive_book(user, book_id)
+    return redirect(url_for("books.manage"))
 
 
 @books_bp.route("/archived")

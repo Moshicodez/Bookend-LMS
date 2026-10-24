@@ -1,21 +1,77 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Librarian dashboard | Bookend Library</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
-  <main>
+{% extends "base.html" %}
+{% block title %}Librarian dashboard | Bookend Library{% endblock %}
+{% block content %}
+  <section class="page-heading dashboard-heading">
+    <p class="eyebrow">LIBRARY OVERVIEW</p>
     <h1>Welcome, {{ username }}</h1>
-    <p>Your librarian account is ready to manage the library.</p>
-    <p><a href="{{ url_for('books.catalog') }}">Browse the catalog</a></p>
-    <p><a href="{{ url_for('loans.index') }}">Manage loans</a></p>
-    <p><a href="{{ url_for('members.index') }}">Manage patron accounts</a></p>
-    <form method="post" action="{{ url_for('auth.logout') }}">
-      <button type="submit">Sign out</button>
-    </form>
-  </main>
-</body>
-</html>
+    <p>Your library at a glance.</p>
+  </section>
+  <section class="admin-stat-grid" aria-label="Library statistics">
+    <article class="admin-stat-card"><span>Books</span><strong>{{ dashboard.stats.books }}</strong></article>
+    <article class="admin-stat-card"><span>Genres</span><strong>{{ dashboard.stats.genres }}</strong></article>
+    <article class="admin-stat-card"><span>On loan</span><strong>{{ dashboard.stats.on_loan }}</strong></article>
+    <article class="admin-stat-card"><span>Overdue</span><strong>{{ dashboard.stats.overdue }}</strong></article>
+    <article class="admin-stat-card"><span>Patrons</span><strong>{{ dashboard.stats.patrons }}</strong></article>
+    <article class="admin-stat-card"><span>Fees collected</span><strong>${{ "%.2f"|format(dashboard.stats.fees_collected) }}</strong></article>
+  </section>
+
+  <div class="admin-dashboard-columns">
+    <section class="admin-panel" aria-labelledby="recent-loans-title">
+      <div class="admin-panel-heading">
+        <div><p class="eyebrow">LATEST ACTIVITY</p><h2 id="recent-loans-title">Recent loans</h2></div>
+        <a href="{{ url_for('loans.index') }}">View all</a>
+      </div>
+      {% if dashboard.recent_loans %}
+        <div class="table-scroll">
+          <table class="admin-table">
+            <thead><tr><th>Book</th><th>Patron</th><th>Due date</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for item in dashboard.recent_loans %}
+                <tr>
+                  <td>{{ item.book_title }}</td>
+                  <td>{{ item.patron_name }}</td>
+                  <td>{{ item.loan.due_date.strftime("%b %d, %Y") }}</td>
+                  <td><span class="loan-status status-{{ item.status|lower|replace(' ', '-') }}">{{ item.status }}</span></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="muted">No loans have been recorded yet.</p>
+      {% endif %}
+    </section>
+
+    <section class="admin-panel" aria-labelledby="popular-books-title">
+      <div class="admin-panel-heading">
+        <div><p class="eyebrow">READER FAVORITES</p><h2 id="popular-books-title">Most borrowed books</h2></div>
+      </div>
+      {% if dashboard.most_borrowed %}
+        <ol class="most-borrowed-list">
+          {% for item in dashboard.most_borrowed %}
+            <li>
+              {% if item.book.cover %}
+                <img src="{{ url_for('static', filename='uploads/' ~ item.book.cover) }}" alt="">
+              {% else %}
+                <span class="mini-cover" aria-hidden="true">{{ item.book.title[:1] }}</span>
+              {% endif %}
+              <span><strong>{{ item.book.title }}</strong><small>{{ item.book.author }}</small></span>
+              <b>{{ item.loan_count }} loans</b>
+            </li>
+          {% endfor %}
+        </ol>
+      {% else %}
+        <p class="muted">Borrowed books will appear here.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  <section class="admin-quick-links" aria-label="Librarian tools">
+    <a href="{{ url_for('books.manage') }}"><span aria-hidden="true">▤</span> Manage books</a>
+    <a href="{{ url_for('books.add') }}"><span aria-hidden="true">＋</span> Add a book</a>
+    <a href="{{ url_for('loans.index') }}"><span aria-hidden="true">↗</span> Manage loans</a>
+    <a href="{{ url_for('loans.overdue') }}"><span aria-hidden="true">◷</span> Overdue loans</a>
+    <a href="{{ url_for('members.index') }}"><span aria-hidden="true">♙</span> Members</a>
+    <a href="{{ url_for('social.moderate_reviews') }}"><span aria-hidden="true">☆</span> Reviews</a>
+  </section>
+{% endblock %}

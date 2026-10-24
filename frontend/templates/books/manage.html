@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Manage books | Bookend Library{% endblock %}
+{% block content %}
+  <section class="page-heading">
+    <p class="eyebrow">LIBRARIAN TOOLS</p>
+    <h1>Manage books</h1>
+    <p>Update catalog details, covers, and availability.</p>
+    <a class="button" href="{{ url_for('books.add') }}">Add a book</a>
+  </section>
+  {% if books %}
+    <div class="table-scroll">
+      <table class="admin-table books-admin-table">
+        <thead><tr><th>Cover</th><th>Book</th><th>Genre</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for book in books %}
+            <tr>
+              <td>
+                {% if book.cover %}
+                  <img class="admin-cover-thumb" src="{{ url_for('static', filename='uploads/' ~ book.cover) }}" alt="Cover of {{ book.title }}">
+                {% else %}
+                  <span class="mini-cover" aria-hidden="true">{{ book.title[:1] }}</span>
+                {% endif %}
+              </td>
+              <td><strong>{{ book.title }}</strong><small>by {{ book.author }}</small></td>
+              <td>{{ book.genre or "Uncategorized" }}</td>
+              <td>
+                {% if not book.catalog %}Archived
+                {% elif book.can_borrow() %}Available
+                {% elif book.available %}In-library use
+                {% else %}On loan
+                {% endif %}
+              </td>
+              <td class="admin-actions">
+                <a class="button button-secondary" href="{{ url_for('books.edit', book_id=book.book_id) }}">Edit</a>
+                {% if book.catalog %}
+                  {% if book.available %}
+                    <form method="post" action="{{ url_for('books.delete', book_id=book.book_id) }}" onsubmit="return confirm('Remove this book from the catalog? Loan history will be kept.');">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button class="button button-danger" type="submit">Delete</button>
+                    </form>
+                  {% else %}
+                    <span class="muted">Unavailable while on loan</span>
+                  {% endif %}
+                {% else %}
+                  <form method="post" action="{{ url_for('books.restore', book_id=book.book_id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="button button-secondary" type="submit">Restore</button>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <section class="empty-state">
+      <h2>No books in the catalog</h2>
+      <p>Add the first book to get started.</p>
+    </section>
+  {% endif %}
+{% endblock %}

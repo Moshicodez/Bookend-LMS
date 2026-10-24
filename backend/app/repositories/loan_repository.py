@@ -103,6 +103,21 @@ class LoanRepository:
         ).scalars()
         return [self._to_domain_loan(record) for record in records]
 
+    def most_borrowed(self, limit=5):
+        rows = db.session.execute(
+            db.select(
+                LoanRecord.book_id,
+                db.func.count(LoanRecord.loan_id).label("loan_count"),
+            )
+            .group_by(LoanRecord.book_id)
+            .order_by(db.desc("loan_count"), LoanRecord.book_id)
+            .limit(limit)
+        ).all()
+        return [
+            {"book_id": book_id, "loan_count": loan_count}
+            for book_id, loan_count in rows
+        ]
+
     def return_record(self, loan_id, returned_at):
         loan_id = self._valid_id(loan_id)
         if loan_id is None:

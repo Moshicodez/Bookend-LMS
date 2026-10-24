@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Archived books | Bookend Library{% endblock %}
+{% block content %}
+  <h1>Archived books</h1>
+  <p><a href="{{ url_for('books.catalog') }}">Back to catalog</a></p>
+  {% if books %}
+    <ul>
+      {% for book in books %}
+        <li>
+          <strong>{{ book.title }}</strong> by {{ book.author }}
+          {% if book.genre %}<span> · {{ book.genre }}</span>{% endif %}
+          <form method="post" action="{{ url_for('books.restore', book_id=book.book_id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit">Restore</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No archived books.</p>
+  {% endif %}
+{% endblock %}

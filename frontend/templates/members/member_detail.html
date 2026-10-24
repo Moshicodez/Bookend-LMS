@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ member.username }} | Members | Bookend Library{% endblock %}
+{% block content %}
+  <p class="breadcrumbs"><a href="{{ url_for('members.index') }}">Members</a><span aria-hidden="true">/</span><span>{{ member.username }}</span></p>
+  <section class="member-profile-card">
+    <div class="profile-avatar" aria-hidden="true">{{ member.username[:1]|upper }}</div>
+    <div>
+      <p class="eyebrow">PATRON PROFILE</p>
+      <h1>{{ member.username }}</h1>
+      <p>{{ member.email }}</p>
+      <span class="member-account-status">{{ "Active account" if member.active else "Deactivated account" }}</span>
+    </div>
+  </section>
+  <section class="member-history-section" aria-labelledby="member-history-title">
+    <div class="admin-panel-heading">
+      <div><p class="eyebrow">ACCOUNT ACTIVITY</p><h2 id="member-history-title">Full loan history</h2></div>
+      <span>{{ history|length }} loan{{ "" if history|length == 1 else "s" }}</span>
+    </div>
+    {% if history %}
+      <div class="loan-card-grid">
+        {% for entry in history %}
+          <article class="loan-card">
+            {% if entry.book and entry.book.cover %}
+              <img src="{{ url_for('static', filename='uploads/' ~ entry.book.cover) }}" alt="Cover of {{ entry.book.title }}">
+            {% else %}
+              <span class="basket-cover-fallback" aria-hidden="true">{{ entry.book_title[:1] }}</span>
+            {% endif %}
+            <div class="loan-card-content">
+              <span class="loan-status status-{{ entry.status|lower|replace(' ', '-') }}">{{ entry.status }}</span>
+              <h3>{{ entry.book_title }}</h3>
+              <p>Borrowed {{ entry.loan.borrowed_at.strftime("%b %d, %Y") }}</p>
+              <p>Due {{ entry.loan.due_date.strftime("%b %d, %Y") }}</p>
+              {% if entry.loan.returned_at %}<p>Returned {{ entry.loan.returned_at.strftime("%b %d, %Y") }}</p>{% endif %}
+              <p>Outstanding: ${{ "%.2f"|format(entry.outstanding) }}</p>
+              {% if entry.fees %}
+                <ul class="member-fees">
+                  {% for fee in entry.fees %}
+                    <li>{{ fee.type }}: ${{ "%.2f"|format(fee.amount) }} · {{ "Paid" if fee.paid else "Unpaid" }}</li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p>This patron has no loan history.</p>
+    {% endif %}
+  </section>
+{% endblock %}

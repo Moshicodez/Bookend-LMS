@@ -44,6 +44,38 @@
         </article>
       {% endfor %}
     </div>
+  {% elif user.is_librarian() and loan_cards %}
+    <div class="table-scroll">
+      <table class="admin-table">
+        <thead><tr><th>Book</th><th>Patron ID</th><th>Borrowed</th><th>Due</th><th>Status</th><th>Fees</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for card in loan_cards %}
+            <tr>
+              <td>{{ card.book.title if card.book else "Book #" ~ card.loan.book_id }}</td>
+              <td>{{ card.loan.patron_id }}</td>
+              <td>{{ card.loan.borrowed_at.strftime("%b %d, %Y") }}</td>
+              <td>{{ card.loan.due_date.strftime("%b %d, %Y") }}</td>
+              <td><span class="loan-status status-{{ card.status|lower|replace(' ', '-') }}">{{ card.status }}</span></td>
+              <td>${{ "%.2f"|format(card.outstanding) }}</td>
+              <td class="admin-actions">
+                {% if not card.loan.returned_at and not card.loan.lost %}
+                  <form method="post" action="{{ url_for('loans.librarian_return_book', book_id=card.loan.book_id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="button button-secondary" type="submit">Mark returned</button>
+                  </form>
+                  <form method="post" action="{{ url_for('loans.librarian_mark_lost', book_id=card.loan.book_id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="button button-danger" type="submit">Mark lost</button>
+                  </form>
+                {% else %}
+                  <span class="muted">Closed</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   {% elif loans %}
     <ul>
       {% for loan in loans %}

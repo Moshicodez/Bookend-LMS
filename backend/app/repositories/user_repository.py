@@ -1,4 +1,4 @@
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from ..exceptions import ValidationError
 from ..extensions import db
@@ -55,6 +55,22 @@ class UserRepository:
         ).scalars()
         return [self._to_domain_user(record) for record in records]
 
+    def find_patrons(self, search_term=""):
+        statement = db.select(UserRecord).where(UserRecord.role == "patron")
+        search_term = (search_term or "").strip()
+        if search_term:
+            pattern = f"%{search_term}%"
+            statement = statement.where(
+                db.or_(
+                    UserRecord.username.ilike(pattern),
+                    UserRecord.email.ilike(pattern),
+                )
+            )
+        records = db.session.execute(
+            statement.order_by(UserRecord.username)
+        ).scalars()
+        return [self._to_domain_user(record) for record in records]
+
     def find_by_id(self, user_id):
         record = db.session.get(UserRecord, user_id)
         return self._to_domain_user(record) if record else None
@@ -65,6 +81,17 @@ class UserRepository:
             raise ValidationError("User not found.")
         record.active = bool(active)
         db.session.commit()
+
+    def update_password_hash(self, user_id, password_hash):
+        record = db.session.get(UserRecord, user_id)
+        if record is None:
+            raise ValidationError("User not found.")
+        record.password_hash = password_hash
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise
 
     @staticmethod
     def _to_domain_user(record):

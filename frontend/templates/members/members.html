@@ -1,20 +1,59 @@
 {% extends "base.html" %}
 {% block title %}Members | Bookend Library{% endblock %}
 {% block content %}
-  <h1>Patron accounts</h1>
+  <section class="page-heading">
+    <p class="eyebrow">LIBRARIAN TOOLS</p>
+    <h1>Patron accounts</h1>
+  </section>
+  <form method="get" action="{{ url_for('members.index') }}">
+    <label for="member-search">Search by username or email</label>
+    <input id="member-search" name="q" type="search" value="{{ search_term or '' }}">
+    <button type="submit">Search</button>
+  </form>
+  <section aria-labelledby="create-patron-title">
+    <h2 id="create-patron-title">Create patron account</h2>
+    {% if error_message %}<p role="alert">{{ error_message }}</p>{% endif %}
+    <form method="post" action="{{ url_for('members.create') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="q" value="{{ search_term or '' }}">
+      <label for="patron-username">Username</label>
+      <input id="patron-username" name="username" value="{{ form_data.username if form_data else '' }}" required>
+      <label for="patron-email">Email</label>
+      <input id="patron-email" name="email" type="email" value="{{ form_data.email if form_data else '' }}" required>
+      <label for="patron-password">Password</label>
+      <input id="patron-password" name="password" type="password" autocomplete="new-password" required>
+      <label for="patron-confirm-password">Confirm password</label>
+      <input id="patron-confirm-password" name="confirm_password" type="password" autocomplete="new-password" required>
+      <button type="submit">Create patron</button>
+    </form>
+  </section>
+  {% if temporary_password %}
+    <section role="status" aria-labelledby="temporary-password-title">
+      <h2 id="temporary-password-title">Temporary password</h2>
+      <p>Copy this password now. It will not be shown again.</p>
+      <p><code>{{ temporary_password }}</code></p>
+    </section>
+  {% endif %}
   {% if members %}
-    <ul>
+    <ul class="member-list">
       {% for member in members %}
         <li>
           <strong>{{ member.username }}</strong> — {{ member.email }}
           <span>{{ "Active" if member.active else "Deactivated" }}</span>
+          <a class="button button-secondary" href="{{ url_for('members.detail', user_id=member.user_id) }}">View</a>
           <form method="post" action="{{ url_for('members.toggle', user_id=member.user_id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit">{{ "Deactivate" if member.active else "Reactivate" }}</button>
+          </form>
+          <form method="post" action="{{ url_for('members.reset_password', user_id=member.user_id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="q" value="{{ search_term or '' }}">
+            <button type="submit">Reset password</button>
           </form>
         </li>
       {% endfor %}
     </ul>
   {% else %}
-    <p>No patron accounts yet.</p>
+    <p>No matching patron accounts.</p>
   {% endif %}
 {% endblock %}
