@@ -11,7 +11,8 @@ class Librarian(User):
         "archive_book",
         "update_return_status",
         "manage_mem",
-        "manage_loans"
+        "manage_loans",
+        "manage_reviews",
     })
 
     def home_endpoint(self):

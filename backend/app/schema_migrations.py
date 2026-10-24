@@ -6,6 +6,7 @@ from .extensions import db
 SQLITE_COLUMN_UPGRADES = {
     "books": {
         "kind": "VARCHAR(30) NOT NULL DEFAULT 'standard'",
+        "cover": "VARCHAR(255)",
     },
     "loans": {
         "fee_paid": "BOOLEAN NOT NULL DEFAULT 0",

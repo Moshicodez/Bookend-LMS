@@ -1,6 +1,9 @@
 import os
 
 
+COVER_COLORS = ("#a44235", "#476d57", "#536779", "#98713f", "#695676", "#9a5947")
+
+
 class Config:
     SECRET_KEY = os.environ.get("BOOKEND_SECRET_KEY", "dev_only_change_me")
     SQLALCHEMY_DATABASE_URI = os.environ.get(

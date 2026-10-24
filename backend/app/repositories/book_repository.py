@@ -7,6 +7,16 @@ from ..models.book_record import BookRecord
 
 
 class BookRepository:
+    def list_genres(self):
+        return list(
+            db.session.execute(
+                db.select(BookRecord.genre)
+                .where(BookRecord.catalog.is_(True), BookRecord.genre != "")
+                .distinct()
+                .order_by(BookRecord.genre.collate("NOCASE"))
+            ).scalars()
+        )
+
     def create(self, book):
         record = BookRecord(
             kind=book.kind,
@@ -14,6 +24,7 @@ class BookRepository:
             author=book.author,
             genre=book.genre,
             description=book.description,
+            cover=book.cover,
             available=book.available,
             catalog=book.catalog,
         )
@@ -28,11 +39,28 @@ class BookRepository:
         record = db.session.get(BookRecord, book_id)
         return self._to_domain_book(record) if record else None
 
+    def find_by_title_author(self, title, author):
+        record = db.session.execute(
+            db.select(BookRecord).where(
+                db.func.lower(BookRecord.title) == (title or "").strip().lower(),
+                db.func.lower(BookRecord.author) == (author or "").strip().lower(),
+            )
+        ).scalars().first()
+        return self._to_domain_book(record) if record else None
+
     def find_all(self, include_archived=False):
         statement = db.select(BookRecord).order_by(BookRecord.title, BookRecord.book_id)
         if not include_archived:
             statement = statement.where(BookRecord.catalog.is_(True))
         records = db.session.execute(statement).scalars()
+        return [self._to_domain_book(record) for record in records]
+
+    def find_archived(self):
+        records = db.session.execute(
+            db.select(BookRecord)
+            .where(BookRecord.catalog.is_(False), BookRecord.available.is_(True))
+            .order_by(BookRecord.title, BookRecord.book_id)
+        ).scalars()
         return [self._to_domain_book(record) for record in records]
 
     def update_book(self, book):
@@ -47,6 +75,7 @@ class BookRepository:
         record.author = book.author
         record.genre = book.genre
         record.description = book.description
+        record.cover = book.cover
         record.available = book.available
         record.catalog = book.catalog
         self._commit()
@@ -70,6 +99,7 @@ class BookRepository:
             record.description,
             available=record.available,
             catalog=record.catalog,
+            cover=record.cover,
         )
 
     @staticmethod

@@ -1,31 +1,33 @@
 {% extends "base.html" %}
-{% block title %}Catalog | Bookend Library{% endblock %}
+{% block title %}Books | Bookend Library{% endblock %}
 {% block content %}
-  <h1>Library catalog</h1>
+  <section class="page-heading">
+    <p class="eyebrow">THE COLLECTION</p>
+    <h1>Books to borrow</h1>
+  </section>
   <form method="get" action="{{ url_for('books.catalog') }}">
     <label for="catalog-search">Search books</label>
     <input id="catalog-search" name="q" value="{{ search_term }}" type="search">
+    {% if selected_genre %}<input type="hidden" name="genre" value="{{ selected_genre }}">{% endif %}
     <button type="submit">Search</button>
   </form>
+  <nav class="genre-filters" aria-label="Filter books by genre">
+    <a class="{% if not selected_genre %}is-active{% endif %}" href="{{ url_for('books.catalog', q=search_term or None) }}">All genres</a>
+    {% for genre in genres %}
+      <a class="{% if selected_genre|lower == genre|lower %}is-active{% endif %}" href="{{ url_for('books.catalog', q=search_term or None, genre=genre) }}">{{ genre }}</a>
+    {% endfor %}
+  </nav>
   {% if user.is_librarian() %}
     <p><a href="{{ url_for('books.add') }}">Add a book</a></p>
+    <p><a href="{{ url_for('books.archived') }}">Archived books</a></p>
   {% endif %}
   {% if books %}
-    <ul>
+    <div class="book-grid">
       {% for book in books %}
-        <li>
-          <a href="{{ url_for('books.detail', book_id=book.book_id) }}">{{ book.title }}</a>
-          <span>by {{ book.author }}{% if book.genre %} · {{ book.genre }}{% endif %}</span>
-          <span>
-            {% if not book.catalog %}Archived
-            {% elif book.can_borrow() %}Available
-            {% elif book.available %}In-library use
-            {% else %}On loan
-            {% endif %}
-          </span>
-        </li>
+        {% set cover_color = cover_colors[loop.index0 % cover_colors|length] %}
+        {% include "landing/_book_card.html" %}
       {% endfor %}
-    </ul>
+    </div>
   {% else %}
     <p>No matching books found.</p>
   {% endif %}

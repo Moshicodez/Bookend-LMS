@@ -10,6 +10,7 @@ class BookRecord(db.Model):
     author = db.Column(db.String(160), nullable=False)
     genre = db.Column(db.String(100), nullable=False, default="")
     description = db.Column(db.Text, nullable=False, default="")
+    cover = db.Column(db.String(255), nullable=True)
     available = db.Column(db.Boolean, nullable=False, default=True)
     catalog = db.Column(db.Boolean, nullable=False, default=True)
 

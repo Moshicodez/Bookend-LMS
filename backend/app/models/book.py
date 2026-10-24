@@ -11,10 +11,21 @@ class Book:
         super().__init_subclass__(**kwargs)
         Book._registry[cls.KIND] = cls
 
-    def __init__(self, book_id, title, author, genre, description, available=True, catalog=True):
+    def __init__(
+        self,
+        book_id,
+        title,
+        author,
+        genre,
+        description,
+        available=True,
+        catalog=True,
+        cover=None,
+    ):
         self._book_id = book_id
         self._available = bool(available)
         self._catalog = bool(catalog)
+        self._cover = cover
         self._set_details(title, author, genre, description)
 
     @classmethod
@@ -68,6 +79,13 @@ class Book:
         return self._catalog
 
     @property
+    def cover(self):
+        return self._cover
+
+    def set_cover(self, filename):
+        self._cover = filename
+
+    @property
     def kind(self):
         return self.KIND
 
@@ -102,6 +120,7 @@ class Book:
             "author": self._author,
             "genre": self._genre,
             "description": self._description,
+            "cover": self._cover,
             "kind": self.KIND,
             "loan_days": self.loan_days,
             "status": status
@@ -125,6 +144,11 @@ class Book:
             raise ValidationError("This book is on loan. Process its return before archiving.")
         self._catalog = False
 
+    def restore(self):
+        if not self._available:
+            raise ValidationError("An unavailable book cannot be restored to the catalog.")
+        self._catalog = True
+
     def mark_lost(self):
         self._available = False
         self._catalog = False
@@ -137,6 +161,7 @@ class Book:
             "author": self._author,
             "genre": self._genre,
             "description": self._description,
+            "cover": self._cover,
             "available": self._available,
             "catalog": self._catalog
         }

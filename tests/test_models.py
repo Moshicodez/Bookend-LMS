@@ -32,6 +32,9 @@ class BookModelTests(unittest.TestCase):
             Book(None, "", "Author", "", "")
 
         book = Book(None, "Book", "Author", "", "")
+        book.set_cover("cover.jpg")
+        self.assertEqual(book.cover, "cover.jpg")
+        self.assertEqual(book.to_record()["cover"], "cover.jpg")
         book.borrow()
         with self.assertRaises(ValidationError):
             book.archive()

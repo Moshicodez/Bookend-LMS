@@ -4,10 +4,12 @@ from urllib.parse import quote
 
 from flask import Blueprint, render_template, request
 
+from ..config import COVER_COLORS
 from ..extensions import db
 from ..models.loan_record import LoanRecord
 from ..models.user_record import UserRecord
 from ..repositories.book_repository import BookRepository
+from ..repositories.review_repository import ReviewRepository
 
 
 landing_bp = Blueprint("landing", __name__)
@@ -27,11 +29,7 @@ SEARCH_FIELDS = {
     "title": ("title",),
     "author": ("author",),
     "genre": ("genre",),
-    "isbn": ("isbn",),
 }
-COVER_COLORS = ("#a44235", "#476d57", "#536779", "#98713f", "#695676", "#9a5947")
-
-
 def _genre_carousel_items(genre_sections):
     items = []
     for index, genre in enumerate(genre_sections):
@@ -89,6 +87,7 @@ def _genre_carousel_items(genre_sections):
 @landing_bp.route("/")
 def index():
     books = BookRepository().find_all()
+    ratings = ReviewRepository().summaries([book.book_id for book in books])
     loan_counts = dict(
         db.session.execute(
             db.select(LoanRecord.book_id, db.func.count(LoanRecord.loan_id))
@@ -117,7 +116,16 @@ def index():
             "all_books": trending_books or books,
         }
     ]
-    for genre in GENRES:
+    known_genres = {genre.casefold() for genre in GENRES}
+    extra_genres = sorted(
+        {
+            book.genre.strip()
+            for book in books
+            if book.genre.strip() and book.genre.strip().casefold() not in known_genres
+        },
+        key=str.casefold,
+    )
+    for genre in (*GENRES, *extra_genres):
         matching_books = [
             book for book in books if (book.genre or "").casefold() == genre.casefold()
         ]
@@ -160,6 +168,7 @@ def index():
     return render_template(
         "landing.html",
         books=books,
+        ratings=ratings,
         trending_books=trending_books,
         new_arrivals=new_arrivals,
         available_books=available_books,

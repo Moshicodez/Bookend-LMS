@@ -12,7 +12,9 @@ class Patron(User):
         "view_loans",
         "view_payments",
         "pay_late_fee",
-        "pay_loss"
+        "pay_loss",
+        "save_favorites",
+        "write_review",
     })
 
     def home_endpoint(self):

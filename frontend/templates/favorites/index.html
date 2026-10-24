@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Saved books | Bookend Library{% endblock %}
+{% block content %}
+  {% set cover_colors = ["#a44235", "#476d57", "#536779", "#98713f", "#695676", "#9a5947"] %}
+  <section class="page-heading">
+    <p class="eyebrow">YOUR SHELF</p>
+    <h1>Saved books</h1>
+    <p>Books you want to keep close.</p>
+  </section>
+  {% if books %}
+    <div class="book-grid">
+      {% for book in books %}
+        {% set cover_color = cover_colors[loop.index0 % cover_colors|length] %}
+        {% include "landing/_book_card.html" %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <section class="empty-state">
+      <h2>Your saved shelf is empty</h2>
+      <p>Save books that catch your eye and find them here later.</p>
+      <a class="button" href="{{ url_for('books.catalog') }}">Browse books</a>
+    </section>
+  {% endif %}
+{% endblock %}

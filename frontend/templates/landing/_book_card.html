@@ -11,11 +11,17 @@
     </span>
   </a>
   <div class="book-card-copy">
-    <span class="availability-badge{% if not book.available %} is-borrowed{% endif %}">
-      {{ "Available" if book.available else "Borrowed" }}
+    {% set can_borrow = book.can_borrow() %}
+    <span class="availability-badge{% if not can_borrow %} is-borrowed{% endif %}">
+      {{ "Available" if can_borrow else ("In-library use" if book.available else "Borrowed") }}
     </span>
     <h3><a href="{{ book_url }}">{{ book.title }}</a></h3>
     <p>{{ book.author }}</p>
     {% if book.genre %}<span class="book-genre-label">{{ book.genre }}</span>{% endif %}
+    {% set rating = ratings.get(book.book_id, {"average": 0, "count": 0}) %}
+    <p class="book-rating" aria-label="{{ '%.1f'|format(rating.average) }} out of 5 stars from {{ rating.count }} reviews">
+      <span aria-hidden="true">{{ "★" if rating.count else "☆" }} {{ "%.1f"|format(rating.average) }}</span>
+      <span>({{ rating.count }})</span>
+    </p>
   </div>
 </article>
