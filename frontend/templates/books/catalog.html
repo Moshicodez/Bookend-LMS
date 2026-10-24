@@ -17,7 +17,7 @@
       <a class="{% if selected_genre|lower == genre|lower %}is-active{% endif %}" href="{{ url_for('books.catalog', q=search_term or None, genre=genre) }}">{{ genre }}</a>
     {% endfor %}
   </nav>
-  {% if user.is_librarian() %}
+  {% if user and user.is_librarian() %}
     <p><a href="{{ url_for('books.add') }}">Add a book</a></p>
     <p><a href="{{ url_for('books.archived') }}">Archived books</a></p>
   {% endif %}

@@ -4,40 +4,66 @@
     <span>bookend<span class="brand-period">.</span></span>
   </a>
 
-  <button
-    class="landing-menu-toggle"
-    type="button"
-    aria-label="Open navigation menu"
-    aria-expanded="false"
-    aria-controls="landing-navigation"
-    data-menu-toggle
-  >
-    <span></span>
-    <span></span>
-    <span></span>
-  </button>
-
-  <nav class="landing-navigation" id="landing-navigation" aria-label="Main navigation" data-navigation>
-    <a href="#trending-books">Browse</a>
-    <a href="#genre-browser">Genres</a>
-    <a href="#about">About</a>
-    <a class="nav-search" href="#hero-search" aria-label="Go to book search">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="10.8" cy="10.8" r="6.8"></circle>
-        <path d="m16 16 5 5"></path>
-      </svg>
-    </a>
-    <div class="nav-auth-actions">
-      {% if session.get('user_id') %}
-      <span class="nav-welcome">Hi, {{ session.get('username', 'reader') }}</span>
-      <a class="nav-login" href="{{ url_for('dashboard.patron_dashboard' if session.get('role') == 'patron' else 'dashboard.librarian_dashboard') }}">Dashboard</a>
+  <nav class="landing-navigation" aria-label="Main navigation">
+    <a href="{{ url_for('landing.index') }}">Home</a>
+    <a href="{{ url_for('books.catalog') }}">Books</a>
+    <details class="genre-dropdown">
+      <summary>Genres</summary>
+      <div class="genre-dropdown-menu">
+        {% for genre in navigation_genres %}
+          <a href="{{ url_for('books.catalog', genre=genre) }}">{{ genre }}</a>
+        {% else %}
+          <span>No genres yet</span>
+        {% endfor %}
+      </div>
+    </details>
+    <button class="icon-button nav-icon" type="button" aria-label="Search books" data-search-open>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg>
+    </button>
+    {% if current_user and current_user.is_patron() %}
+      <span class="nav-welcome">Hi, {{ current_user.username }}</span>
+      <a class="nav-login" href="{{ url_for('dashboard.patron_dashboard') }}">Dashboard</a>
+      <a class="icon-button nav-icon" href="{{ url_for('dashboard.patron_dashboard') }}" aria-label="Your profile">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M4.5 20c.8-4 3.3-6 7.5-6s6.7 2 7.5 6"></path></svg>
+      </a>
+      <a class="icon-button nav-icon" href="{{ url_for('social.favorites') }}" aria-label="Saved books, {{ favorite_count }} saved">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 8.7c0 5-8.4 10.1-8.4 10.1S3.6 13.7 3.6 8.7a4.4 4.4 0 0 1 8.4-1.8 4.4 4.4 0 0 1 8.4 1.8Z"></path></svg>
+        {% if favorite_count %}<span class="nav-count">{{ favorite_count }}</span>{% endif %}
+      </a>
+      <a class="icon-button nav-icon" href="{{ url_for('patron.basket_index') }}" aria-label="Borrow basket, {{ basket_count }} books">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16l-1.5 11h-13L4 9Z"></path><path d="m8 9 4-6 4 6"></path></svg>
+        {% if basket_count %}<span class="nav-count">{{ basket_count }}</span>{% endif %}
+      </a>
+      <a class="icon-button nav-icon" href="{{ url_for('loans.index') }}" aria-label="My loans">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H20v18H7.5A2.5 2.5 0 0 0 5 22V4.5Z"></path><path d="M5 5h12M5 20h12"></path></svg>
+      </a>
+    {% elif current_user and current_user.is_librarian() %}
+      <a class="icon-button nav-icon" href="{{ url_for('dashboard.librarian_dashboard') }}" aria-label="Librarian dashboard, {{ overdue_count }} overdue loans">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 20 5v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5l8-3Z"></path><path d="m9 12 2 2 4-5"></path></svg>
+        {% if overdue_count %}<span class="nav-count">{{ overdue_count }}</span>{% endif %}
+      </a>
+      <a href="{{ url_for('dashboard.librarian_dashboard') }}">Dashboard</a>
+    {% else %}
+      <a class="icon-button nav-icon" href="{{ url_for('auth.login') }}" aria-label="Sign in to view your profile">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M4.5 20c.8-4 3.3-6 7.5-6s6.7 2 7.5 6"></path></svg>
+      </a>
+      <a class="icon-button nav-icon" href="{{ url_for('auth.login') }}" aria-label="Sign in to view saved books">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 8.7c0 5-8.4 10.1-8.4 10.1S3.6 13.7 3.6 8.7a4.4 4.4 0 0 1 8.4-1.8 4.4 4.4 0 0 1 8.4 1.8Z"></path></svg>
+      </a>
+      <a class="icon-button nav-icon" href="{{ url_for('auth.login') }}" aria-label="Sign in to use the borrow basket">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16l-1.5 11h-13L4 9Z"></path><path d="m8 9 4-6 4 6"></path></svg>
+      </a>
+      <a class="icon-button nav-icon" href="{{ url_for('auth.login') }}" aria-label="Sign in to view your loans">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H20v18H7.5A2.5 2.5 0 0 0 5 22V4.5Z"></path><path d="M5 5h12M5 20h12"></path></svg>
+      </a>
+      <a class="nav-login" href="{{ url_for('auth.login') }}">Sign in</a>
+      <a class="landing-button nav-signup" href="{{ url_for('auth.register') }}">Join the library</a>
+    {% endif %}
+    {% if current_user %}
       <form class="nav-logout-form" method="post" action="{{ url_for('auth.logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="nav-logout" type="submit">Log out</button>
       </form>
-      {% else %}
-      <a class="nav-login" href="{{ url_for('auth.login') }}">Login</a>
-      <a class="landing-button nav-signup" href="{{ url_for('auth.register') }}">Sign up</a>
-      {% endif %}
-    </div>
+    {% endif %}
   </nav>
 </header>

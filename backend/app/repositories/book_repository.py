@@ -17,6 +17,21 @@ class BookRepository:
             ).scalars()
         )
 
+    def find_more_in_genre(self, genre, exclude_book_id, limit=4):
+        if not genre:
+            return []
+        records = db.session.execute(
+            db.select(BookRecord)
+            .where(
+                BookRecord.catalog.is_(True),
+                db.func.lower(BookRecord.genre) == genre.casefold(),
+                BookRecord.book_id != exclude_book_id,
+            )
+            .order_by(BookRecord.title, BookRecord.book_id)
+            .limit(limit)
+        ).scalars()
+        return [self._to_domain_book(record) for record in records]
+
     def create(self, book):
         record = BookRecord(
             kind=book.kind,

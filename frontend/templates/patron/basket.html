@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Borrow basket | Bookend Library{% endblock %}
+{% block content %}
+  <section class="page-heading">
+    <p class="eyebrow">YOUR NEXT READS</p>
+    <h1>Borrow basket</h1>
+  </section>
+  {% if books %}
+    <form method="post" action="{{ url_for('patron.basket_remove') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {% for book in books %}
+        <label class="basket-book">
+          <input type="checkbox" name="book_ids" value="{{ book.book_id }}">
+          <span>{{ book.title }} — {{ book.author }}</span>
+        </label>
+      {% endfor %}
+      <button type="submit">Remove selected</button>
+    </form>
+  {% else %}
+    <section class="empty-state">
+      <h2>Your basket is empty</h2>
+      <p>Add available books you would like to borrow.</p>
+      <a class="button" href="{{ url_for('books.catalog') }}">Browse books</a>
+    </section>
+  {% endif %}
+{% endblock %}

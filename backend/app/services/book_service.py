@@ -52,6 +52,9 @@ class BookService:
     def get_book(self, book_id):
         return self._get_book(book_id)
 
+    def more_in_genre(self, book):
+        return self._book_repo.find_more_in_genre(book.genre, book.book_id)
+
     def add_book(
         self,
         librarian,

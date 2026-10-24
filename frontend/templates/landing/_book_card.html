@@ -1,9 +1,9 @@
-{% set book_url = url_for('books.detail', book_id=book.book_id) if session.get('user_id') else url_for('auth.login') %}
+{% set book_url = url_for('books.detail', book_id=book.book_id) %}
 <article class="landing-book-card">
   <a class="book-cover-link" href="{{ book_url }}" aria-label="View {{ book.title }} by {{ book.author }}">
     <span class="book-cover-art" style="--cover-color: {{ cover_color }}">
-      {% if book.cover_url is defined and book.cover_url %}
-        <img src="{{ book.cover_url }}" alt="Cover of {{ book.title }}" loading="lazy">
+      {% if book.cover %}
+        <img src="{{ url_for('static', filename='uploads/' ~ book.cover) }}" alt="Cover of {{ book.title }}" loading="lazy">
       {% else %}
         <span class="book-cover-placeholder">{{ book.title }}</span>
       {% endif %}
@@ -13,7 +13,7 @@
   <div class="book-card-copy">
     {% set can_borrow = book.can_borrow() %}
     <span class="availability-badge{% if not can_borrow %} is-borrowed{% endif %}">
-      {{ "Available" if can_borrow else ("In-library use" if book.available else "Borrowed") }}
+      {{ "Available" if can_borrow else ("In-library use" if book.available else "On loan") }}
     </span>
     <h3><a href="{{ book_url }}">{{ book.title }}</a></h3>
     <p>{{ book.author }}</p>
@@ -23,5 +23,25 @@
       <span aria-hidden="true">{{ "★" if rating.count else "☆" }} {{ "%.1f"|format(rating.average) }}</span>
       <span>({{ rating.count }})</span>
     </p>
+    <div class="book-card-actions">
+      {% if current_user and current_user.is_patron() %}
+        <form method="post" action="{{ url_for('social.toggle_favorite', book_id=book.book_id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+          <button class="icon-button heart-button" type="submit" aria-label="{{ 'Remove from' if book.book_id in favorite_ids else 'Save to' }} saved books">{{ "♥" if book.book_id in favorite_ids else "♡" }}</button>
+        </form>
+      {% elif not current_user %}
+        <a class="icon-button heart-button" href="{{ url_for('auth.login') }}" aria-label="Sign in to save this book">♡</a>
+      {% endif %}
+      {% if book.can_borrow() and current_user and current_user.is_patron() %}
+        <form method="post" action="{{ url_for('patron.basket_add', book_id=book.book_id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+          <button class="button add-basket-button" type="submit">Add to basket</button>
+        </form>
+      {% elif book.can_borrow() and not current_user %}
+        <a class="button add-basket-button" href="{{ url_for('auth.login') }}">Sign in to borrow</a>
+      {% endif %}
+    </div>
   </div>
 </article>

@@ -52,6 +52,8 @@ class LandingRouteTests(unittest.TestCase):
             ["Featured", "History", "Kids", "Mystery", "Crime", "Horror", "Thriller", "Romance", "Drama"],
         )
         self.assertTrue(all(item["src"].startswith("data:image/svg+xml,") for item in carousel_items))
+        self.assertNotIn(b'<option value="isbn"', response.data)
+        self.assertNotIn(b'aria-live="polite"', response.data)
         for asset in ("css", "js"):
             response = self.client.get(f"/static/dist/genre-carousel.{asset}")
             self.assertEqual(response.status_code, 200)
@@ -97,10 +99,26 @@ class LandingRouteTests(unittest.TestCase):
         self.assertIn(b"A Quiet Mystery", html)
         self.assertIn(b"2</span>\n      <span class=\"stat-label\">Books in the collection", html)
         self.assertIn(b"1</span>\n      <span class=\"stat-label\">Active patrons", html)
-        self.assertIn(b"1</span>\n      <span class=\"stat-label\">Books borrowed", html)
+        self.assertIn(b"1</span>\n      <span class=\"stat-label\">Books on loan", html)
         self.assertIn(b"Available", html)
-        self.assertIn(b"Borrowed", html)
+        self.assertIn(b"On loan", html)
         self.assertEqual(book.genre, "History")
+
+    def test_landing_includes_unlisted_genres_and_correct_reference_status(self):
+        BookRepository().create(Book(None, "Star Routes", "S. Author", "Sci-Fi", ""))
+        BookRepository().create(Book(None, "Space Tales", "T. Author", "Adventure", ""))
+        BookRepository().create(
+            Book.create("reference", None, "Atlas", "A. Author", "History", "")
+        )
+
+        response = self.client.get("/")
+        items_attribute = re.search(rb'data-items="([^"]+)"', response.data)
+        carousel_items = json.loads(unescape(items_attribute.group(1).decode()))
+        genres = [item["title"] for item in carousel_items]
+
+        self.assertEqual(genres[-2:], ["Adventure", "Sci-Fi"])
+        self.assertIn(b"In-library use", response.data)
+        self.assertIn(b'class="availability-badge is-borrowed">', response.data)
 
     def test_landing_search_filters_by_selected_type(self):
         BookRepository().create(

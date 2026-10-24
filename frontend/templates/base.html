@@ -5,29 +5,44 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Bookend Library{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
   {% block page_styles %}{% endblock %}
   {% block page_scripts %}{% endblock %}
+  <script src="{{ url_for('static', filename='js/library.js') }}" defer></script>
 </head>
 <body class="{% block body_class %}{% endblock %}">
   {% block site_header %}
-  <header>
-    <a href="{{ url_for('books.catalog') }}">Bookend Library</a>
-    <nav aria-label="Main navigation">
-      <a href="{{ url_for('books.catalog') }}">Catalog</a>
-      {% if session.get('user_id') %}
-        <a href="{{ url_for('loans.index') }}">Loans</a>
-        {% if session.get('role') == 'librarian' %}
-          <a href="{{ url_for('members.index') }}">Members</a>
-        {% endif %}
-        <form method="post" action="{{ url_for('auth.logout') }}">
-          <button type="submit">Sign out</button>
-        </form>
-      {% else %}
-        <a href="{{ url_for('auth.login') }}">Sign in</a>
-      {% endif %}
-    </nav>
-  </header>
+    {% include "landing/_navbar.html" %}
   {% endblock %}
+  <dialog class="search-overlay" data-search-dialog aria-labelledby="search-overlay-title">
+    <div class="search-overlay-inner">
+      <button class="icon-button search-close" type="button" aria-label="Close search" data-search-close>×</button>
+      <p class="eyebrow">FIND YOUR NEXT READ</p>
+      <h2 id="search-overlay-title">Search the shelves</h2>
+      <form class="overlay-search-form" method="get" action="{{ url_for('books.catalog') }}">
+        <label class="visually-hidden" for="overlay-search-input">Search by title, author, or genre</label>
+        <input id="overlay-search-input" name="q" type="search" placeholder="Title, author, or genre" data-search-input>
+        <button class="button" type="submit">Search books</button>
+      </form>
+      <p class="search-chips-label">Browse a genre</p>
+      <div class="genre-chips">
+        {% for genre in navigation_genres %}
+          <a href="{{ url_for('books.catalog', genre=genre) }}">{{ genre }}</a>
+        {% else %}
+          <span>Genres will appear as books are added.</span>
+        {% endfor %}
+      </div>
+    </div>
+  </dialog>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="global-flashes" aria-live="polite">
+        {% for category, message in messages %}
+          <p class="flash-message {{ category }}">{{ message }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
   <main class="{% block main_class %}{% endblock %}">
     {% block content %}{% endblock %}
   </main>

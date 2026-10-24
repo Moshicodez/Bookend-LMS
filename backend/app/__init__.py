@@ -2,9 +2,9 @@ import json
 import os
 
 import click
-from flask import Flask
+from flask import Flask, session
 
-from .config import Config
+from .config import COVER_COLORS, Config
 from .csrf import CSRFProtect
 from .exceptions import NotFoundError, PermissionDenied, ValidationError
 from .extensions import db
@@ -32,11 +32,14 @@ def create_app(test_config=None):
     from .routes.landing import landing_bp
     from .routes.loans import loans_bp
     from .routes.members import members_bp
+    from .routes.patron import patron_bp
     from .routes.social import social_bp
     from .schema_migrations import upgrade_legacy_sqlite_schema
     from .services.auth_service import AuthService
     from .services.book_service import BookService
     from .repositories.book_repository import BookRepository
+    from .repositories.favorite_repository import FavoriteRepository
+    from .repositories.loan_repository import LoanRepository
     from .repositories.user_repository import UserRepository
 
     with app.app_context():
@@ -50,6 +53,35 @@ def create_app(test_config=None):
     app.register_blueprint(loans_bp)
     app.register_blueprint(members_bp)
     app.register_blueprint(social_bp)
+    app.register_blueprint(patron_bp)
+
+    @app.context_processor
+    def library_navigation_context():
+        from .routes.auth import _signed_in_user
+
+        current_user = _signed_in_user()
+        favorite_ids = set()
+        favorite_count = 0
+        basket_count = 0
+        overdue_count = 0
+        if current_user is not None and current_user.is_patron():
+            favorite_ids = set(
+                FavoriteRepository().book_ids_for_user(current_user.user_id)
+            )
+            favorite_count = len(favorite_ids)
+            basket_ids = session.get("basket_book_ids", [])
+            basket_count = len(set(basket_ids)) if isinstance(basket_ids, list) else 0
+        elif current_user is not None and current_user.is_librarian():
+            overdue_count = len(LoanRepository().find_overdue())
+        return {
+            "current_user": current_user,
+            "favorite_ids": favorite_ids,
+            "favorite_count": favorite_count,
+            "basket_count": basket_count,
+            "overdue_count": overdue_count,
+            "navigation_genres": BookRepository().list_genres(),
+            "cover_colors": COVER_COLORS,
+        }
 
     @app.cli.command("create-librarian")
     @click.option("--username", prompt=True)

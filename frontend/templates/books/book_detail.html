@@ -7,7 +7,7 @@
     {% if book.genre %}<a href="{{ url_for('books.catalog', genre=book.genre) }}">{{ book.genre }}</a><span aria-hidden="true">/</span>{% endif %}
     <span>{{ book.title }}</span>
   </nav>
-  <article>
+  <article class="book-detail-layout">
     {% if book.cover %}
       <img class="detail-cover" src="{{ url_for('static', filename='uploads/' ~ book.cover) }}" alt="Cover of {{ book.title }}">
     {% endif %}
@@ -28,27 +28,25 @@
     </p>
     {% if book.can_borrow() %}<p>Loan period: {{ book.loan_days }} days</p>{% endif %}
   </article>
-  {% if user.is_patron() %}
+  {% if user and user.is_patron() %}
     <form method="post" action="{{ url_for('social.toggle_favorite', book_id=book.book_id) }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="next" value="{{ url_for('books.detail', book_id=book.book_id) }}">
       <button type="submit" aria-pressed="{{ 'true' if is_favorite else 'false' }}">{{ "♥ Saved" if is_favorite else "♡ Save book" }}</button>
     </form>
+  {% elif not user %}
+    <a class="button" href="{{ url_for('auth.login') }}">♡ Save book</a>
   {% endif %}
-  {% if user.is_patron() and book.can_borrow() %}
-    <form method="post" action="{{ url_for('loans.borrow', book_id=book.book_id) }}">
+  {% if user and user.is_patron() and book.can_borrow() %}
+    <form method="post" action="{{ url_for('patron.basket_add', book_id=book.book_id) }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit">Borrow this book</button>
+      <input type="hidden" name="next" value="{{ url_for('books.detail', book_id=book.book_id) }}">
+      <button type="submit">Add to basket</button>
     </form>
   {% endif %}
   <section class="reviews-section" aria-labelledby="reviews-title">
     <h2 id="reviews-title">Book reviews</h2>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% for category, message in messages %}
-        <p class="flash-message {{ category }}" role="status">{{ message }}</p>
-      {% endfor %}
-    {% endwith %}
-    {% if user.is_patron() and own_review %}
+    {% if user and user.is_patron() and own_review %}
       <form method="post" action="{{ url_for('social.update_review', review_id=own_review.review_id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label for="edit-rating">Your rating</label>
@@ -65,7 +63,7 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit">Delete your review</button>
       </form>
-    {% elif user.is_patron() %}
+    {% elif user and user.is_patron() %}
       <form method="post" action="{{ url_for('social.create_review', book_id=book.book_id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label for="review-rating">Your rating</label>
@@ -92,13 +90,13 @@
       <p>No reviews yet. Be the first to share your thoughts.</p>
     {% endif %}
   </section>
-  {% if user.is_patron() and active_loan and active_loan.patron_id == user.user_id %}
+  {% if user and user.is_patron() and active_loan and active_loan.patron_id == user.user_id %}
     <form method="post" action="{{ url_for('loans.return_book', book_id=book.book_id) }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit">Return this book</button>
     </form>
   {% endif %}
-  {% if user.is_librarian() %}
+  {% if user and user.is_librarian() %}
     <p><a href="{{ url_for('books.edit', book_id=book.book_id) }}">Edit details</a></p>
     {% if book.available and book.catalog %}
       <form method="post" action="{{ url_for('books.archive', book_id=book.book_id) }}">
@@ -106,5 +104,17 @@
         <button type="submit">Archive book</button>
       </form>
     {% endif %}
+  {% endif %}
+  {% if more_books %}
+    <section class="more-books-section" aria-labelledby="more-books-title">
+      <h2 id="more-books-title">More in {{ book.genre }}</h2>
+      <div class="book-grid">
+        {% for book in more_books %}
+          {% set cover_color = cover_colors[loop.index0 % cover_colors|length] %}
+          {% set ratings = more_ratings %}
+          {% include "landing/_book_card.html" %}
+        {% endfor %}
+      </div>
+    </section>
   {% endif %}
 {% endblock %}

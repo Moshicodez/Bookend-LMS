@@ -1,3 +1,5 @@
+from urllib.parse import urlsplit
+
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from ..exceptions import ValidationError
@@ -20,7 +22,13 @@ def _login_redirect():
 
 def _safe_return_path():
     destination = request.form.get("next", "")
-    if destination.startswith("/") and not destination.startswith("//"):
+    parsed = urlsplit(destination)
+    if (
+        parsed.scheme == ""
+        and parsed.netloc == ""
+        and parsed.path.startswith("/")
+        and "\\" not in parsed.path
+    ):
         return destination
     return None
 

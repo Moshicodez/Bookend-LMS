@@ -29,16 +29,14 @@ def _require_user():
 
 @books_bp.route("/")
 def catalog():
-    user, response = _require_user()
-    if response:
-        return response
+    user = _signed_in_user()
     search_term = request.args.get("q", "")
     genre = request.args.get("genre", "").strip()
     books = book_service.search_books(search_term, genre)
     ratings = review_service.summaries([book.book_id for book in books])
     favorite_ids = (
         set(favorite_repository.book_ids_for_user(user.user_id))
-        if user.is_patron()
+        if user is not None and user.is_patron()
         else set()
     )
     return render_template(
@@ -56,24 +54,32 @@ def catalog():
 
 @books_bp.route("/<int:book_id>")
 def detail(book_id):
-    user, response = _require_user()
-    if response:
-        return response
+    user = _signed_in_user()
     book = book_service.get_book(book_id)
     active_loan = loan_repository.find_active_loan_by_book(book_id)
     reviews = review_service.for_book(book_id)
     rating = review_service.summary(book_id)
-    own_review = review_service.own_review(user, book_id) if user.is_patron() else None
+    more_books = book_service.more_in_genre(book)
+    more_ratings = review_service.summaries(
+        [more_book.book_id for more_book in more_books]
+    )
+    own_review = (
+        review_service.own_review(user, book_id)
+        if user is not None and user.is_patron()
+        else None
+    )
     return render_template(
         "books/book_detail.html",
         book=book,
         active_loan=active_loan,
         reviews=reviews,
         rating=rating,
+        more_books=more_books,
+        more_ratings=more_ratings,
         own_review=own_review,
         is_favorite=(
             favorite_repository.contains(user.user_id, book_id)
-            if user.is_patron()
+            if user is not None and user.is_patron()
             else False
         ),
         user=user,
