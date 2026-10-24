@@ -23,7 +23,7 @@
     {% if current_user and current_user.is_patron() %}
       <span class="nav-welcome">Hi, {{ current_user.username }}</span>
       <a class="nav-login" href="{{ url_for('dashboard.patron_dashboard') }}">Dashboard</a>
-      <a class="icon-button nav-icon" href="{{ url_for('dashboard.patron_dashboard') }}" aria-label="Your profile">
+      <a class="icon-button nav-icon" href="{{ url_for('patron.profile') }}" aria-label="Your profile">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M4.5 20c.8-4 3.3-6 7.5-6s6.7 2 7.5 6"></path></svg>
       </a>
       <a class="icon-button nav-icon" href="{{ url_for('social.favorites') }}" aria-label="Saved books, {{ favorite_count }} saved">

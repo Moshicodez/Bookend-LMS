@@ -585,6 +585,252 @@ main:not(.landing-main) > form[method="get"] input {
   border-bottom: 1px solid var(--line);
 }
 
+.basket-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.75fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.basket-list,
+.basket-summary,
+.profile-card,
+.loan-card,
+.receipt-book {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--white);
+}
+
+.basket-book img,
+.basket-cover-fallback,
+.receipt-book img {
+  width: 68px;
+  height: 92px;
+  flex: 0 0 auto;
+  border-radius: 5px;
+  background: var(--green);
+  color: var(--white);
+  object-fit: cover;
+}
+
+.basket-cover-fallback {
+  display: grid;
+  place-items: center;
+  font-family: var(--serif);
+  font-size: 28px;
+}
+
+.basket-book h2,
+.receipt-book h2,
+.loan-card h2 {
+  margin: 0 0 7px;
+  font-family: var(--serif);
+  font-size: 21px;
+  font-weight: 400;
+}
+
+.basket-book h2 a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.basket-book p,
+.receipt-book p,
+.loan-card p {
+  margin: 5px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.select-all-control {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.basket-summary {
+  position: sticky;
+  top: 18px;
+}
+
+.basket-summary h2 {
+  font-family: var(--serif);
+  font-size: 26px;
+  font-weight: 400;
+}
+
+.basket-summary ul {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.basket-summary li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.basket-summary time {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.basket-summary form .button {
+  width: 100%;
+}
+
+.button-secondary {
+  border-color: var(--line) !important;
+  background: var(--white) !important;
+  color: var(--green) !important;
+}
+
+.button-secondary:hover {
+  background: var(--paper) !important;
+}
+
+.receipt-heading {
+  text-align: center;
+}
+
+.receipt-list {
+  display: grid;
+  max-width: 760px;
+  gap: 12px;
+  margin: 0 auto 24px;
+}
+
+.receipt-book {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.loan-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 18px;
+}
+
+.loan-card {
+  display: flex;
+  gap: 16px;
+}
+
+.loan-card > img,
+.loan-card > .basket-cover-fallback {
+  width: 84px;
+  height: 120px;
+  flex: 0 0 auto;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.loan-card-content {
+  min-width: 0;
+}
+
+.loan-status {
+  display: inline-block;
+  padding: 5px 9px;
+  border-radius: 20px;
+  background: #e6eee4;
+  color: var(--green-dark) !important;
+  font-size: 10px !important;
+  font-weight: 700;
+}
+
+.loan-status.status-overdue,
+.loan-status.status-lost {
+  background: #f3e6e2;
+  color: #8a342e !important;
+}
+
+.loan-status.status-returned {
+  background: var(--paper-deep);
+  color: var(--muted) !important;
+}
+
+.loan-card form {
+  margin: 9px 0;
+}
+
+.profile-card {
+  display: flex;
+  max-width: 780px;
+  align-items: center;
+  gap: 18px;
+}
+
+.profile-card h2 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 24px;
+  font-weight: 400;
+}
+
+.profile-card p {
+  margin: 6px 0;
+  color: var(--muted);
+}
+
+.profile-card .button {
+  margin-left: auto;
+}
+
+.profile-avatar {
+  display: grid;
+  width: 60px;
+  height: 60px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--paper-deep);
+  color: var(--green);
+  font-family: var(--serif);
+  font-size: 28px;
+}
+
+.profile-stats {
+  display: flex;
+  gap: 14px;
+  margin: 24px 0;
+}
+
+.profile-stats article {
+  display: grid;
+  min-width: 150px;
+  gap: 6px;
+  padding: 17px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--white);
+}
+
+.profile-stats strong {
+  color: var(--green);
+  font-family: var(--serif);
+  font-size: 28px;
+  font-weight: 400;
+}
+
+.profile-stats span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .flash-message.error {
   color: #8a342e;
 }
@@ -657,5 +903,22 @@ main:not(.landing-main) > form[method="get"] input {
   .overlay-search-form {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .basket-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .basket-summary {
+    position: static;
+  }
+
+  .profile-card {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .profile-card .button {
+    margin-left: 0;
   }
 }

@@ -1,9 +1,10 @@
 from datetime import date
 
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from ..exceptions import NotFoundError, ValidationError
 from ..extensions import db
+from ..models.book_record import BookRecord
 from ..models.loan import Loan
 from ..models.loan_record import LoanRecord
 
@@ -19,6 +20,38 @@ class LoanRepository:
         db.session.add(record)
         self._commit()
         return self._to_domain_loan(record)
+
+    def create_loans_atomic(self, patron_id, entries):
+        records = []
+        try:
+            for book, borrowed_at, due_date in entries:
+                book_record = db.session.get(BookRecord, book.book_id)
+                if (
+                    book_record is None
+                    or not book_record.catalog
+                    or not book_record.available
+                ):
+                    raise ValidationError(
+                        f"{book.title} is no longer available to borrow."
+                    )
+                book_record.available = False
+                records.append(
+                    LoanRecord(
+                        patron_id=patron_id,
+                        book_id=book.book_id,
+                        borrowed_at=borrowed_at,
+                        due_date=due_date,
+                    )
+                )
+            db.session.add_all(records)
+            db.session.commit()
+        except IntegrityError as error:
+            db.session.rollback()
+            raise ValidationError("The loans could not be saved.") from error
+        except (ValidationError, SQLAlchemyError):
+            db.session.rollback()
+            raise
+        return [self._to_domain_loan(record) for record in records]
 
     def find_loan(self, loan_id):
         loan_id = self._valid_id(loan_id)

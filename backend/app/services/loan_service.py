@@ -28,16 +28,13 @@ class LoanService:
         patron.require("view_loans")
         return self._loan_repo.find_patron_loans(patron.user_id)
 
-    def borrow_book(self, patron, book_id):
+    def _prepare_borrow(self, patron, book_id, loans, pending_count=0):
         patron.require("borrow_book")
         book = self._get_book(book_id)
-
         borrowed_at = today()
-        loans = self._loan_repo.find_patron_loans(patron.user_id)
-
         active_loans = [loan for loan in loans if not loan.is_returned()]
 
-        if len(active_loans) >= patron.loan_limit:
+        if len(active_loans) + pending_count >= patron.loan_limit:
             raise ValidationError(f"You can only borrow {patron.loan_limit} books at a time.")
 
         if any(loan.outstanding(borrowed_at) > 0 for loan in loans):
@@ -47,18 +44,67 @@ class LoanService:
             raise ValidationError("You are already borrowing this book.")
 
         book.borrow()
-
         due_date = add_days(borrowed_at, book.loan_days)
+        return book, borrowed_at, due_date
 
+    def borrow_book(self, patron, book_id):
+        loans = self._loan_repo.find_patron_loans(patron.user_id)
+        book, borrowed_at, due_date = self._prepare_borrow(
+            patron, book_id, loans
+        )
         loan = self._loan_repo.create_loan(
             patron.user_id,
-            book_id,
+            book.book_id,
             borrowed_at,
             due_date
         )
-
         self._book_repo.update_book(book)
         return loan
+
+    def borrow_books(self, patron, book_ids):
+        patron.require("borrow_book")
+        if not book_ids:
+            raise ValidationError("Your borrow basket is empty.")
+        if len(set(book_ids)) != len(book_ids):
+            raise ValidationError("Your borrow basket contains duplicate books.")
+
+        loans = self._loan_repo.find_patron_loans(patron.user_id)
+        entries = []
+        for pending_count, book_id in enumerate(book_ids):
+            entries.append(
+                self._prepare_borrow(
+                    patron,
+                    book_id,
+                    loans,
+                    pending_count=pending_count,
+                )
+            )
+        return self._loan_repo.create_loans_atomic(patron.user_id, entries)
+
+    def loan_cards(self, patron):
+        patron.require("view_loans")
+        current_date = today()
+        cards = []
+        for loan in self._loan_repo.find_patron_loans(patron.user_id):
+            book = self._book_repo.find_book(loan.book_id)
+            if loan.lost:
+                status = "Lost"
+            elif loan.is_returned():
+                status = "Returned"
+            elif loan.due_date < current_date:
+                status = "Overdue"
+            else:
+                status = "On loan"
+            cards.append(
+                {
+                    "loan": loan,
+                    "book": book,
+                    "status": status,
+                    "outstanding": loan.outstanding(current_date),
+                    "fees": loan.fee_breakdown(current_date),
+                }
+            )
+        return cards
 
     def return_book(self, patron, book_id):
         patron.require("return_book")

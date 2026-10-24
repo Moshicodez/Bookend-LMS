@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Loan receipt | Bookend Library{% endblock %}
+{% block content %}
+  <section class="page-heading receipt-heading">
+    <p class="eyebrow">BORROWING CONFIRMED</p>
+    <h1>Your loan receipt</h1>
+    <p>Keep these due dates handy. We hope you enjoy your reading.</p>
+  </section>
+  <section class="receipt-list" aria-label="Borrowed books and due dates">
+    {% for item in receipt_items %}
+      <article class="receipt-book">
+        {% if item.book and item.book.cover %}
+          <img src="{{ url_for('static', filename='uploads/' ~ item.book.cover) }}" alt="Cover of {{ item.book.title }}">
+        {% else %}
+          <span class="basket-cover-fallback" aria-hidden="true">B</span>
+        {% endif %}
+        <div>
+          <p class="eyebrow">LOAN #{{ item.loan.loan_id }}</p>
+          <h2>{{ item.book.title if item.book else "Book" }}</h2>
+          <p>Borrowed {{ item.loan.borrowed_at.strftime("%b %d, %Y") }}</p>
+          <p><strong>Due {{ item.loan.due_date.strftime("%b %d, %Y") }}</strong></p>
+        </div>
+      </article>
+    {% endfor %}
+  </section>
+  <a class="button" href="{{ url_for('loans.index') }}">View my loans</a>
+{% endblock %}

@@ -16,4 +16,13 @@
   dialog.addEventListener("click", (event) => {
     if (event.target === dialog) dialog.close();
   });
+
+  document.querySelectorAll("[data-select-all]").forEach((selectAll) => {
+    selectAll.addEventListener("change", () => {
+      const form = selectAll.closest("form");
+      form?.querySelectorAll("[data-basket-select]").forEach((checkbox) => {
+        checkbox.checked = selectAll.checked;
+      });
+    });
+  });
 })();

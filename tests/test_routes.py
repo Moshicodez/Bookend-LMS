@@ -89,7 +89,7 @@ class BackendRouteTests(unittest.TestCase):
         )
         loans_page = self.client.get("/loans/")
         self.assertEqual(loans_page.status_code, 200)
-        self.assertIn(b"Currently on loan", loans_page.data)
+        self.assertIn(b"On loan", loans_page.data)
 
         returned = self.post(f"/loans/return/{book.book_id}")
         self.assertEqual(returned.status_code, 302)

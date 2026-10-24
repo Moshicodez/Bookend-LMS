@@ -4,18 +4,48 @@
   <section class="page-heading">
     <p class="eyebrow">YOUR NEXT READS</p>
     <h1>Borrow basket</h1>
+    <p>Choose the books you would like to borrow. Due dates are calculated from each book's loan period.</p>
   </section>
-  {% if books %}
-    <form method="post" action="{{ url_for('patron.basket_remove') }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      {% for book in books %}
-        <label class="basket-book">
-          <input type="checkbox" name="book_ids" value="{{ book.book_id }}">
-          <span>{{ book.title }} — {{ book.author }}</span>
+  {% if basket.books %}
+    <div class="basket-layout">
+      <form class="basket-list" method="post" action="{{ url_for('patron.basket_remove') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="select-all-control">
+          <input type="checkbox" data-select-all>
+          <span>Select all</span>
         </label>
-      {% endfor %}
-      <button type="submit">Remove selected</button>
-    </form>
+        {% for item in basket.books %}
+          <article class="basket-book">
+            <input type="checkbox" name="book_ids" value="{{ item.book.book_id }}" data-basket-select aria-label="Select {{ item.book.title }}">
+            {% if item.book.cover %}
+              <img src="{{ url_for('static', filename='uploads/' ~ item.book.cover) }}" alt="Cover of {{ item.book.title }}">
+            {% else %}
+              <span class="basket-cover-fallback" aria-hidden="true">{{ item.book.title[:1] }}</span>
+            {% endif %}
+            <div>
+              <h2><a href="{{ url_for('books.detail', book_id=item.book.book_id) }}">{{ item.book.title }}</a></h2>
+              <p>By {{ item.book.author }}{% if item.book.genre %} · {{ item.book.genre }}{% endif %}</p>
+              <p>Loan period: {{ item.book.loan_days }} days · Due {{ item.due_date.strftime("%b %d, %Y") }}</p>
+            </div>
+          </article>
+        {% endfor %}
+        <button class="button button-secondary" type="submit">Remove selected</button>
+      </form>
+      <aside class="basket-summary">
+        <p class="eyebrow">LOAN SUMMARY</p>
+        <h2>{{ basket.books|length }} book{{ "" if basket.books|length == 1 else "s" }}</h2>
+        <p>{{ basket.remaining_limit }} loan slot{{ "" if basket.remaining_limit == 1 else "s" }} remaining after current loans.</p>
+        <ul>
+          {% for item in basket.books %}
+            <li><span>{{ item.book.title }}</span><time>{{ item.due_date.strftime("%b %d") }}</time></li>
+          {% endfor %}
+        </ul>
+        <form method="post" action="{{ url_for('patron.basket_checkout') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="button" type="submit">Confirm borrowing</button>
+        </form>
+      </aside>
+    </div>
   {% else %}
     <section class="empty-state">
       <h2>Your basket is empty</h2>

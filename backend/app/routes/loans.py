@@ -26,9 +26,16 @@ def index():
     if user.is_librarian():
         user.require("manage_loans")
         loans = loan_repository.find_all()
+        loan_cards = None
     else:
-        loans = loan_service.view_loans(user)
-    return render_template("loans/loans.html", loans=loans, user=user)
+        loans = []
+        loan_cards = loan_service.loan_cards(user)
+    return render_template(
+        "loans/loans.html",
+        loans=loans,
+        loan_cards=loan_cards,
+        user=user,
+    )
 
 
 @loans_bp.route("/issue")
@@ -84,4 +91,10 @@ def overdue():
         return response
     user.require("manage_loans")
     loans = loan_repository.find_overdue()
-    return render_template("loans/loans.html", loans=loans, user=user, overdue=True)
+    return render_template(
+        "loans/loans.html",
+        loans=loans,
+        loan_cards=None,
+        user=user,
+        overdue=True,
+    )

@@ -2,12 +2,49 @@
 {% block title %}Loans | Bookend Library{% endblock %}
 {% block content %}
   <h1>{{ "Overdue loans" if overdue else "Loans" }}</h1>
-  {% if not user.is_librarian() %}
+  {% if user.is_patron() %}
+    <p><a class="button" href="{{ url_for('patron.basket_index') }}">Open borrow basket</a></p>
+  {% elif not user.is_librarian() %}
     <p><a href="{{ url_for('loans.issue') }}">Borrow a book</a></p>
   {% elif not overdue %}
     <p><a href="{{ url_for('loans.overdue') }}">View overdue loans</a></p>
   {% endif %}
-  {% if loans %}
+  {% if user.is_patron() and loan_cards %}
+    <div class="loan-card-grid">
+      {% for card in loan_cards %}
+        <article class="loan-card">
+          {% if card.book and card.book.cover %}
+            <img src="{{ url_for('static', filename='uploads/' ~ card.book.cover) }}" alt="Cover of {{ card.book.title }}">
+          {% else %}
+            <span class="basket-cover-fallback" aria-hidden="true">{{ card.book.title[:1] if card.book else "B" }}</span>
+          {% endif %}
+          <div class="loan-card-content">
+            <p class="loan-status status-{{ card.status|lower|replace(' ', '-') }}">{{ card.status }}</p>
+            <h2>{{ card.book.title if card.book else "Book" }}</h2>
+            <p>Borrowed {{ card.loan.borrowed_at.strftime("%b %d, %Y") }}</p>
+            <p>Due {{ card.loan.due_date.strftime("%b %d, %Y") }}</p>
+            {% if card.loan.returned_at %}<p>Returned {{ card.loan.returned_at.strftime("%b %d, %Y") }}</p>{% endif %}
+            {% if card.loan.lost %}<p>Marked lost</p>{% endif %}
+            <p>Fees: ${{ "%.2f"|format(card.outstanding) }}</p>
+            {% if not card.loan.returned_at and not card.loan.lost %}
+              <form method="post" action="{{ url_for('loans.return_book', book_id=card.loan.book_id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit">Return book</button>
+              </form>
+            {% endif %}
+            {% for fee in card.fees %}
+              {% if fee.amount > 0 and not fee.paid and (fee.type == "Loss fee" or card.loan.returned_at) %}
+                <form method="post" action="{{ url_for('loans.pay_loss_fee' if fee.type == 'Loss fee' else 'loans.pay_late_fee', loan_id=card.loan.loan_id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit">Pay {{ fee.type|lower }} (${{ "%.2f"|format(fee.amount) }})</button>
+                </form>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% elif loans %}
     <ul>
       {% for loan in loans %}
         <li>
@@ -21,6 +58,7 @@
               {% for fee in loan.fee_breakdown() %}
                 {% if fee.amount > 0 and not fee.paid %}
                   <form method="post" action="{{ url_for('loans.pay_loss_fee' if fee.type == 'Loss fee' else 'loans.pay_late_fee', loan_id=loan.loan_id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit">Pay {{ fee.type|lower }} ({{ "%.2f"|format(fee.amount) }})</button>
                   </form>
                 {% endif %}

@@ -1,4 +1,5 @@
 from .loan_service import LoanService
+from ..utils.date_utils import today
 
 
 class PatronService:
@@ -7,6 +8,15 @@ class PatronService:
 
     def view_loans(self, patron):
         return self._loans.view_loans(patron)
+
+    def profile_summary(self, patron):
+        loans = self._loans.view_loans(patron)
+        current_loans = [loan for loan in loans if not loan.is_returned()]
+        overdue_count = sum(loan.due_date < today() for loan in current_loans)
+        return {
+            "current_loans": len(current_loans),
+            "overdue_count": overdue_count,
+        }
 
     def borrow(self, patron, book_id):
         return self._loans.borrow_book(patron, book_id)

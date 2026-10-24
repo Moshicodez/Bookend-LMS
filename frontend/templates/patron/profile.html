@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}My profile | Bookend Library{% endblock %}
+{% block content %}
+  <section class="page-heading">
+    <p class="eyebrow">YOUR ACCOUNT</p>
+    <h1>Profile</h1>
+  </section>
+  <section class="profile-card">
+    <div class="profile-avatar" aria-hidden="true">{{ patron.username[:1]|upper }}</div>
+    <div>
+      <h2>{{ patron.username }}</h2>
+      <p>{{ patron.email }}</p>
+      <p class="profile-role">{{ patron.role|title }}</p>
+    </div>
+    <a class="button button-secondary" href="{{ url_for('auth.change_password') }}">Change password</a>
+  </section>
+  <section class="profile-stats" aria-label="Loan summary">
+    <article><strong>{{ summary.current_loans }}</strong><span>Current loans</span></article>
+    <article><strong>{{ summary.overdue_count }}</strong><span>Overdue</span></article>
+  </section>
+  <a href="{{ url_for('loans.index') }}">View my loan history</a>
+{% endblock %}

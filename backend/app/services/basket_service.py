@@ -1,10 +1,13 @@
 from ..exceptions import NotFoundError, ValidationError
+from ..utils.date_utils import add_days, today
+from .loan_service import LoanService
 
 
 class BasketService:
     def __init__(self, book_repository, loan_repository):
         self._books = book_repository
         self._loans = loan_repository
+        self._loan_service = LoanService(book_repository, loan_repository)
 
     def add(self, patron, basket_ids, book_id):
         patron.require("borrow_book")
@@ -48,3 +51,47 @@ class BasketService:
             if book is not None and book.catalog:
                 books.append(book)
         return books
+
+    def items(self, patron, basket_ids):
+        books = self.books(patron, basket_ids)
+        loans = self._loans.find_patron_loans(patron.user_id)
+        remaining = patron.loan_limit - sum(
+            not loan.is_returned() for loan in loans
+        )
+        return {
+            "books": [
+                {
+                    "book": book,
+                    "due_date": add_days(today(), book.loan_days),
+                }
+                for book in books
+            ],
+            "remaining_limit": max(remaining, 0),
+        }
+
+    def checkout(self, patron, basket_ids):
+        normalized_ids = []
+        for value in basket_ids:
+            try:
+                normalized_ids.append(int(value))
+            except (TypeError, ValueError) as error:
+                raise ValidationError(
+                    "The borrow basket contains an invalid book."
+                ) from error
+        return self._loan_service.borrow_books(patron, normalized_ids)
+
+    def receipt(self, patron, loan_ids):
+        patron.require("view_loans")
+        receipt = []
+        for loan_id in loan_ids:
+            try:
+                loan_id = int(loan_id)
+            except (TypeError, ValueError) as error:
+                raise ValidationError("The loan receipt is invalid.") from error
+            loan = self._loans.find_loan(loan_id)
+            if loan is None or loan.patron_id != patron.user_id:
+                raise NotFoundError("Loan not found.")
+            receipt.append(
+                {"loan": loan, "book": self._books.find_book(loan.book_id)}
+            )
+        return receipt
