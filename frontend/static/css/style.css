@@ -1013,32 +1013,6 @@ input {
   min-height: inherit;
 }
 
-.back-home-link {
-  position: absolute;
-  z-index: 2;
-  top: 20px;
-  left: 22px;
-  color: #344936;
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.book-login-stage.is-open > .back-home-link {
-  display: none;
-}
-
-.back-home-link:hover {
-  color: #1d271c;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.back-home-link:focus-visible {
-  outline: 3px solid #9cae8f;
-  outline-offset: 4px;
-}
-
 .login-page .book-pages {
   height: min(720px, calc(100vh - 92px));
   border-color: #435b43;
@@ -1290,16 +1264,6 @@ input {
     padding: 0;
     overflow: visible;
     background: var(--paper);
-  }
-
-  .login-page .book-login-stage.is-open > .back-home-link {
-    display: block;
-  }
-
-  .login-page .back-home-link {
-    top: 10px;
-    left: 16px;
-    font-size: 11px;
   }
 
   .login-page .book-login-stage {

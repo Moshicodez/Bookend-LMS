@@ -16,9 +16,6 @@
   <section class="login-screen">
     <section class="form-panel" aria-labelledby="form-title">
       <div class="book-login-stage{% if error_message or success_message or request.args.get('open') or (page or request.args.get('page')) == 'register' %} is-open{% endif %}" data-book-stage>
-
-        <a class="back-home-link" href="{{ url_for('landing.index') }}">← Back to home</a>
-
         <!-- closed book invitation -->
         <div
           class="book-invitation"
