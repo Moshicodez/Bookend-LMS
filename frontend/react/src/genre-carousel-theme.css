@@ -1,7 +1,7 @@
 .genre-carousel-host {
   position: relative;
   width: 100%;
-  height: 560px;
+  height: 430px;
 }
 
 .genre-carousel-stage {
@@ -19,9 +19,90 @@
   outline-offset: 4px;
 }
 
+.genre-carousel-host .circular-carousel__controls {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  pointer-events: none;
+}
+
+.genre-carousel-host .circular-carousel__arrow,
+.genre-carousel-host .circular-carousel__dot {
+  display: grid;
+  place-items: center;
+  border: 1px solid rgb(67 91 67 / 24%);
+  background: rgb(246 244 238 / 94%);
+  color: #435b43;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.genre-carousel-host .circular-carousel__arrow {
+  position: absolute;
+  top: 50%;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  font-size: 29px;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
+.genre-carousel-host .circular-carousel__arrow:hover,
+.genre-carousel-host .circular-carousel__dot:hover,
+.genre-carousel-host .circular-carousel__dot.is-active {
+  background: #435b43;
+  color: #fffefa;
+}
+
+.genre-carousel-host .circular-carousel__arrow:focus-visible,
+.genre-carousel-host .circular-carousel__dot:focus-visible {
+  outline: 3px solid #9cae8f;
+  outline-offset: 3px;
+}
+
+.genre-carousel-host .circular-carousel__arrow--previous {
+  left: 10px;
+}
+
+.genre-carousel-host .circular-carousel__arrow--next {
+  right: 10px;
+}
+
+.genre-carousel-host .circular-carousel__dots {
+  position: absolute;
+  right: 0;
+  bottom: 12px;
+  left: 0;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.genre-carousel-host .circular-carousel__dot {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.genre-carousel-host .circular-carousel__dots .circular-carousel__dot {
+  pointer-events: auto;
+}
+
 @media (max-width: 680px) {
   .genre-carousel-host {
-    height: 420px;
+    height: 340px;
+  }
+
+  .genre-carousel-host .circular-carousel__arrow--previous {
+    left: 2px;
+  }
+
+  .genre-carousel-host .circular-carousel__arrow--next {
+    right: 2px;
   }
 }
 

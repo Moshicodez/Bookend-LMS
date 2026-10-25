@@ -7,11 +7,30 @@
     <span class="section-note">A shelf for every kind of story</span>
   </div>
 
+  {% if not genre_sections %}
+  <div class="genre-empty-state">
+    No genres yet. Ask your librarian to add some.
+  </div>
+  {% elif genre_sections|length == 1 %}
+  <div class="genre-single-wrap">
+    <a
+      class="genre-single-card"
+      href="{{ url_for('books.catalog', genre=genre_sections[0].name) }}"
+      aria-label="Browse {{ genre_sections[0].name }} books"
+    >
+      <img
+        src="{{ genre_carousel_items[0].src }}"
+        alt="{{ genre_carousel_items[0].alt }}"
+      >
+    </a>
+  </div>
+  {% else %}
   <div
     class="genre-carousel-host"
     id="genre-carousel-root"
     data-items="{{ genre_carousel_items|tojson|forceescape }}"
   ></div>
+  {% endif %}
 
   <div class="genre-panel">
     <div id="genre-books-panel" class="genre-panel-content">

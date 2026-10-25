@@ -221,7 +221,7 @@ const CircularCarousel = ({
   const cardW = Math.max(40, cardWidth);
   const cardH = cardW / clamp(aspectRatio, 0.2, 5);
   const along = axis === 'x' ? cardH : cardW;
-  const step = 360 / count;
+  const step = count === 2 ? 120 : 360 / count;
 
   const radius = useMemo(() => {
     const n = Math.max(count, 3);
@@ -300,7 +300,7 @@ const CircularCarousel = ({
     cardW,
     cardH,
     intro: reduced ? 'none' : intro in INTRO_LENGTH ? intro : 'rise',
-    autoplay: reduced ? 'off' : autoplay,
+    autoplay: reduced ? 'off' : count === 2 ? 'step' : autoplay,
     speed,
     interval: Math.max(0.5, interval),
     draggable,
@@ -395,7 +395,20 @@ const CircularCarousel = ({
     let raf = 0;
     let visible = true;
 
-    const nearest = angle => Math.round(angle / settingsRef.current.step) * settingsRef.current.step;
+    const nearest = angle => {
+      const s = settingsRef.current;
+      if (s.count !== 2) return Math.round(angle / s.step) * s.step;
+      const cycle = Math.round(angle / 360);
+      const candidates = [
+        cycle * 360,
+        cycle * 360 - s.step,
+        (cycle - 1) * 360,
+        (cycle - 1) * 360 - s.step
+      ];
+      return candidates.reduce((closest, target) =>
+        Math.abs(target - angle) < Math.abs(closest - angle) ? target : closest
+      );
+    };
 
     const measure = () => {
       const s = settingsRef.current;
@@ -522,7 +535,14 @@ const CircularCarousel = ({
       if (s.autoplay === 'step' && !paused && !state.intro && state.introDone) {
         if (!state.stepAt) state.stepAt = now + s.interval * 1000;
         if (now >= state.stepAt) {
-          state.target = (state.target ?? nearest(state.angle)) + s.step * state.dir;
+          if (s.count === 2) {
+            const index = ((Math.round(-state.angle / s.step) % s.count) + s.count) % s.count;
+            const nextIndex = (index + (state.dir < 0 ? 1 : -1) + s.count) % s.count;
+            const target = -nextIndex * s.step;
+            state.target = target + 360 * Math.round((state.angle - target) / 360);
+          } else {
+            state.target = (state.target ?? nearest(state.angle)) + s.step * state.dir;
+          }
           state.stepAt = now + s.interval * 1000;
         }
         busy = true;
@@ -698,6 +718,10 @@ const CircularCarousel = ({
   const stepBy = useCallback(delta => {
     const state = stateRef.current;
     const s = settingsRef.current;
+    if (s.count === 2) {
+      focusIndex((activeRef.current + (delta > 0 ? 1 : -1) + s.count) % s.count);
+      return;
+    }
     const base = state.target ?? Math.round(state.angle / s.step) * s.step;
     state.target = base - delta * s.step * (s.layout.inward ? -1 : 1);
     state.holdUntil = performance.now() + 2800;
@@ -812,6 +836,10 @@ const CircularCarousel = ({
     const card = event.target.closest?.('[data-cc-index]');
     if (!card) return;
     const index = Number(card.getAttribute('data-cc-index'));
+    if (index === activeRef.current && list[index]?.href) {
+      window.location.assign(list[index].href);
+      return;
+    }
     if (focusOnClick) focusIndex(index);
     onItemClick?.(list[index], index);
   };
@@ -823,7 +851,14 @@ const CircularCarousel = ({
     else if (event.key === backward) stepBy(-1);
     else if (event.key === 'Home') focusIndex(0);
     else if (event.key === 'End') focusIndex(count - 1);
-    else if (event.key === 'Enter' || event.key === '') onItemClick?.(list[activeRef.current], activeRef.current);
+    else if (
+      (event.key === 'Enter' || event.key === '') &&
+      !event.target.closest?.('.circular-carousel__controls')
+    ) {
+      const index = activeRef.current;
+      if (list[index]?.href) window.location.assign(list[index].href);
+      else onItemClick?.(list[index], index);
+    }
     else return;
     event.preventDefault();
   };
@@ -954,6 +989,50 @@ const CircularCarousel = ({
           </span>
         </div>
       )}
+      <div className="circular-carousel__controls">
+        <button
+          className="circular-carousel__arrow circular-carousel__arrow--previous"
+          type="button"
+          aria-label="Previous genre"
+          title="Previous genre"
+          onPointerDown={event => event.stopPropagation()}
+          onClick={event => {
+            event.stopPropagation();
+            stepBy(-1);
+          }}
+        >
+          <span aria-hidden="true">‹</span>
+        </button>
+        <button
+          className="circular-carousel__arrow circular-carousel__arrow--next"
+          type="button"
+          aria-label="Next genre"
+          title="Next genre"
+          onPointerDown={event => event.stopPropagation()}
+          onClick={event => {
+            event.stopPropagation();
+            stepBy(1);
+          }}
+        >
+          <span aria-hidden="true">›</span>
+        </button>
+        <nav className="circular-carousel__dots" aria-label="Choose a genre">
+          {list.map((item, index) => (
+            <button
+              key={`${item.title || 'genre'}-${index}`}
+              type="button"
+              className={`circular-carousel__dot${index === active ? ' is-active' : ''}`}
+              aria-label={`Show ${item.title || `genre ${index + 1}`}`}
+              aria-pressed={index === active}
+              onPointerDown={event => event.stopPropagation()}
+              onClick={event => {
+                event.stopPropagation();
+                focusIndex(index);
+              }}
+            />
+          ))}
+        </nav>
+      </div>
       <div className="circular-carousel__live" aria-live="polite" aria-atomic="true">
         {`${label}, ${active + 1} of ${count}`}
       </div>

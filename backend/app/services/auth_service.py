@@ -42,8 +42,11 @@ class AuthService:
         if not is_valid_username(username):
             raise ValidationError("Username must be 3-30 characters: letters, numbers, _ . -")
 
+        if len(password or "") < 8:
+            raise ValidationError("Password must be at least 8 characters.")
+
         if password != confirm_password:
-            raise ValidationError("Passwords do not match.")
+            raise ValidationError("Passwords don't match.")
 
         tips = self.pass_feedback(password)
         if tips:

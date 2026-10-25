@@ -2,6 +2,11 @@
 {% block title %}Bookend Library{% endblock %}
 {% block body_class %}login-page{% endblock %}
 {% block site_header %}{% endblock %}
+{% block page_styles %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% endblock %}
 {% block page_scripts %}
   <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
 {% endblock %}
@@ -12,16 +17,14 @@
     <section class="form-panel" aria-labelledby="form-title">
       <div class="book-login-stage{% if error_message or success_message or request.args.get('open') or (page or request.args.get('page')) == 'register' %} is-open{% endif %}" data-book-stage>
 
+        <a class="back-home-link" href="{{ url_for('landing.index') }}">← Back to home</a>
+
         <!-- closed book invitation -->
         <div
           class="book-invitation"
           data-book-invitation
           {% if error_message or success_message or request.args.get('open') or (page or request.args.get('page')) == 'register' %}aria-hidden="true" inert{% endif %}
         >
-          <a class="brand book-brand" href="/" aria-label="Bookend Library">
-            <span class="brand-mark" aria-hidden="true">B</span>
-            <span>bookend<span class="brand-period">.</span></span>
-          </a>
           <button
             class="book-trigger"
             type="button"
@@ -67,14 +70,14 @@
 
               <!-- right page — the flipping element -->
               <section class="open-page right-page" data-right-page>
+                <a class="brand form-brand" href="{{ url_for('landing.index') }}" aria-label="Bookend Library home">
+                  <span class="brand-mark" aria-hidden="true">B</span>
+                  <span>bookend<span class="brand-period">.</span></span>
+                </a>
 
                 <!-- FRONT: login form -->
                 <div class="page-face page-front" id="login-face">
                   <div class="login-card">
-                    <a class="brand form-brand" href="/" aria-label="Bookend Library">
-                      <span class="brand-mark" aria-hidden="true">B</span>
-                      <span>bookend<span class="brand-period">.</span></span>
-                    </a>
                     <p class="eyebrow form-eyebrow">WELCOME BACK</p>
                     <h2 id="form-title">Sign in to your account</h2>
                     <p class="form-intro">Your books are waiting right where you left them.</p>
@@ -88,7 +91,7 @@
                         <label for="login-username">Username or email</label>
                         <input id="login-username" name="username" type="text"
                           value="{{ username or '' }}" placeholder="Enter your username or email"
-                          autocomplete="username email" required>
+                          autocomplete="username" required>
                       </div>
                       <div class="form-field">
                         <div class="label-row">
@@ -104,17 +107,15 @@
                             data-password-toggle="login-password">Show</button>
                         </div>
                       </div>
-                      <button class="submit-button" type="submit">
-                        <span>Sign in</span>
+                      <button class="submit-button" type="submit" data-loading-label="Signing in...">
+                        <span data-submit-label>Sign in</span>
                         <span class="button-arrow" aria-hidden="true">→</span>
                       </button>
                     </form>
                     <div class="form-note">
                       <span class="note-icon" aria-hidden="true">i</span>
-                      <p>Having trouble signing in? Please ask a librarian for help.</p>
+                      <p>Having trouble signing in? Forgot your password? Please ask a librarian for help.</p>
                     </div>
-                    <p class="copyright">Forgot your password? Ask a librarian to reset it.</p>
-                    <p class="copyright">© Bookend Library</p>
                     <p class="copyright">New here? <a class="page-turn-link" href="{{ url_for('auth.register') }}" data-page-turn="next">Create an account</a></p>
                   </div>
                 </div>
@@ -122,17 +123,13 @@
                 <!-- BACK: register form (rotated 180deg, revealed when flipped) -->
                 <div class="page-face page-back-face" id="register-face">
                   <div class="login-card register-card">
-                    <a class="brand form-brand" href="/" aria-label="Bookend Library">
-                      <span class="brand-mark" aria-hidden="true">B</span>
-                      <span>bookend<span class="brand-period">.</span></span>
-                    </a>
                     <p class="eyebrow form-eyebrow">JOIN BOOKEND</p>
-                    <h2>Create your account</h2>
+                    <h2 id="register-title">Create your account</h2>
                     <p class="form-intro">A place for every story, starting with yours.</p>
-                    {% if error_message and (page or request.args.get('page')) == 'register' %}
+                    {% if error_message and (page or request.args.get('page')) == 'register' and not field_errors %}
                     <p class="preview-message" role="alert">{{ error_message }}</p>
                     {% endif %}
-                    <form class="login-form register-form" method="post" action="{{ url_for('auth.register') }}">
+                    <form class="login-form register-form" method="post" action="{{ url_for('auth.register') }}" aria-labelledby="register-title" novalidate>
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <div class="form-field">
                         <label for="email">Email</label>
@@ -151,19 +148,29 @@
                         <label for="reg-password">Password</label>
                         <div class="password-input">
                           <input id="reg-password" name="password" type="password"
-                            autocomplete="new-password" required>
+                            autocomplete="new-password" minlength="8" aria-describedby="password-rule password-error"
+                            {% if field_errors and field_errors.get('password') %}aria-invalid="true"{% endif %} required>
                           <button class="password-toggle" type="button"
                             aria-label="Show password" aria-pressed="false"
                             data-password-toggle="reg-password">Show</button>
                         </div>
+                        <span class="field-hint password-rule" id="password-rule">At least 8 characters.</span>
+                        <span class="field-error" id="password-error" data-field-error="password" role="alert" {% if not (field_errors and field_errors.get('password')) %}hidden{% endif %}>{{ field_errors.get('password', '') if field_errors else '' }}</span>
                       </div>
                       <div class="form-field">
                         <label for="reg-confirm">Confirm password</label>
-                        <input id="reg-confirm" name="confirm_password" type="password"
-                          autocomplete="new-password" required>
+                        <div class="password-input">
+                          <input id="reg-confirm" name="confirm_password" type="password"
+                            autocomplete="new-password" aria-describedby="confirm-password-error"
+                            {% if field_errors and field_errors.get('confirm_password') %}aria-invalid="true"{% endif %} required>
+                          <button class="password-toggle" type="button"
+                            aria-label="Show password" aria-pressed="false"
+                            data-password-toggle="reg-confirm">Show</button>
+                        </div>
+                        <span class="field-error" id="confirm-password-error" data-field-error="confirm_password" role="alert" {% if not (field_errors and field_errors.get('confirm_password')) %}hidden{% endif %}>{{ field_errors.get('confirm_password', '') if field_errors else '' }}</span>
                       </div>
-                      <button class="submit-button" type="submit">
-                        <span>Create account</span>
+                      <button class="submit-button" type="submit" data-loading-label="Creating account...">
+                        <span data-submit-label>Create account</span>
                         <span class="button-arrow" aria-hidden="true">→</span>
                       </button>
                     </form>
@@ -197,6 +204,7 @@
 
       </div>
     </section>
+    <p class="auth-copyright">© Bookend Library</p>
   </section>
 </section>
 {% endblock %}

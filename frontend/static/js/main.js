@@ -5,25 +5,35 @@ const bookCard     = document.querySelector("#book-card");
 const bookPages    = document.querySelector(".book-pages");
 const rightPage    = document.querySelector("[data-right-page]");
 
-// ── open book on trigger click ────────────────────────────────────────────────
-bookTrigger?.addEventListener("click", () => {
+const openBook = (focusForm = false) => {
   if (!(bookStage instanceof HTMLElement) || !(bookCard instanceof HTMLElement)) return;
 
   bookStage.classList.add("is-open");
-  bookTrigger.setAttribute("aria-expanded", "true");
-  bookTrigger.blur();
+  bookTrigger?.setAttribute("aria-expanded", "true");
   bookInvitation?.setAttribute("aria-hidden", "true");
   bookInvitation?.setAttribute("inert", "");
   bookCard.removeAttribute("inert");
   bookCard.setAttribute("aria-hidden", "false");
-  setTimeout(() => {
-    const target = bookPages?.dataset.page === "register" ? "#email" : "#login-username";
-    document.querySelector(target)?.focus();
-  }, 500);
+
+  if (focusForm) {
+    setTimeout(() => {
+      const target = bookPages?.dataset.page === "register" ? "#email" : "#login-username";
+      document.querySelector(target)?.focus();
+    }, 500);
+  }
+};
+
+// ── open book on trigger click ────────────────────────────────────────────────
+bookTrigger?.addEventListener("click", () => {
+  openBook(true);
+  bookTrigger.blur();
 });
 
-if (bookStage?.classList.contains("is-open")) {
-  document.querySelector("[data-initial-focus]")?.focus();
+if (window.matchMedia("(max-width: 760px)").matches) {
+  openBook();
+} else if (bookStage?.classList.contains("is-open")) {
+  bookCard?.removeAttribute("inert");
+  bookCard?.setAttribute("aria-hidden", "false");
 }
 
 // ── in-place page flip ────────────────────────────────────────────────────────
@@ -74,5 +84,65 @@ document.querySelectorAll("[data-password-toggle]").forEach((btn) => {
     btn.textContent = visible ? "Show" : "Hide";
     btn.setAttribute("aria-label",   visible ? "Show password" : "Hide password");
     btn.setAttribute("aria-pressed", String(!visible));
+  });
+});
+
+document.querySelectorAll(".login-form").forEach((form) => {
+  const isRegisterForm = form instanceof HTMLFormElement && form.classList.contains("register-form");
+  const password = isRegisterForm ? form.querySelector("#reg-password") : null;
+  const confirmation = isRegisterForm ? form.querySelector("#reg-confirm") : null;
+  const passwordError = isRegisterForm ? form.querySelector('[data-field-error="password"]') : null;
+  const confirmationError = isRegisterForm
+    ? form.querySelector('[data-field-error="confirm_password"]')
+    : null;
+
+  const validateRegistrationPasswords = () => {
+    if (
+      !(password instanceof HTMLInputElement) ||
+      !(confirmation instanceof HTMLInputElement) ||
+      !(passwordError instanceof HTMLElement) ||
+      !(confirmationError instanceof HTMLElement)
+    ) return false;
+
+    const tooShort = password.value.length < 8;
+    const mismatch = password.value !== confirmation.value;
+    passwordError.textContent = tooShort ? "Password must be at least 8 characters." : "";
+    passwordError.hidden = !tooShort;
+    confirmationError.textContent = mismatch ? "Passwords don't match." : "";
+    confirmationError.hidden = !mismatch;
+    password.setAttribute("aria-invalid", String(tooShort));
+    confirmation.setAttribute("aria-invalid", String(mismatch));
+    return tooShort || mismatch;
+  };
+
+  if (
+    password instanceof HTMLInputElement &&
+    confirmation instanceof HTMLInputElement
+  ) {
+    password.addEventListener("input", validateRegistrationPasswords);
+    confirmation.addEventListener("input", validateRegistrationPasswords);
+  }
+
+  form.addEventListener("submit", (event) => {
+    if (isRegisterForm) {
+      if (validateRegistrationPasswords()) {
+        event.preventDefault();
+        if (password instanceof HTMLInputElement && password.value.length < 8) {
+          password.focus();
+        } else if (confirmation instanceof HTMLInputElement) {
+          confirmation.focus();
+        }
+        return;
+      }
+    }
+
+    if (!(form instanceof HTMLFormElement)) return;
+    const submitButton = form.querySelector('button[type="submit"]');
+    const submitLabel = submitButton?.querySelector("[data-submit-label]");
+    if (!(submitButton instanceof HTMLButtonElement) || !(submitLabel instanceof HTMLElement)) return;
+
+    submitButton.disabled = true;
+    form.setAttribute("aria-busy", "true");
+    submitLabel.textContent = submitButton.dataset.loadingLabel ?? "Submitting...";
   });
 });

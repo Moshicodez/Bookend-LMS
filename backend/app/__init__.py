@@ -25,10 +25,11 @@ def create_app(test_config=None):
     db.init_app(app)
     CSRFProtect().init_app(app)
 
-    from .models import BookRecord, LoanRecord, Librarian, Patron, UserRecord
+    from .models import BookRecord, GenreRecord, LoanRecord, Librarian, Patron, UserRecord
     from .routes.auth import auth_bp
     from .routes.books import books_bp
     from .routes.dashboard import dashboard_bp
+    from .routes.genres import genres_bp
     from .routes.landing import landing_bp
     from .routes.loans import loans_bp
     from .routes.members import members_bp
@@ -39,6 +40,7 @@ def create_app(test_config=None):
     from .services.book_service import BookService
     from .repositories.book_repository import BookRepository
     from .repositories.favorite_repository import FavoriteRepository
+    from .repositories.genre_repository import GenreRepository
     from .repositories.loan_repository import LoanRepository
     from .repositories.user_repository import UserRepository
 
@@ -49,6 +51,7 @@ def create_app(test_config=None):
     app.register_blueprint(landing_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
+    app.register_blueprint(genres_bp)
     app.register_blueprint(books_bp)
     app.register_blueprint(loans_bp)
     app.register_blueprint(members_bp)
@@ -79,7 +82,7 @@ def create_app(test_config=None):
             "favorite_count": favorite_count,
             "basket_count": basket_count,
             "overdue_count": overdue_count,
-            "navigation_genres": BookRepository().list_genres(),
+            "navigation_genres": GenreRepository().list_genres(),
             "cover_colors": COVER_COLORS,
         }
 

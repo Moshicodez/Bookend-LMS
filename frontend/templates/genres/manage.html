@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Manage genres | Bookend Library{% endblock %}
+{% block content %}
+  <section class="page-heading">
+    <p class="eyebrow">LIBRARIAN TOOLS</p>
+    <h1>Manage genres</h1>
+    <p>Add genres to the Browse the stacks carousel.</p>
+  </section>
+
+  <section class="admin-panel" aria-labelledby="add-genre-heading">
+    <div class="admin-panel-heading">
+      <div><p class="eyebrow">CATALOG ORGANIZATION</p><h2 id="add-genre-heading">Add a genre</h2></div>
+    </div>
+    <form method="post" action="{{ url_for('genres.add') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label for="genre-name">Genre name</label>
+      <input id="genre-name" name="name" type="text" maxlength="100" required>
+      <button class="button" type="submit">Add genre</button>
+    </form>
+  </section>
+
+  <section class="admin-panel" aria-labelledby="genre-list-heading">
+    <div class="admin-panel-heading">
+      <div><p class="eyebrow">BROWSE THE STACKS</p><h2 id="genre-list-heading">Genres</h2></div>
+    </div>
+    {% if genres %}
+      <div class="table-scroll">
+        <table class="admin-table">
+          <thead><tr><th>Genre</th><th>Books</th><th>Actions</th></tr></thead>
+          <tbody>
+            {% for genre in genres %}
+              <tr>
+                <td>{{ genre.name }}</td>
+                <td>{{ "In use" if genre.in_use else "No books assigned" }}</td>
+                <td>
+                  {% if genre.in_use %}
+                    <button class="button button-danger" type="button" disabled title="Reassign or clear books in this genre first">Remove</button>
+                  {% else %}
+                    <form method="post" action="{{ url_for('genres.remove') }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="name" value="{{ genre.name }}">
+                      <button class="button button-danger" type="submit">Remove</button>
+                    </form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="muted">No genres have been added yet.</p>
+    {% endif %}
+  </section>
+{% endblock %}

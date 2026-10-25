@@ -48,20 +48,12 @@ class LandingRouteTests(unittest.TestCase):
             self.assertIn(label, response.data)
         self.assertNotIn(b"nav-icon-label", response.data)
         self.assertIn(b"No books to show here just yet", response.data)
-        self.assertIn(b"No books in this stack yet", response.data)
+        self.assertIn(b"No genres yet. Ask your librarian to add some.", response.data)
         self.assertIn(b"dist/genre-carousel.css", response.data)
         self.assertIn(b"dist/genre-carousel.js", response.data)
         self.assertIn(b"family=Anton&family=Poppins", response.data)
-        self.assertIn(b'id="genre-carousel-root"', response.data)
-        self.assertIn(b"data:image/svg+xml", response.data)
-        items_attribute = re.search(rb'data-items="([^"]+)"', response.data)
-        self.assertIsNotNone(items_attribute)
-        carousel_items = json.loads(unescape(items_attribute.group(1).decode()))
-        self.assertEqual(
-            [item["title"] for item in carousel_items],
-            ["Featured", "History", "Kids", "Mystery", "Crime", "Horror", "Thriller", "Romance", "Drama"],
-        )
-        self.assertTrue(all(item["src"].startswith("data:image/svg+xml,") for item in carousel_items))
+        self.assertNotIn(b'id="genre-carousel-root"', response.data)
+        self.assertNotIn(b"data:image/svg+xml", response.data)
         self.assertNotIn(b'<option value="isbn"', response.data)
         self.assertNotIn(b'aria-live="polite"', response.data)
         for asset in ("css", "js"):
@@ -125,9 +117,35 @@ class LandingRouteTests(unittest.TestCase):
         carousel_items = json.loads(unescape(items_attribute.group(1).decode()))
         genres = [item["title"] for item in carousel_items]
 
-        self.assertEqual(genres[-2:], ["Adventure", "Sci-Fi"])
+        self.assertEqual(genres, ["Adventure", "History", "Sci-Fi"])
         self.assertIn(b"In-library use", response.data)
         self.assertIn(b'class="availability-badge is-borrowed">', response.data)
+
+    def test_single_genre_uses_a_centered_link_without_carousel_controls(self):
+        BookRepository().create(Book(None, "The Harbor Archive", "A. Writer", "History", ""))
+
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'class="genre-single-card"', response.data)
+        self.assertIn(b'href="/books/?genre=History"', response.data)
+        self.assertNotIn(b'id="genre-carousel-root"', response.data)
+        self.assertNotIn(b"circular-carousel__controls", response.data)
+
+    def test_multiple_genres_render_carousel_items_with_catalog_links(self):
+        BookRepository().create(Book(None, "The Harbor Archive", "A. Writer", "History", ""))
+        BookRepository().create(Book(None, "A Quiet Mystery", "B. Writer", "Mystery", ""))
+
+        response = self.client.get("/")
+        items_attribute = re.search(rb'data-items="([^"]+)"', response.data)
+        carousel_items = json.loads(unescape(items_attribute.group(1).decode()))
+
+        self.assertEqual(len(carousel_items), 2)
+        self.assertEqual(
+            [item["href"] for item in carousel_items],
+            ["/books/?genre=History", "/books/?genre=Mystery"],
+        )
+        self.assertIn(b'id="genre-carousel-root"', response.data)
 
     def test_landing_search_filters_by_selected_type(self):
         BookRepository().create(

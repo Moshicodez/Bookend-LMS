@@ -50,6 +50,7 @@ def login():
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
+@auth_bp.route("/signup", methods=["GET", "POST"])
 def register():
     if request.method == "GET":
         return render_template("auth/login.html", page="register")
@@ -62,9 +63,15 @@ def register():
             request.form.get("confirm_password"),
         )
     except ValidationError as error:
+        field_errors = {}
+        if str(error) == "Password must be at least 8 characters.":
+            field_errors["password"] = str(error)
+        elif str(error) == "Passwords don't match.":
+            field_errors["confirm_password"] = str(error)
         return render_template(
             "auth/login.html",
             error_message=str(error),
+            field_errors=field_errors,
             form_data={
                 "email": request.form.get("email", ""),
                 "username": request.form.get("username", ""),

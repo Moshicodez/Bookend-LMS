@@ -125,6 +125,38 @@ class AuthRouteTests(unittest.TestCase):
         ).scalar_one()
         self.assertEqual(record.role, "patron")
 
+    def test_signup_route_validates_password_length_and_confirmation(self):
+        short_password = self.post(
+            "/signup",
+            data={
+                "email": "short@example.com",
+                "username": "shortreader",
+                "password": "Short1!",
+                "confirm_password": "Short1!",
+            },
+        )
+        self.assertEqual(short_password.status_code, 400)
+        self.assertIn(b"Password must be at least 8 characters.", short_password.data)
+        self.assertIn(b'id="password-error"', short_password.data)
+
+        mismatched_password = self.post(
+            "/signup",
+            data={
+                "email": "mismatch@example.com",
+                "username": "mismatchreader",
+                "password": "StrongPass1!",
+                "confirm_password": "DifferentPass2!",
+            },
+        )
+        self.assertEqual(mismatched_password.status_code, 400)
+        self.assertIn(b"Passwords don&#39;t match.", mismatched_password.data)
+        self.assertIn(b'id="confirm-password-error"', mismatched_password.data)
+
+        self.assertEqual(
+            db.session.scalar(db.select(db.func.count(UserRecord.user_id))),
+            0,
+        )
+
     def test_user_can_log_in_with_email_and_reach_landing_page(self):
         self.register_account()
 
@@ -243,13 +275,21 @@ class AuthRouteTests(unittest.TestCase):
         self.assertEqual(self.login(password="NewStrongPass2!").status_code, 302)
 
     def test_signup_page_has_patron_only_form_and_extends_base(self):
-        response = self.client.get("/register")
+        response = self.client.get("/signup")
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'data-book-stage', response.data)
         self.assertIn(b'data-book-trigger', response.data)
         self.assertIn(b'id="email"', response.data)
-        self.assertIn(b'href="/register" data-page-turn="next"', response.data)
+        self.assertIn(b'action="/signup"', response.data)
+        self.assertIn(b'href="/signup" data-page-turn="next"', response.data)
+        self.assertIn(b'autocomplete="current-password"', response.data)
+        self.assertIn(b'autocomplete="new-password"', response.data)
+        self.assertIn(b'id="reg-confirm"', response.data)
+        self.assertIn(b'data-password-toggle="reg-confirm"', response.data)
+        self.assertIn(b'At least 8 characters.', response.data)
+        self.assertIn(b'Having trouble signing in? Forgot your password?', response.data)
+        self.assertEqual(response.data.count(b'class="brand form-brand"'), 1)
         self.assertNotIn(b'name="role"', response.data)
         self.assertNotIn(b"forgot-password", response.data)
         self.assertIn(b"css/style.css", response.data)

@@ -4,6 +4,7 @@ import string
 from werkzeug.security import generate_password_hash
 
 from ..exceptions import NotFoundError, PermissionDenied
+from ..repositories.genre_repository import GenreRepository
 from ..utils.date_utils import today
 from .auth_service import AuthService
 from .book_service import BookService
@@ -17,6 +18,7 @@ class LibrarianService:
         self._book_repo = book_repo
         self._loan_repo = loan_repo
         self._user_repo = user_repo
+        self._genre_repo = GenreRepository()
 
     def add_book(self, librarian, title, author, genre, description, kind="standard"):
         return self._books.add_book(
@@ -84,9 +86,7 @@ class LibrarianService:
         return {
             "stats": {
                 "books": len(books),
-                "genres": len(
-                    {book.genre.casefold() for book in books if book.genre.strip()}
-                ),
+                "genres": len(self._genre_repo.list_genres()),
                 "on_loan": sum(not loan.is_returned() for loan in loans),
                 "overdue": len(overdue),
                 "patrons": len(patrons),

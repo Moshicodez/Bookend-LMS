@@ -2,6 +2,7 @@ from .book import Book, NewReleaseBook, ReferenceBook
 from .book_record import BookRecord
 from .favorite_record import FavoriteRecord
 from .fine import Fee, LateFee, LossFee
+from .genre_record import GenreRecord
 from .librarian import Librarian
 from .loan import Loan
 from .loan_record import LoanRecord
@@ -16,6 +17,7 @@ __all__ = [
     "BookRecord",
     "Fee",
     "FavoriteRecord",
+    "GenreRecord",
     "LateFee",
     "Librarian",
     "Loan",

@@ -13,6 +13,7 @@ class Librarian(User):
         "manage_mem",
         "manage_loans",
         "manage_reviews",
+        "manage_genres",
     })
 
     def home_endpoint(self):

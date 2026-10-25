@@ -2,28 +2,19 @@ from datetime import date
 from html import escape
 from urllib.parse import quote
 
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template, request, url_for
 
 from ..config import COVER_COLORS
 from ..extensions import db
 from ..models.loan_record import LoanRecord
 from ..models.user_record import UserRecord
 from ..repositories.book_repository import BookRepository
+from ..repositories.genre_repository import GenreRepository
 from ..repositories.review_repository import ReviewRepository
 
 
 landing_bp = Blueprint("landing", __name__)
 
-GENRES = (
-    "History",
-    "Kids",
-    "Mystery",
-    "Crime",
-    "Horror",
-    "Thriller",
-    "Romance",
-    "Drama",
-)
 SEARCH_FIELDS = {
     "all": ("title", "author", "genre"),
     "title": ("title",),
@@ -79,6 +70,7 @@ def _genre_carousel_items(genre_sections):
                 "alt": f"{genre['name']} book covers from the Bookend library",
                 "title": genre["name"],
                 "subtitle": f"{len(genre['all_books'])} books",
+                "href": url_for("books.catalog", genre=genre["name"]),
             }
         )
     return items
@@ -109,25 +101,13 @@ def index():
     )[:10]
     available_books = [book for book in books if book.can_borrow()][:10]
 
-    genre_sections = [
-        {
-            "name": "Featured",
-            "books": (trending_books or books)[:3],
-            "all_books": trending_books or books,
-        }
-    ]
-    known_genres = {genre.casefold() for genre in GENRES}
-    extra_genres = sorted(
-        {
-            book.genre.strip()
-            for book in books
-            if book.genre.strip() and book.genre.strip().casefold() not in known_genres
-        },
-        key=str.casefold,
-    )
-    for genre in (*GENRES, *extra_genres):
+    genres = GenreRepository().list_genres()
+    genre_sections = []
+    for genre in genres:
         matching_books = [
-            book for book in books if (book.genre or "").casefold() == genre.casefold()
+            book
+            for book in books
+            if (book.genre or "").strip().casefold() == genre.casefold()
         ]
         genre_sections.append(
             {
@@ -148,8 +128,6 @@ def index():
             LoanRecord.returned_at.is_(None),
         )
     ) or 0
-    genre_count = len({book.genre.strip().casefold() for book in books if book.genre.strip()})
-
     search_term = request.args.get("q", "").strip()
     search_type = request.args.get("type", "all")
     search_fields = SEARCH_FIELDS.get(search_type, SEARCH_FIELDS["all"])
@@ -179,7 +157,7 @@ def index():
             "books": len(books),
             "patrons": active_patron_count,
             "borrowed": borrowed_count,
-            "genres": genre_count,
+            "genres": len(genres),
         },
         search_term=search_term,
         search_type=search_type if search_type in SEARCH_FIELDS else "all",

@@ -977,3 +977,430 @@ input {
     animation-duration: 0.01ms;
   }
 }
+
+.login-page {
+  --sans: "Poppins", sans-serif;
+  min-height: 100vh;
+  font-family: "Poppins", sans-serif;
+}
+
+.login-page-content {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+.login-page .login-screen {
+  min-height: 0;
+  flex: 1 0 auto;
+}
+
+.login-page .form-panel {
+  min-height: 0;
+  padding: 14px 24px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 48%, rgb(218 222 202 / 45%), transparent 48%),
+    var(--paper);
+}
+
+.login-page .book-login-stage {
+  width: min(1120px, 100%);
+  min-height: min(740px, calc(100vh - 72px));
+}
+
+.login-page .book-invitation {
+  min-height: inherit;
+}
+
+.back-home-link {
+  position: absolute;
+  z-index: 2;
+  top: 20px;
+  left: 22px;
+  color: #344936;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.book-login-stage.is-open > .back-home-link {
+  display: none;
+}
+
+.back-home-link:hover {
+  color: #1d271c;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.back-home-link:focus-visible {
+  outline: 3px solid #9cae8f;
+  outline-offset: 4px;
+}
+
+.login-page .book-pages {
+  height: min(720px, calc(100vh - 92px));
+  border-color: #435b43;
+}
+
+.login-page .page-face {
+  padding: 56px clamp(28px, 4vw, 54px) 28px;
+  overflow: hidden;
+}
+
+.login-page .login-card {
+  width: min(100%, 410px);
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+
+.login-page .form-brand {
+  position: absolute;
+  z-index: 3;
+  top: 28px;
+  left: 50%;
+  margin: 0;
+  transform: translateX(-50%);
+  font-family: "Poppins", sans-serif;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: -0.8px;
+  text-transform: none;
+}
+
+.login-page .form-brand:focus-visible {
+  outline: 3px solid #9cae8f;
+  outline-offset: 4px;
+}
+
+.login-page .login-card h2 {
+  color: #252a25;
+  font-family: "Anton", Impact, sans-serif;
+  font-size: clamp(26px, 2.7vw, 34px);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0.015em;
+  line-height: 1.12;
+  text-transform: uppercase;
+}
+
+.login-page .form-intro,
+.login-page .field-hint,
+.login-page .form-note p,
+.login-page .copyright {
+  color: #555b52;
+  font-family: "Poppins", sans-serif;
+}
+
+.login-page .form-intro {
+  margin: 7px 0 15px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.login-page .form-eyebrow,
+.login-page .eyebrow,
+.login-page .form-field label,
+.login-page .field-hint,
+.login-page .form-note,
+.login-page .page-turn-link,
+.login-page .submit-button,
+.login-page .password-toggle {
+  font-family: "Poppins", sans-serif;
+}
+
+.login-page .login-form {
+  gap: 11px;
+}
+
+.login-page .form-field label {
+  margin-bottom: 5px;
+  color: #343a32;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.login-page .form-field input,
+.login-page .form-field select {
+  height: 48px;
+  border-color: #c7cbbf;
+  background: #fffefa;
+  color: #252a25;
+  font-size: 12px;
+}
+
+.login-page .form-field input:focus,
+.login-page .form-field select:focus {
+  border-color: #435b43;
+  outline: 2px solid #435b43;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgb(67 91 67 / 13%);
+}
+
+.login-page .form-field input[aria-invalid="true"] {
+  border-color: #b33a32;
+}
+
+.login-page .register-form {
+  gap: 8px 14px;
+}
+
+.login-page .register-form .form-field input {
+  height: 48px;
+}
+
+.login-page .field-hint {
+  color: #555b52;
+  font-size: 10px;
+}
+
+.login-page .password-rule {
+  display: block;
+  margin-top: 4px;
+}
+
+.login-page .field-error {
+  display: block;
+  margin-top: 4px;
+  color: #b42318;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.login-page .field-error[hidden] {
+  display: none;
+}
+
+.login-page .password-toggle {
+  color: #344936;
+  font-size: 10px;
+}
+
+.login-page .password-toggle:focus-visible,
+.login-page .submit-button:focus-visible {
+  outline: 3px solid #435b43;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px rgb(67 91 67 / 14%);
+}
+
+.login-page .submit-button {
+  min-height: 48px;
+  margin-top: 3px;
+  border-radius: 5px;
+  font-family: "Poppins", sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.login-page .submit-button:disabled {
+  cursor: wait;
+  opacity: 0.78;
+  transform: none;
+}
+
+.login-page .button-arrow {
+  font-family: "Poppins", sans-serif;
+  font-size: 19px;
+}
+
+.login-page .form-note {
+  margin-top: 12px;
+  padding: 8px 10px;
+  border-color: #d8ddcf;
+  background: #f0f2eb;
+}
+
+.login-page .form-note p {
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.login-page .copyright {
+  margin-top: 12px;
+  color: #4c534a;
+  font-size: 10px;
+}
+
+.login-page .page-turn-link {
+  color: #344936;
+  font-weight: 600;
+}
+
+.login-page .preview-message {
+  margin: 0 0 12px;
+  border-color: #d9aaa4;
+  background: #fff1ef;
+  color: #a4231b;
+}
+
+.auth-copyright {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 8px 16px 12px;
+  color: #555b52;
+  font-size: 10px;
+  text-align: center;
+}
+
+@media (max-height: 820px) and (min-width: 761px) {
+  .login-page .book-login-stage {
+    min-height: calc(100vh - 58px);
+  }
+
+  .login-page .book-pages {
+    height: calc(100vh - 92px);
+  }
+
+  .login-page .page-face {
+    padding-top: 48px;
+    padding-bottom: 18px;
+  }
+
+  .login-page .form-brand {
+    top: 22px;
+  }
+
+  .login-page .form-intro {
+    margin-bottom: 10px;
+  }
+
+  .login-page .form-note {
+    margin-top: 8px;
+  }
+}
+
+@media (max-width: 760px) {
+  .login-page-content {
+    min-height: 100vh;
+  }
+
+  .login-page .login-screen {
+    min-height: 0;
+  }
+
+  .login-page .form-panel {
+    display: block;
+    min-height: 0;
+    padding: 0;
+    overflow: visible;
+    background: var(--paper);
+  }
+
+  .login-page .book-login-stage.is-open > .back-home-link {
+    display: block;
+  }
+
+  .login-page .back-home-link {
+    top: 10px;
+    left: 16px;
+    font-size: 11px;
+  }
+
+  .login-page .book-login-stage {
+    display: block;
+    width: 100%;
+    min-height: 0;
+    perspective: none;
+  }
+
+  .login-page .book-invitation,
+  .login-page .left-page,
+  .login-page .open-book-cover,
+  .login-page .book-spine-shadow {
+    display: none !important;
+  }
+
+  .login-page .opened-book,
+  .login-page .book-login-stage.is-open .opened-book {
+    display: block;
+    width: 100%;
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    transition: none;
+  }
+
+  .login-page .open-book-shadow {
+    padding: 0;
+    filter: none;
+  }
+
+  .login-page .book-pages {
+    display: block;
+    height: auto;
+    min-height: calc(100vh - 36px);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    perspective: none;
+  }
+
+  .login-page .right-page {
+    display: block;
+    min-height: calc(100vh - 36px);
+    padding: 0;
+    overflow: visible;
+    transform: none !important;
+    transform-origin: center;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .login-page .form-brand {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: fit-content;
+    margin: 0 auto;
+    padding-top: 46px;
+    transform: none;
+  }
+
+  .login-page .page-face {
+    position: relative;
+    inset: auto;
+    display: none;
+    min-height: 0;
+    padding: 26px 22px 22px;
+    overflow: visible;
+    background: transparent;
+  }
+
+  .login-page .book-pages:not([data-page="register"]) .page-front {
+    display: flex;
+  }
+
+  .login-page .book-pages[data-page="register"] .page-back-face {
+    display: flex;
+  }
+
+  .login-page .login-card {
+    width: min(100%, 440px);
+    margin: 0 auto;
+  }
+
+  .login-page .register-form {
+    gap: 10px;
+  }
+
+  .login-page .auth-copyright {
+    padding-bottom: 14px;
+  }
+}
+
+@media (max-width: 420px) {
+  .login-page .register-form {
+    grid-template-columns: 1fr;
+  }
+
+  .login-page .register-form .submit-button {
+    grid-column: auto;
+  }
+}

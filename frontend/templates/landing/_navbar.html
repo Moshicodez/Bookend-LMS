@@ -23,6 +23,7 @@
       <a class="nav-login" href="{{ url_for('dashboard.patron_dashboard') }}">Dashboard</a>
     {% elif current_user and current_user.is_librarian() %}
       <a href="{{ url_for('dashboard.librarian_dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('genres.index') }}">Manage genres</a>
     {% endif %}
     {% if current_user %}
       <form class="nav-logout-form" method="post" action="{{ url_for('auth.logout') }}">

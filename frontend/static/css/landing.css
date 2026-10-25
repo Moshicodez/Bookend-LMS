@@ -1672,15 +1672,15 @@ html::-webkit-scrollbar {
 
 .genre-section {
   width: 100%;
-  padding: 50px max(32px, calc((100vw - var(--landing-content-width)) / 2)) 30px;
+  padding: 38px max(32px, calc((100vw - var(--landing-content-width)) / 2)) 24px;
   background: var(--landing-surface);
 }
 
 .genre-section > .section-heading {
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 28px;
-  text-align: center;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  text-align: left;
 }
 
 .genre-section > .section-heading h2 {
@@ -1688,13 +1688,66 @@ html::-webkit-scrollbar {
 }
 
 .genre-section > .section-heading .section-kicker {
+  margin-bottom: 6px;
   letter-spacing: 0.2em;
+}
+
+.genre-section > .section-heading .section-note {
+  max-width: 260px;
+  padding: 0 0 6px;
+  text-align: right;
 }
 
 .genre-carousel-host {
   width: 100%;
   max-width: var(--landing-content-width);
   margin: 0 auto;
+}
+
+.genre-empty-state,
+.genre-single-wrap {
+  width: 100%;
+  max-width: var(--landing-content-width);
+  min-height: 260px;
+  margin: 0 auto;
+}
+
+.genre-empty-state {
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--landing-border);
+  color: var(--landing-muted);
+  text-align: center;
+}
+
+.genre-single-wrap {
+  display: grid;
+  place-items: center;
+}
+
+.genre-single-card {
+  display: block;
+  width: min(220px, 70vw);
+  overflow: hidden;
+  border: 1px solid var(--landing-border);
+  border-radius: 12px;
+  box-shadow: 0 16px 38px rgb(26 35 25 / 12%);
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.genre-single-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 42px rgb(26 35 25 / 16%);
+}
+
+.genre-single-card:focus-visible {
+  outline: 3px solid var(--landing-accent);
+  outline-offset: 4px;
+}
+
+.genre-single-card img {
+  display: block;
+  width: 100%;
 }
 
 .features-section {
@@ -1900,12 +1953,21 @@ html::-webkit-scrollbar {
   }
 
   .genre-section {
-    padding: 42px 20px 20px;
+    padding: 32px 20px 18px;
   }
 
   .genre-section > .section-heading {
-    justify-content: center;
-    text-align: center;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .genre-section > .section-heading .section-note {
+    max-width: none;
+    padding: 0;
+    text-align: left;
   }
 
   .feature-grid {

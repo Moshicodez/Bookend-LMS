@@ -10,6 +10,7 @@ from backend.app.models.book import Book
 from backend.app.models.loan_record import LoanRecord
 from backend.app.models.review_record import ReviewRecord
 from backend.app.repositories.book_repository import BookRepository
+from backend.app.repositories.genre_repository import GenreRepository
 from backend.app.repositories.user_repository import UserRepository
 
 
@@ -208,6 +209,19 @@ class LibrarianUiTests(unittest.TestCase):
         )
         self.assertEqual(lost.status_code, 302)
         self.assertFalse(self.books.find_book(self.mystery.book_id).catalog)
+
+    def test_dashboard_counts_genres_with_no_books(self):
+        GenreRepository().add("Fantasy")
+        self._sign_in(self.librarian)
+
+        response = self.client.get("/librarian")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            b'<article class="admin-stat-card"><span>Genres</span><strong>3</strong></article>',
+            response.data,
+        )
+        self.assertIn(b"Manage genres", response.data)
 
 
 if __name__ == "__main__":
