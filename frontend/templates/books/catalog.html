@@ -1,35 +1,60 @@
 {% extends "base.html" %}
 {% block title %}Books | Bookend Library{% endblock %}
+{% block body_class %}books-page{% endblock %}
+{% block page_styles %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/books.css') }}">
+{% endblock %}
 {% block content %}
-  <section class="page-heading">
+  <section class="page-heading catalog-heading">
     <p class="eyebrow">THE COLLECTION</p>
-    <h1>Books to borrow</h1>
+    <h1 class="catalog-display">Books to borrow</h1>
+    <p>Search by title or author, or pick a genre.</p>
   </section>
-  <form method="get" action="{{ url_for('books.catalog') }}">
-    <label for="catalog-search">Search books</label>
-    <input id="catalog-search" name="q" value="{{ search_term }}" type="search">
+
+  <form class="catalog-search" method="get" action="{{ url_for('books.catalog') }}" role="search">
+    <label class="visually-hidden" for="catalog-search">Search books</label>
+    <input id="catalog-search" name="q" value="{{ search_term }}" type="search" placeholder="Search books, authors...">
     {% if selected_genre %}<input type="hidden" name="genre" value="{{ selected_genre }}">{% endif %}
-    <button type="submit">Search</button>
+    <button class="button" type="submit">Search</button>
   </form>
-  <nav class="genre-filters" aria-label="Filter books by genre">
-    <a class="{% if not selected_genre %}is-active{% endif %}" href="{{ url_for('books.catalog', q=search_term or None) }}">All genres</a>
+
+  <nav class="genre-filters catalog-chips" aria-label="Filter books by genre">
+    <a class="catalog-chip {% if not selected_genre %}is-active{% endif %}" href="{{ url_for('books.catalog', q=search_term or None) }}">All genres</a>
     {% for genre in genres %}
-      <a class="{% if selected_genre|lower == genre|lower %}is-active{% endif %}" href="{{ url_for('books.catalog', q=search_term or None, genre=genre) }}">{{ genre }}</a>
+      <a class="catalog-chip {% if selected_genre|lower == genre|lower %}is-active{% endif %}" href="{{ url_for('books.catalog', q=search_term or None, genre=genre) }}">{{ genre }}</a>
     {% endfor %}
   </nav>
+
   {% if user and user.is_librarian() %}
-    <p><a href="{{ url_for('books.add') }}">Add a book</a></p>
-    <p><a href="{{ url_for('books.manage') }}">Manage books</a></p>
-    <p><a href="{{ url_for('books.archived') }}">Archived books</a></p>
+    <nav class="catalog-admin-links" aria-label="Book management">
+      <a class="button button-secondary" href="{{ url_for('books.add') }}">Add a book</a>
+      <a class="button button-secondary" href="{{ url_for('books.manage') }}">Manage books</a>
+      <a class="button button-secondary" href="{{ url_for('books.archived') }}">Archived books</a>
+    </nav>
   {% endif %}
+
   {% if books %}
-    <div class="book-grid">
+    <p class="catalog-count">{{ books|length }} book{{ "" if books|length == 1 else "s" }} found</p>
+    <div class="book-grid catalog-book-grid">
       {% for book in books %}
         {% set cover_color = cover_colors[loop.index0 % cover_colors|length] %}
         {% include "landing/_book_card.html" %}
       {% endfor %}
     </div>
   {% else %}
-    <p>No matching books found.</p>
+    <section class="catalog-empty">
+      {% if search_term or selected_genre %}
+        <p>No matching books found.</p>
+        <a href="{{ url_for('books.catalog') }}">Clear search and filters</a>
+      {% else %}
+        <p>No books in the collection yet. Ask your librarian to add some.</p>
+      {% endif %}
+    </section>
   {% endif %}
+{% endblock %}
+{% block page_footer %}
+  <footer class="books-footer">&copy; {{ current_year }} Bookend Library</footer>
 {% endblock %}

@@ -1,3 +1,5 @@
+from datetime import date
+
 from flask import Blueprint, redirect, render_template, request, url_for
 
 from ..config import COVER_COLORS
@@ -49,6 +51,7 @@ def catalog():
         favorite_ids=favorite_ids,
         cover_colors=COVER_COLORS,
         user=user,
+        current_year=date.today().year,
     )
 
 

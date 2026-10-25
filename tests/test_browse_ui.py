@@ -60,9 +60,13 @@ class BrowseUiTests(unittest.TestCase):
         self.assertEqual(catalog.status_code, 200)
         self.assertIn(b"History of Libraries", catalog.data)
         self.assertIn(b"Books to borrow", catalog.data)
+        self.assertIn(b'class="is-current" aria-current="page" href="/books/"', catalog.data)
+        self.assertIn(b'Search by title or author, or pick a genre.', catalog.data)
+        self.assertIn(b'class="book-grid catalog-book-grid"', catalog.data)
         self.assertIn(b"data-search-dialog", catalog.data)
         self.assertIn(b"Search by title, author, or genre", catalog.data)
         self.assertIn(b"Sign in to borrow", catalog.data)
+        self.assertIn(b"Bookend Library</footer>", catalog.data)
 
         detail = self.client.get(f"/books/{self.history.book_id}")
         self.assertEqual(detail.status_code, 200)
