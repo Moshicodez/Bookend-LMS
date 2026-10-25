@@ -38,10 +38,20 @@ class LandingRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Find your", response.data)
         self.assertIn(b"Browse the stacks", response.data)
+        for label in (
+            b'aria-label="Search books"',
+            b'aria-label="Sign in to view your profile"',
+            b'aria-label="Sign in to view saved books"',
+            b'aria-label="Sign in to use the borrow basket"',
+            b'aria-label="Sign in to view your loans"',
+        ):
+            self.assertIn(label, response.data)
+        self.assertNotIn(b"nav-icon-label", response.data)
         self.assertIn(b"No books to show here just yet", response.data)
         self.assertIn(b"No books in this stack yet", response.data)
         self.assertIn(b"dist/genre-carousel.css", response.data)
         self.assertIn(b"dist/genre-carousel.js", response.data)
+        self.assertIn(b"family=Anton&family=Poppins", response.data)
         self.assertIn(b'id="genre-carousel-root"', response.data)
         self.assertIn(b"data:image/svg+xml", response.data)
         items_attribute = re.search(rb'data-items="([^"]+)"', response.data)
@@ -59,7 +69,7 @@ class LandingRouteTests(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             response.close()
 
-    def test_landing_shows_database_books_and_statistics(self):
+    def test_landing_shows_database_books_and_availability(self):
         reader = UserRecord(
             email="reader@example.com",
             username="reader",
@@ -97,11 +107,10 @@ class LandingRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"The Harbor Archive", html)
         self.assertIn(b"A Quiet Mystery", html)
-        self.assertIn(b"2</span>\n      <span class=\"stat-label\">Books in the collection", html)
-        self.assertIn(b"1</span>\n      <span class=\"stat-label\">Active patrons", html)
-        self.assertIn(b"1</span>\n      <span class=\"stat-label\">Books on loan", html)
         self.assertIn(b"Available", html)
         self.assertIn(b"On loan", html)
+        self.assertIn(b"WHY BOOKEND", html)
+        self.assertIn(b"Browse the stacks", html)
         self.assertEqual(book.genre, "History")
 
     def test_landing_includes_unlisted_genres_and_correct_reference_status(self):
@@ -131,7 +140,7 @@ class LandingRouteTests(unittest.TestCase):
         response = self.client.get("/?q=harbor&type=author")
         html = response.data
         result_start = html.index(b'search-results-section"')
-        result_end = html.index(b'class="stats-strip"')
+        result_end = html.index(b'class="landing-section genre-section"')
         results_html = html[result_start:result_end]
 
         self.assertEqual(response.status_code, 200)

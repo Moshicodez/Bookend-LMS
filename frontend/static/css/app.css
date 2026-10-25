@@ -17,6 +17,14 @@
   gap: clamp(12px, 2vw, 27px);
 }
 
+.nav-utility-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
 .landing-navigation > a,
 .landing-navigation summary {
   color: var(--ink);
@@ -87,6 +95,21 @@
   background: transparent;
   color: var(--ink);
   cursor: pointer;
+}
+
+@media (max-width: 680px) {
+  .landing-navbar {
+    gap: 12px;
+  }
+
+  .nav-utility-actions {
+    gap: 0;
+  }
+
+  .nav-utility-actions .nav-icon {
+    width: 30px;
+    height: 30px;
+  }
 }
 
 .nav-icon:hover,

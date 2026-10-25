@@ -4,6 +4,9 @@
 {% block body_class %}landing-page{% endblock %}
 {% block main_class %}landing-main{% endblock %}
 {% block page_styles %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='dist/genre-carousel.css') }}">
 {% endblock %}
@@ -40,25 +43,6 @@
   </section>
   {% endif %}
 
-  <section class="stats-strip" aria-label="Library at a glance">
-    <div class="stat-item">
-      <span class="stat-value">{{ stats.books }}</span>
-      <span class="stat-label">Books in the collection</span>
-    </div>
-    <div class="stat-item">
-      <span class="stat-value">{{ stats.patrons }}</span>
-      <span class="stat-label">Active patrons</span>
-    </div>
-    <div class="stat-item">
-      <span class="stat-value">{{ stats.borrowed }}</span>
-      <span class="stat-label">Books on loan</span>
-    </div>
-    <div class="stat-item">
-      <span class="stat-value">{{ stats.genres }}</span>
-      <span class="stat-label">Genres to explore</span>
-    </div>
-  </section>
-
   {% include "landing/_genre_browser.html" %}
 
   <section class="landing-section carousel-section" id="trending-books" aria-labelledby="trending-heading">
@@ -85,10 +69,9 @@
   <section class="landing-section features-section" id="about" aria-labelledby="features-heading">
     <div class="section-heading feature-heading">
       <div>
-        <p class="section-kicker">MADE FOR READERS</p>
-        <h2 id="features-heading">A library that works for you.</h2>
+        <p class="section-kicker">WHY BOOKEND</p>
+        <h2 id="features-heading">A library for every story.</h2>
       </div>
-      <p class="section-description">Everything you need to find a book, borrow it, and keep your reading life in order.</p>
     </div>
     <div class="feature-grid">
       <article class="feature-card">
@@ -112,32 +95,6 @@
         <p>Keep the catalog organized and help your community find its next good read.</p>
       </article>
     </div>
-  </section>
-
-  <section class="landing-section how-section" aria-labelledby="how-heading">
-    <div class="section-heading">
-      <div>
-        <p class="section-kicker">THREE EASY STEPS</p>
-        <h2 id="how-heading">Your next read is closer than you think.</h2>
-      </div>
-    </div>
-    <ol class="steps-list">
-      <li class="step-card">
-        <span class="step-number">1</span>
-        <h3>Create an account</h3>
-        <p>Join Bookend as a patron in just a moment.</p>
-      </li>
-      <li class="step-card">
-        <span class="step-number">2</span>
-        <h3>Find a book</h3>
-        <p>Browse the collection and choose a story for your shelf.</p>
-      </li>
-      <li class="step-card">
-        <span class="step-number">3</span>
-        <h3>Borrow and return</h3>
-        <p>Enjoy your book, then return it when you're done.</p>
-      </li>
-    </ol>
   </section>
 
   <section class="landing-cta" aria-labelledby="cta-heading">
