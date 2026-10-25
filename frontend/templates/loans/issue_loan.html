@@ -8,6 +8,7 @@
         {{ book.title }} by {{ book.author }}
         {% if book.can_borrow() %}
           <form method="post" action="{{ url_for('loans.borrow', book_id=book.book_id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit">Borrow</button>
           </form>
         {% else %}

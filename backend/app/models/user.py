@@ -15,7 +15,14 @@ class User(ABC):
         if cls.ROLE:
             User._registry[cls.ROLE] = cls
 
-    def __init__(self, user_id, email, username, password_hash, active=True):
+    def __init__(
+        self,
+        user_id,
+        email,
+        username,
+        password_hash,
+        active=True,
+    ):
         self._user_id = user_id
         self._email = email
         self._username = username
@@ -23,11 +30,25 @@ class User(ABC):
         self._active = bool(active)
 
     @classmethod
-    def create(cls, user_id, email, username, password_hash, role, active=True):
+    def create(
+        cls,
+        user_id,
+        email,
+        username,
+        password_hash,
+        role,
+        active=True,
+    ):
         subclass = cls._registry.get(role)
         if subclass is None:
             raise ValidationError(f"Unknown role: {role}")
-        return subclass(user_id, email, username, password_hash, active)
+        return subclass(
+            user_id,
+            email,
+            username,
+            password_hash,
+            active,
+        )
 
     @property
     def user_id(self):

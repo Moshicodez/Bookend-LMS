@@ -16,6 +16,10 @@ bookTrigger?.addEventListener("click", () => {
   bookInvitation?.setAttribute("inert", "");
   bookCard.removeAttribute("inert");
   bookCard.setAttribute("aria-hidden", "false");
+  setTimeout(() => {
+    const target = bookPages?.dataset.page === "register" ? "#email" : "#login-username";
+    document.querySelector(target)?.focus();
+  }, 500);
 });
 
 if (bookStage?.classList.contains("is-open")) {

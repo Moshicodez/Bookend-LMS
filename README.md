@@ -22,10 +22,34 @@ automatically in Flask's instance folder. Set `BOOKEND_DATABASE_URL` to use a
 different SQLAlchemy database URL, and set `BOOKEND_SECRET_KEY` to a long,
 random value before deploying.
 
-Public signup creates patron accounts only. Librarian accounts must be added
-directly to the `users` table by an administrator, with `role` set to
-`librarian` and `password_hash` generated with Werkzeug's
-`werkzeug.security.generate_password_hash` (never store a plain-text password).
+Public signup creates patron accounts only. Email addresses are checked for
+valid syntax; the app does not send email or verify mailbox ownership. Create a
+librarian account with:
+
+```powershell
+flask --app main create-librarian
+```
+
+The command prompts for username, email, and password with confirmation.
+Load the sample books from `frontend/static/data/genre-books.json` with:
+
+```powershell
+flask --app main seed-demo
+```
+
+The seed command skips books already in the database with the same title and
+author. Librarians can create patron accounts, search members by username or email,
+view patron loan history and fees, and reset a patron's password from the
+Members page. Temporary passwords are shown once. The Catalog also provides
+a librarian-only Archived books view with a Restore action. To reset any
+account from the command line:
+
+```powershell
+flask --app main reset-user-password reader@example.com
+```
+
+The CLI prompts for a new password and confirmation. Signed-in users can also
+change their password from the landing-page navigation.
 
 ## Backend
 

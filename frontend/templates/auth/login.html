@@ -1,23 +1,22 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f6f4ee">
-  <title>Bookend Library</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+{% extends "base.html" %}
+{% block title %}Bookend Library{% endblock %}
+{% block body_class %}login-page{% endblock %}
+{% block site_header %}{% endblock %}
+{% block page_scripts %}
   <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
-</head>
-<body class="login-page">
-  <main class="login-screen">
+{% endblock %}
+{% block main_class %}login-screen{% endblock %}
+{% block content %}
+<section class="login-page-content">
+  <section class="login-screen">
     <section class="form-panel" aria-labelledby="form-title">
-      <div class="book-login-stage{% if error_message or request.args.get('open') or (page or request.args.get('page')) == 'register' %} is-open{% endif %}" data-book-stage>
+      <div class="book-login-stage{% if error_message or success_message or request.args.get('open') or (page or request.args.get('page')) == 'register' %} is-open{% endif %}" data-book-stage>
 
         <!-- closed book invitation -->
         <div
           class="book-invitation"
           data-book-invitation
-          {% if error_message or request.args.get('open') or (page or request.args.get('page')) == 'register' %}aria-hidden="true" inert{% endif %}
+          {% if error_message or success_message or request.args.get('open') or (page or request.args.get('page')) == 'register' %}aria-hidden="true" inert{% endif %}
         >
           <a class="brand book-brand" href="/" aria-label="Bookend Library">
             <span class="brand-mark" aria-hidden="true">B</span>
@@ -27,7 +26,7 @@
             class="book-trigger"
             type="button"
             aria-label="Open Bookend to reveal the sign-in form"
-            aria-expanded="{{ 'true' if (error_message or request.args.get('open') or (page or request.args.get('page')) == 'register') else 'false' }}"
+            aria-expanded="{{ 'true' if (error_message or success_message or request.args.get('open') or (page or request.args.get('page')) == 'register') else 'false' }}"
             aria-controls="book-card"
             data-book-trigger
           >
@@ -55,7 +54,7 @@
         <div
           class="opened-book"
           id="book-card"
-          {% if error_message or request.args.get('open') or (page or request.args.get('page')) == 'register' %}aria-hidden="false"{% else %}inert aria-hidden="true"{% endif %}
+          {% if error_message or success_message or request.args.get('open') or (page or request.args.get('page')) == 'register' %}aria-hidden="false"{% else %}inert aria-hidden="true"{% endif %}
         >
           <div class="open-book-shadow">
             <!-- data-page: "login" or "register" — JS flips between them -->
@@ -79,10 +78,12 @@
                     <p class="eyebrow form-eyebrow">WELCOME BACK</p>
                     <h2 id="form-title">Sign in to your account</h2>
                     <p class="form-intro">Your books are waiting right where you left them.</p>
+                    {% if success_message %}<p class="preview-message" role="status">{{ success_message }}</p>{% endif %}
                     {% if error_message and (page or request.args.get('page')) != 'register' %}
                     <p class="preview-message" role="alert">{{ error_message }}</p>
                     {% endif %}
                     <form class="login-form" method="post" action="{{ url_for('auth.login') }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <div class="form-field">
                         <label for="login-username">Username or email</label>
                         <input id="login-username" name="username" type="text"
@@ -112,6 +113,7 @@
                       <span class="note-icon" aria-hidden="true">i</span>
                       <p>Having trouble signing in? Please ask a librarian for help.</p>
                     </div>
+                    <p class="copyright">Forgot your password? Ask a librarian to reset it.</p>
                     <p class="copyright">© Bookend Library</p>
                     <p class="copyright">New here? <a class="page-turn-link" href="{{ url_for('auth.register') }}" data-page-turn="next">Create an account</a></p>
                   </div>
@@ -131,6 +133,7 @@
                     <p class="preview-message" role="alert">{{ error_message }}</p>
                     {% endif %}
                     <form class="login-form register-form" method="post" action="{{ url_for('auth.register') }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <div class="form-field">
                         <label for="email">Email</label>
                         <input id="email" name="email" type="email"
@@ -194,6 +197,6 @@
 
       </div>
     </section>
-  </main>
-</body>
-</html>
+  </section>
+</section>
+{% endblock %}

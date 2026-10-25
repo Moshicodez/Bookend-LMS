@@ -2,7 +2,8 @@
 {% block title %}Add a book | Bookend Library{% endblock %}
 {% block content %}
   <h1>Add a book</h1>
-  <form method="post" action="{{ url_for('books.add') }}">
+  <form method="post" action="{{ url_for('books.add') }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label for="title">Title</label>
     <input id="title" name="title" maxlength="250" required>
     <label for="author">Author</label>
@@ -11,6 +12,8 @@
     <input id="genre" name="genre" maxlength="100">
     <label for="description">Description</label>
     <textarea id="description" name="description"></textarea>
+    <label for="cover">Book cover (JPG, PNG, or WebP; max 2 MB)</label>
+    <input id="cover" name="cover" type="file" accept=".jpg,.png,.webp,image/jpeg,image/png,image/webp">
     <label for="kind">Book type</label>
     <select id="kind" name="kind">
       <option value="standard">Standard</option>

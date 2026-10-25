@@ -98,6 +98,7 @@
   {% endif %}
   {% if user and user.is_librarian() %}
     <p><a href="{{ url_for('books.edit', book_id=book.book_id) }}">Edit details</a></p>
+    <p><a href="{{ url_for('books.manage') }}">Back to books</a></p>
     {% if book.available and book.catalog %}
       <form method="post" action="{{ url_for('books.archive', book_id=book.book_id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

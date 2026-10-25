@@ -2,7 +2,8 @@
 {% block title %}Edit {{ book.title }} | Bookend Library{% endblock %}
 {% block content %}
   <h1>Edit book</h1>
-  <form method="post" action="{{ url_for('books.edit', book_id=book.book_id) }}">
+  <form method="post" action="{{ url_for('books.edit', book_id=book.book_id) }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label for="title">Title</label>
     <input id="title" name="title" value="{{ book.title }}" maxlength="250" required>
     <label for="author">Author</label>
@@ -11,6 +12,9 @@
     <input id="genre" name="genre" value="{{ book.genre }}" maxlength="100">
     <label for="description">Description</label>
     <textarea id="description" name="description">{{ book.description }}</textarea>
+    {% if book.cover %}<p>Current cover: <img src="{{ url_for('static', filename='uploads/' ~ book.cover) }}" alt="Cover of {{ book.title }}" width="100"></p>{% endif %}
+    <label for="cover">Replace cover (JPG, PNG, or WebP; max 2 MB)</label>
+    <input id="cover" name="cover" type="file" accept=".jpg,.png,.webp,image/jpeg,image/png,image/webp">
     <button type="submit">Save changes</button>
   </form>
 {% endblock %}

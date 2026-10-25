@@ -11,7 +11,7 @@
 }
 
 .genre-carousel-host .circular-carousel {
-  --cc-fade: #f6f4ee;
+  --cc-fade: #f6f4ee !important;
 }
 
 .genre-carousel-host .circular-carousel:focus-visible {
