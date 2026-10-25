@@ -5,8 +5,8 @@
   </a>
 
   <nav class="landing-navigation" aria-label="Main navigation">
-    <a class="is-current" href="{{ url_for('landing.index') }}">Home</a>
-    <a href="{{ url_for('books.catalog') }}">Books</a>
+    <a class="{% if request.endpoint == 'landing.index' %}is-current{% endif %}" {% if request.endpoint == 'landing.index' %}aria-current="page"{% endif %} href="{{ url_for('landing.index') }}">Home</a>
+    <a class="{% if request.endpoint == 'books.catalog' %}is-current{% endif %}" {% if request.endpoint == 'books.catalog' %}aria-current="page"{% endif %} href="{{ url_for('books.catalog') }}">Books</a>
     <details class="genre-dropdown">
       <summary>Genres</summary>
       <div class="genre-dropdown-menu">
