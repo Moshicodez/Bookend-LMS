@@ -1,5 +1,6 @@
 from ..config import Config
 from ..exceptions import NotFoundError, ValidationError
+from ..repositories.user_repository import UserRepository
 from ..utils.date_utils import add_days, today
 
 
@@ -109,20 +110,32 @@ class LoanService:
             return "Overdue"
         return "On loan"
 
-    def management_cards(self, librarian, overdue_only=False):
+    def management_cards(self, librarian, overdue_only=False, search="", status=""):
         librarian.require("manage_loans")
         loans = (
             self._loan_repo.find_overdue()
             if overdue_only
             else self._loan_repo.find_all()
         )
+        users = UserRepository()
+        term = (search or "").strip().casefold()
         cards = []
         for loan in loans:
+            book = self._book_repo.find_book(loan.book_id)
+            patron = users.find_by_id(loan.patron_id)
+            patron_name = patron.username if patron else f"#{loan.patron_id}"
+            loan_status = self._loan_status(loan, today())
+            if status and loan_status.lower().replace(" ", "-") != status:
+                continue
+            haystack = f"{book.title if book else ''} {patron_name}".casefold()
+            if term and term not in haystack:
+                continue
             cards.append(
                 {
                     "loan": loan,
-                    "book": self._book_repo.find_book(loan.book_id),
-                    "status": self._loan_status(loan, today()),
+                    "book": book,
+                    "patron_name": patron_name,
+                    "status": loan_status,
                     "outstanding": loan.outstanding(today()),
                 }
             )

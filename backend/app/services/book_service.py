@@ -28,6 +28,16 @@ class BookService:
             ]
         return books
 
+    def search_page(self, term="", genre="", status="", sort="title", page=1, per_page=12):
+        return self._book_repo.search(term, genre, status, sort, page, per_page)
+
+    def management_search(self, librarian, term="", status="all"):
+        librarian.require("edit_book")
+        if status not in {"all", "available", "on_loan", "archived"}:
+            status = "all"
+        books, _ = self._book_repo.search(term, "", status, "title", 1, 500)
+        return books
+
     def archived_books(self, librarian):
         librarian.require("archive_book")
         return self._book_repo.find_archived()

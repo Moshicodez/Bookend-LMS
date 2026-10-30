@@ -6,6 +6,9 @@
   <title>{% block title %}Bookend Library{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   {% block page_styles %}{% endblock %}
   {% block page_scripts %}{% endblock %}
   <script src="{{ url_for('static', filename='js/library.js') }}" defer></script>
@@ -46,6 +49,8 @@
   <main class="{% block main_class %}{% endblock %}">
     {% block content %}{% endblock %}
   </main>
-  {% block page_footer %}{% endblock %}
+  {% block page_footer %}
+    <footer class="site-footer">&copy; Bookend Library</footer>
+  {% endblock %}
 </body>
 </html>

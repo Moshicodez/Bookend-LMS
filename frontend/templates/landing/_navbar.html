@@ -4,7 +4,7 @@
     <span>bookend<span class="brand-period">.</span></span>
   </a>
 
-  <nav class="landing-navigation" aria-label="Main navigation">
+  <nav class="landing-navigation" aria-label="Main navigation" data-navigation>
     <a class="{% if request.endpoint == 'landing.index' %}is-current{% endif %}" {% if request.endpoint == 'landing.index' %}aria-current="page"{% endif %} href="{{ url_for('landing.index') }}">Home</a>
     <a class="{% if request.endpoint == 'books.catalog' %}is-current{% endif %}" {% if request.endpoint == 'books.catalog' %}aria-current="page"{% endif %} href="{{ url_for('books.catalog') }}">Books</a>
     <details class="genre-dropdown">
@@ -23,7 +23,6 @@
       <a class="nav-login" href="{{ url_for('dashboard.patron_dashboard') }}">Dashboard</a>
     {% elif current_user and current_user.is_librarian() %}
       <a href="{{ url_for('dashboard.librarian_dashboard') }}">Dashboard</a>
-      <a href="{{ url_for('genres.index') }}">Manage genres</a>
     {% endif %}
     {% if current_user %}
       <form class="nav-logout-form" method="post" action="{{ url_for('auth.logout') }}">
@@ -32,6 +31,7 @@
       </form>
     {% endif %}
   </nav>
+
   <div class="nav-utility-actions" aria-label="Account shortcuts">
     <button class="icon-button nav-icon" type="button" aria-label="Search books" title="Search books" data-search-open>
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg>
@@ -71,4 +71,8 @@
       </a>
     {% endif %}
   </div>
+
+  <button class="landing-menu-toggle" type="button" aria-expanded="false" aria-label="Open navigation menu" data-menu-toggle>
+    <span></span><span></span><span></span>
+  </button>
 </header>

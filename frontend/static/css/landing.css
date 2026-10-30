@@ -67,22 +67,6 @@ html::-webkit-scrollbar {
   clip-path: inset(50%);
 }
 
-.landing-navbar {
-  position: sticky;
-  z-index: 20;
-  top: 0;
-  display: flex;
-  min-height: 76px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 32px;
-  padding: 13px max(32px, calc((100vw - var(--landing-content-width)) / 2));
-  border-bottom: 1px solid #303030;
-  background: rgb(26 26 26 / 96%);
-  box-shadow: 0 3px 14px rgb(0 0 0 / 16%);
-  backdrop-filter: blur(12px);
-}
-
 .landing-navigation.is-open {
   border-color: var(--landing-border);
   background: var(--landing-surface);
@@ -945,12 +929,6 @@ html::-webkit-scrollbar {
 }
 
 @media (max-width: 900px) {
-  .landing-navbar {
-    gap: 20px;
-    padding-right: 28px;
-    padding-left: 28px;
-  }
-
   .landing-navigation {
     gap: 18px;
   }
@@ -971,11 +949,6 @@ html::-webkit-scrollbar {
 @media (max-width: 680px) {
   html {
     scroll-padding-top: 72px;
-  }
-
-  .landing-navbar {
-    min-height: 66px;
-    padding: 11px 20px;
   }
 
   .landing-menu-toggle {
@@ -1247,12 +1220,6 @@ html::-webkit-scrollbar {
   color: var(--landing-text);
 }
 
-.landing-navbar {
-  border-color: var(--landing-border);
-  background: rgb(255 254 250 / 94%);
-  box-shadow: 0 4px 18px rgb(50 54 43 / 6%);
-}
-
 .landing-brand,
 .landing-navigation .nav-login {
   color: var(--landing-text);
@@ -1505,18 +1472,6 @@ html::-webkit-scrollbar {
 
 .footer-bottom p {
   color: #777b70;
-}
-
-.landing-navbar {
-  width: 100%;
-  min-height: 90px;
-  gap: 24px;
-  margin: 0;
-  padding: 0 48px;
-  border-top: 3px solid var(--landing-text);
-  border-bottom: 1px solid var(--landing-border);
-  background: var(--landing-surface);
-  box-shadow: none;
 }
 
 .landing-brand {
@@ -1874,11 +1829,6 @@ html::-webkit-scrollbar {
 }
 
 @media (max-width: 800px) {
-  .landing-navbar {
-    min-height: 76px;
-    padding: 0 20px;
-  }
-
   .landing-navigation {
     position: static;
     width: auto;
@@ -1912,11 +1862,6 @@ html::-webkit-scrollbar {
 }
 
 @media (max-width: 680px) {
-  .landing-navbar {
-    min-height: 66px;
-    padding: 8px 16px;
-  }
-
   .nav-utility-actions {
     gap: 0;
   }

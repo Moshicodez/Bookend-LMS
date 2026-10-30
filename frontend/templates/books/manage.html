@@ -7,6 +7,18 @@
     <p>Update catalog details, covers, and availability.</p>
     <a class="button" href="{{ url_for('books.add') }}">Add a book</a>
   </section>
+
+  <form method="get" action="{{ url_for('books.manage') }}" role="search">
+    <label class="visually-hidden" for="manage-q">Search books</label>
+    <input id="manage-q" name="q" type="search" value="{{ q }}" placeholder="Title, author, genre">
+    <select name="status" aria-label="Filter by status">
+      {% for value, label in [("all","All"),("available","Available"),("on_loan","On loan"),("archived","Archived")] %}
+        <option value="{{ value }}" {{ 'selected' if status == value }}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button class="button" type="submit">Filter</button>
+  </form>
+
   {% if books %}
     <div class="table-scroll">
       <table class="admin-table books-admin-table">
@@ -55,8 +67,8 @@
     </div>
   {% else %}
     <section class="empty-state">
-      <h2>No books in the catalog</h2>
-      <p>Add the first book to get started.</p>
+      <h2>No books found</h2>
+      <p>Try a different search, or add a book to get started.</p>
     </section>
   {% endif %}
 {% endblock %}

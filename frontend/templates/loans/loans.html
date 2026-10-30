@@ -1,14 +1,32 @@
 {% extends "base.html" %}
 {% block title %}Loans | Bookend Library{% endblock %}
 {% block content %}
-  <h1>{{ "Overdue loans" if overdue else "Loans" }}</h1>
+  <section class="page-heading">
+    <p class="eyebrow">{{ "LIBRARIAN TOOLS" if user.is_librarian() else "YOUR LOANS" }}</p>
+    <h1>{{ "Overdue loans" if overdue else "Loans" }}</h1>
+  </section>
+
   {% if user.is_patron() %}
     <p><a class="button" href="{{ url_for('patron.basket_index') }}">Open borrow basket</a></p>
   {% elif not user.is_librarian() %}
     <p><a href="{{ url_for('loans.issue') }}">Borrow a book</a></p>
   {% elif not overdue %}
-    <p><a href="{{ url_for('loans.overdue') }}">View overdue loans</a></p>
+    <p><a class="button button-secondary" href="{{ url_for('loans.overdue') }}">View overdue loans</a></p>
   {% endif %}
+
+  {% if user.is_librarian() and not overdue %}
+    <form method="get" action="{{ url_for('loans.index') }}" role="search">
+      <label class="visually-hidden" for="loan-q">Search loans</label>
+      <input id="loan-q" name="q" type="search" value="{{ q or '' }}" placeholder="Book title or patron">
+      <select name="status" aria-label="Filter by status">
+        {% for value, label in [("","All"),("on-loan","On loan"),("overdue","Overdue"),("returned","Returned"),("lost","Lost")] %}
+          <option value="{{ value }}" {{ 'selected' if (status or '') == value }}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button class="button" type="submit">Filter</button>
+    </form>
+  {% endif %}
+
   {% if user.is_patron() and loan_cards %}
     <div class="loan-card-grid">
       {% for card in loan_cards %}
@@ -47,12 +65,12 @@
   {% elif user.is_librarian() and loan_cards %}
     <div class="table-scroll">
       <table class="admin-table">
-        <thead><tr><th>Book</th><th>Patron ID</th><th>Borrowed</th><th>Due</th><th>Status</th><th>Fees</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Book</th><th>Patron</th><th>Borrowed</th><th>Due</th><th>Status</th><th>Fees</th><th>Actions</th></tr></thead>
         <tbody>
           {% for card in loan_cards %}
             <tr>
               <td>{{ card.book.title if card.book else "Book #" ~ card.loan.book_id }}</td>
-              <td>{{ card.loan.patron_id }}</td>
+              <td>{{ card.patron_name }}</td>
               <td>{{ card.loan.borrowed_at.strftime("%b %d, %Y") }}</td>
               <td>{{ card.loan.due_date.strftime("%b %d, %Y") }}</td>
               <td><span class="loan-status status-{{ card.status|lower|replace(' ', '-') }}">{{ card.status }}</span></td>
@@ -101,6 +119,6 @@
       {% endfor %}
     </ul>
   {% else %}
-    <p>No loans to show.</p>
+    <section class="empty-state"><h2>No loans to show</h2></section>
   {% endif %}
 {% endblock %}

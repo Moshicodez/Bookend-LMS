@@ -21,6 +21,8 @@ loan_service = LoanService(BookRepository(), loan_repository)
 review_service = ReviewService(ReviewRepository(), BookRepository())
 favorite_repository = FavoriteRepository()
 
+PER_PAGE = 12
+
 
 def _require_user():
     user = _signed_in_user()
@@ -34,7 +36,19 @@ def catalog():
     user = _signed_in_user()
     search_term = request.args.get("q", "")
     genre = request.args.get("genre", "").strip()
-    books = book_service.search_books(search_term, genre)
+    available_only = request.args.get("available") == "1"
+    sort = request.args.get("sort", "title")
+    page = max(request.args.get("page", 1, type=int), 1)
+
+    books, total = book_service.search_page(
+        search_term,
+        genre,
+        "available" if available_only else "",
+        sort,
+        page,
+        PER_PAGE,
+    )
+    pages = max(1, -(-total // PER_PAGE))
     ratings = review_service.summaries([book.book_id for book in books])
     favorite_ids = (
         set(favorite_repository.book_ids_for_user(user.user_id))
@@ -44,6 +58,11 @@ def catalog():
     return render_template(
         "books/catalog.html",
         books=books,
+        total=total,
+        page=page,
+        pages=pages,
+        available_only=available_only,
+        sort=sort,
         search_term=search_term,
         selected_genre=genre,
         genres=BookRepository().list_genres(),
@@ -115,8 +134,16 @@ def manage():
     user, response = _require_user()
     if response:
         return response
-    books = book_service.management_books(user)
-    return render_template("books/manage.html", books=books, user=user)
+    q = request.args.get("q", "")
+    status = request.args.get("status", "all")
+    books = book_service.management_search(user, q, status)
+    return render_template(
+        "books/manage.html",
+        books=books,
+        user=user,
+        q=q,
+        status=status,
+    )
 
 
 @books_bp.route("/<int:book_id>/edit", methods=["GET", "POST"])

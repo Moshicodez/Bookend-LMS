@@ -7,19 +7,6 @@ html::-webkit-scrollbar {
   display: none;
 }
 
-.landing-navbar {
-  position: relative;
-  z-index: 20;
-  display: flex;
-  width: min(1320px, calc(100% - 48px));
-  min-height: 82px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 28px;
-  margin: 0 auto;
-  border-bottom: 1px solid var(--line);
-}
-
 .landing-navigation {
   display: flex;
   align-items: center;
@@ -107,10 +94,6 @@ html::-webkit-scrollbar {
 }
 
 @media (max-width: 680px) {
-  .landing-navbar {
-    gap: 12px;
-  }
-
   .nav-utility-actions {
     gap: 0;
   }
@@ -1204,15 +1187,6 @@ main:not(.landing-main) > form[method="get"] input {
 }
 
 @media (max-width: 760px) {
-  .landing-navbar {
-    width: calc(100% - 32px);
-    min-height: 70px;
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 12px;
-    padding: 14px 0;
-  }
-
   .landing-navigation {
     width: 100%;
     flex-wrap: wrap;

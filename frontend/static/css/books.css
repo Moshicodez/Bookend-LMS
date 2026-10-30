@@ -14,18 +14,6 @@
   font-family: "Poppins", sans-serif;
 }
 
-.books-page .landing-navbar {
-  width: 100%;
-  min-height: 90px;
-  gap: 24px;
-  margin: 0;
-  padding: 0 48px;
-  border-top: 3px solid var(--books-ink);
-  border-bottom: 1px solid var(--books-line);
-  background: #fffefa;
-  box-shadow: none;
-}
-
 .books-page .landing-brand {
   flex: 0 0 auto;
   color: var(--books-ink);
@@ -391,11 +379,6 @@
 }
 
 @media (max-width: 800px) {
-  .books-page .landing-navbar {
-    min-height: 76px;
-    padding: 0 20px;
-  }
-
   .books-page .landing-navigation {
     position: static;
     width: auto;
@@ -410,11 +393,6 @@
 }
 
 @media (max-width: 680px) {
-  .books-page .landing-navbar {
-    min-height: 66px;
-    padding: 8px 16px;
-  }
-
   .books-page .landing-navigation {
     display: none;
   }

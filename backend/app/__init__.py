@@ -1,5 +1,6 @@
 import json
 import os
+from datetime import date
 
 import click
 from flask import Flask, session
@@ -84,6 +85,7 @@ def create_app(test_config=None):
             "overdue_count": overdue_count,
             "navigation_genres": GenreRepository().list_genres(),
             "cover_colors": COVER_COLORS,
+            "site_year": date.today().year,
         }
 
     @app.cli.command("create-librarian")

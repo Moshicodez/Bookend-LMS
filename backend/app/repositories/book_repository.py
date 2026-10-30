@@ -32,6 +32,50 @@ class BookRepository:
         ).scalars()
         return [self._to_domain_book(record) for record in records]
 
+    def search(self, term="", genre="", status="", sort="title", page=1, per_page=12):
+        stmt = db.select(BookRecord)
+        if status == "available":
+            stmt = stmt.where(
+                BookRecord.catalog.is_(True),
+                BookRecord.available.is_(True),
+                BookRecord.kind != "reference",
+            )
+        elif status == "on_loan":
+            stmt = stmt.where(BookRecord.catalog.is_(True), BookRecord.available.is_(False))
+        elif status == "archived":
+            stmt = stmt.where(BookRecord.catalog.is_(False))
+        elif status != "all":
+            stmt = stmt.where(BookRecord.catalog.is_(True))
+
+        for word in (term or "").split():
+            safe = word.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            pattern = f"%{safe}%"
+            stmt = stmt.where(
+                db.or_(
+                    BookRecord.title.ilike(pattern, escape="\\"),
+                    BookRecord.author.ilike(pattern, escape="\\"),
+                    BookRecord.genre.ilike(pattern, escape="\\"),
+                )
+            )
+        if genre:
+            stmt = stmt.where(db.func.lower(BookRecord.genre) == genre.casefold())
+
+        order = {
+            "title": BookRecord.title.collate("NOCASE"),
+            "author": BookRecord.author.collate("NOCASE"),
+            "newest": BookRecord.book_id.desc(),
+        }.get(sort, BookRecord.title.collate("NOCASE"))
+
+        total = db.session.scalar(
+            db.select(db.func.count()).select_from(stmt.subquery())
+        ) or 0
+        rows = db.session.execute(
+            stmt.order_by(order, BookRecord.book_id)
+            .limit(per_page)
+            .offset((max(page, 1) - 1) * per_page)
+        ).scalars()
+        return [self._to_domain_book(record) for record in rows], total
+
     def create(self, book):
         record = BookRecord(
             kind=book.kind,

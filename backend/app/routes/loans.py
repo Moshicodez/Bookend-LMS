@@ -23,10 +23,12 @@ def index():
     user, response = _require_user()
     if response:
         return response
+    q = request.args.get("q", "")
+    status = request.args.get("status", "")
     if user.is_librarian():
         user.require("manage_loans")
         loans = []
-        loan_cards = loan_service.management_cards(user)
+        loan_cards = loan_service.management_cards(user, search=q, status=status)
     else:
         loans = []
         loan_cards = loan_service.loan_cards(user)
@@ -35,6 +37,8 @@ def index():
         loans=loans,
         loan_cards=loan_cards,
         user=user,
+        q=q,
+        status=status,
     )
 
 
