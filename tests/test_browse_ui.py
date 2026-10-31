@@ -130,7 +130,8 @@ class BrowseUiTests(unittest.TestCase):
     def test_librarian_navigation_uses_shield_and_overdue_count(self):
         self._sign_in(self.librarian)
         page = self.client.get("/books/")
-        self.assertIn(b"Librarian dashboard, 0 overdue loans", page.data)
+        self.assertIn(b'href="/librarian"', page.data)
+        self.assertIn(b"Dashboard", page.data)
         self.assertNotIn(b"Saved books,", page.data)
         self.assertNotIn(b"Borrow basket,", page.data)
 

@@ -6,6 +6,8 @@
   <title>{% block title %}Bookend Library{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/overlays.css') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -14,20 +16,23 @@
   <script src="{{ url_for('static', filename='js/library.js') }}" defer></script>
 </head>
 <body class="{% block body_class %}{% endblock %}">
+  {% include "partials/_account_drawer.html" %}
+
   {% block site_header %}
     {% include "landing/_navbar.html" %}
   {% endblock %}
   <dialog class="search-overlay" data-search-dialog aria-labelledby="search-overlay-title">
     <div class="search-overlay-inner">
       <button class="icon-button search-close" type="button" aria-label="Close search" data-search-close>×</button>
-      <p class="eyebrow">FIND YOUR NEXT READ</p>
-      <h2 id="search-overlay-title">Search the shelves</h2>
+      <p class="eyebrow">Search</p>
+      <h2 id="search-overlay-title">Search books, authors, genres...</h2>
       <form class="overlay-search-form" method="get" action="{{ url_for('books.catalog') }}">
         <label class="visually-hidden" for="overlay-search-input">Search by title, author, or genre</label>
-        <input id="overlay-search-input" name="q" type="search" placeholder="Title, author, or genre" data-search-input>
-        <button class="button" type="submit">Search books</button>
+        <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg>
+        <input id="overlay-search-input" name="q" type="search" placeholder="Search books, authors, genres..." data-search-input>
+        <button class="button" type="submit">Search</button>
       </form>
-      <p class="search-chips-label">Browse a genre</p>
+      <p class="search-hint">Press enter to search</p>
       <div class="genre-chips">
         {% for genre in navigation_genres %}
           <a href="{{ url_for('books.catalog', genre=genre) }}">{{ genre }}</a>

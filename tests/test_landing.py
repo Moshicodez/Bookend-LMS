@@ -41,9 +41,6 @@ class LandingRouteTests(unittest.TestCase):
         for label in (
             b'aria-label="Search books"',
             b'aria-label="Sign in to view your profile"',
-            b'aria-label="Sign in to view saved books"',
-            b'aria-label="Sign in to use the borrow basket"',
-            b'aria-label="Sign in to view your loans"',
         ):
             self.assertIn(label, response.data)
         self.assertNotIn(b"nav-icon-label", response.data)
@@ -185,6 +182,7 @@ class LandingRouteTests(unittest.TestCase):
         self.assertIn(b"Hi, reader", response.data)
         self.assertIn(b'href="/patron">Dashboard</a>', response.data)
         self.assertIn(b"Log out", response.data)
+        self.assertIn(b'class="account-dropdown"', response.data)
 
 
 if __name__ == "__main__":

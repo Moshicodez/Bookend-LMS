@@ -168,6 +168,7 @@ class AuthRouteTests(unittest.TestCase):
         self.assertEqual(landing.status_code, 200)
         self.assertIn(b"Hi, reader", landing.data)
         self.assertIn(b"Log out", landing.data)
+        self.assertIn(b'class="account-dropdown"', landing.data)
 
     def test_login_rejects_wrong_password_and_deactivated_user(self):
         record = self.register_account()

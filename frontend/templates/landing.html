@@ -11,9 +11,6 @@
   <script src="{{ url_for('static', filename='js/landing.js') }}" defer></script>
   <script type="module" src="{{ url_for('static', filename='dist/genre-carousel.js') }}"></script>
 {% endblock %}
-{% block site_header %}
-  {% include "landing/_navbar.html" %}
-{% endblock %}
 
 {% block content %}
   {% include "landing/_hero.html" %}
