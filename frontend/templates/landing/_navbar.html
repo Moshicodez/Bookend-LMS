@@ -1,10 +1,11 @@
 <header class="landing-navbar" id="top">
-  <a class="brand landing-brand" href="{{ url_for('landing.index') }}" aria-label="Bookend Library home">
-    <span class="brand-mark" aria-hidden="true">B</span>
-    <span>bookend<span class="brand-period">.</span></span>
-  </a>
+  <div class="landing-navbar-inner">
+    <a class="brand landing-brand" href="{{ url_for('landing.index') }}" aria-label="Bookend Library home">
+      <span class="brand-mark" aria-hidden="true">B</span>
+      <span>bookend<span class="brand-period">.</span></span>
+    </a>
 
-  <nav class="landing-navigation" aria-label="Main navigation" data-navigation>
+    <nav class="landing-navigation" aria-label="Main navigation" data-navigation>
     <a class="{% if request.endpoint == 'landing.index' %}is-current{% endif %}" {% if request.endpoint == 'landing.index' %}aria-current="page"{% endif %} href="{{ url_for('landing.index') }}">Home</a>
     <a class="{% if request.endpoint == 'books.catalog' %}is-current{% endif %}" {% if request.endpoint == 'books.catalog' %}aria-current="page"{% endif %} href="{{ url_for('books.catalog') }}">Books</a>
     {% if current_user and current_user.is_librarian() %}
@@ -71,4 +72,5 @@
   <button class="landing-menu-toggle" type="button" aria-expanded="false" aria-label="Open navigation menu" data-menu-toggle>
     <span></span><span></span><span></span>
   </button>
+</div>
 </header>

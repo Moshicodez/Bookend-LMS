@@ -6,10 +6,12 @@
 {% block page_styles %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='dist/genre-carousel.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='dist/books.css') }}">
 {% endblock %}
 {% block page_scripts %}
   <script src="{{ url_for('static', filename='js/landing.js') }}" defer></script>
   <script type="module" src="{{ url_for('static', filename='dist/genre-carousel.js') }}"></script>
+  <script src="{{ url_for('static', filename='dist/books.js') }}" defer></script>
 {% endblock %}
 
 {% block content %}

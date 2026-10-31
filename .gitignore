@@ -157,6 +157,7 @@ env/
 venv/
 ENV/
 frontend/react/node_modules/
+frontend-react/node_modules/
 env.bak/
 venv.bak/
 

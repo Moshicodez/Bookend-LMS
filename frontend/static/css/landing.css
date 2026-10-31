@@ -1013,15 +1013,38 @@ html::-webkit-scrollbar {
   margin-top: 0;
 }
 
-.hero-actions .landing-button {
-  min-height: 58px;
-  padding: 0 30px;
-  border-radius: 4px;
+.landing-button {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 14px 28px;
+  line-height: 1;
+  border: 1px solid var(--landing-accent);
+  border-radius: var(--landing-radius);
   background: var(--landing-accent);
-  color: var(--landing-bg);
-  font-size: 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+
+.landing-button:hover {
+  transform: translateY(-2px);
+  border-color: var(--landing-accent-hover);
+  background: var(--landing-accent-hover);
+  box-shadow: 0 5px 16px var(--landing-accent-glow);
+}
+
+.landing-button:focus-visible,
+.carousel-arrow:focus-visible,
+.hero-search button:focus-visible,
+.landing-menu-toggle:focus-visible {
+  outline: 3px solid var(--landing-accent-soft);
+  outline-offset: 3px;
 }
 
 .hero-mark {

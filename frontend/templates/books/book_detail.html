@@ -1,5 +1,12 @@
 {% extends "base.html" %}
 {% block title %}{{ book.title }} | Bookend Library{% endblock %}
+{% block page_styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/books.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='dist/books.css') }}">
+{% endblock %}
+{% block page_scripts %}
+  <script src="{{ url_for('static', filename='dist/books.js') }}" defer></script>
+{% endblock %}
 {% block content %}
   <nav class="breadcrumbs" aria-label="Breadcrumb">
     <a href="{{ url_for('books.catalog') }}">Books</a>

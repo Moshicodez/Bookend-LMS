@@ -1,9 +1,30 @@
 {% set book_url = url_for('books.detail', book_id=book.book_id) %}
-<article class="landing-book-card">
+{% set can_borrow = book.can_borrow() %}
+{% set cover_url = url_for('static', filename='uploads/' ~ book.cover) if book.cover else '' %}
+{% set availability_label = "Available" if can_borrow else ("In-library use" if book.available else "On loan") %}
+{% set is_patron = current_user and current_user.is_patron() %}
+{% set is_librarian = current_user and current_user.is_librarian() %}
+{% set role = "patron" if is_patron else ("librarian" if is_librarian else "") %}
+{% set is_favorite = book.book_id in favorite_ids if is_patron else False %}
+
+<div
+  class="landing-book-card"
+  data-book-card
+  data-book-id="{{ book.book_id|e }}"
+  data-title="{{ book.title|e }}"
+  data-author="{{ book.author|e }}"
+  data-cover="{{ cover_url|e }}"
+  data-url="{{ book_url|e }}"
+  data-available="{{ 'true' if can_borrow else 'false' }}"
+  data-role="{{ role|e }}"
+  data-csrf="{{ csrf_token()|e }}"
+  data-description="{{ book.description|e }}"
+  data-favorite="{{ 'true' if is_favorite else 'false' }}"
+>
   <a class="book-cover-link" href="{{ book_url }}" aria-label="View {{ book.title }} by {{ book.author }}">
     <span class="book-cover-art" style="--cover-color: {{ cover_color }}">
       {% if book.cover %}
-        <img src="{{ url_for('static', filename='uploads/' ~ book.cover) }}" alt="Cover of {{ book.title }}" loading="lazy">
+        <img src="{{ cover_url }}" alt="Cover of {{ book.title }}" loading="lazy">
       {% else %}
         <span class="book-cover-placeholder">{{ book.title }}</span>
       {% endif %}
@@ -11,9 +32,8 @@
     </span>
   </a>
   <div class="book-card-copy">
-    {% set can_borrow = book.can_borrow() %}
     <span class="availability-badge{% if not can_borrow %} is-borrowed{% endif %}">
-      {{ "Available" if can_borrow else ("In-library use" if book.available else "On loan") }}
+      {{ availability_label }}
     </span>
     <h3><a href="{{ book_url }}">{{ book.title }}</a></h3>
     <p>{{ book.author }}</p>
@@ -24,7 +44,7 @@
       <span>({{ rating.count }})</span>
     </p>
     <div class="book-card-actions">
-      {% if current_user and current_user.is_patron() %}
+      {% if is_patron %}
         <form method="post" action="{{ url_for('social.toggle_favorite', book_id=book.book_id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
@@ -33,15 +53,25 @@
       {% elif not current_user %}
         <a class="icon-button heart-button" href="{{ url_for('auth.login') }}" aria-label="Sign in to save this book">♡</a>
       {% endif %}
-      {% if book.can_borrow() and current_user and current_user.is_patron() %}
+      {% if can_borrow and is_patron %}
         <form method="post" action="{{ url_for('patron.basket_add', book_id=book.book_id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
           <button class="button add-basket-button" type="submit">Add to basket</button>
         </form>
-      {% elif book.can_borrow() and not current_user %}
+      {% elif can_borrow and not current_user %}
         <a class="button add-basket-button" href="{{ url_for('auth.login') }}">Sign in to borrow</a>
+      {% endif %}
+      {% if is_librarian %}
+        <a class="button button-secondary" href="{{ url_for('books.edit', book_id=book.book_id) }}">Edit</a>
+        {% if book.available and book.catalog %}
+          <form method="post" action="{{ url_for('books.archive', book_id=book.book_id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+            <button class="button button-secondary" type="submit">Archive</button>
+          </form>
+        {% endif %}
       {% endif %}
     </div>
   </div>
-</article>
+</div>

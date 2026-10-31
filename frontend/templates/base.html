@@ -16,11 +16,14 @@
   <script src="{{ url_for('static', filename='js/library.js') }}" defer></script>
 </head>
 <body class="{% block body_class %}{% endblock %}">
-  {% include "partials/_account_drawer.html" %}
+  {% block account_drawer %}
+    {% include "partials/_account_drawer.html" %}
+  {% endblock %}
 
   {% block site_header %}
     {% include "landing/_navbar.html" %}
   {% endblock %}
+  {% block search_overlay %}
   <dialog class="search-overlay" data-search-dialog aria-labelledby="search-overlay-title">
     <div class="search-overlay-inner">
       <button class="icon-button search-close" type="button" aria-label="Close search" data-search-close>×</button>
@@ -42,6 +45,7 @@
       </div>
     </div>
   </dialog>
+  {% endblock %}
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
       <div class="global-flashes" aria-live="polite">
