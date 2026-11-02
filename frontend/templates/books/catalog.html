@@ -3,6 +3,10 @@
 {% block body_class %}books-page{% endblock %}
 {% block page_styles %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/books.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='dist/books.css') }}">
+{% endblock %}
+{% block page_scripts %}
+  <script src="{{ url_for('static', filename='dist/books.js') }}" defer></script>
 {% endblock %}
 {% block content %}
   <section class="page-heading catalog-heading">

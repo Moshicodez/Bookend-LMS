@@ -1,5 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Saved books | Bookend Library{% endblock %}
+{% block page_styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/books.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='dist/books.css') }}">
+{% endblock %}
+{% block page_scripts %}
+  <script src="{{ url_for('static', filename='dist/books.js') }}" defer></script>
+{% endblock %}
 {% block content %}
   {% set cover_colors = ["#a44235", "#476d57", "#536779", "#98713f", "#695676", "#9a5947"] %}
   <section class="page-heading">

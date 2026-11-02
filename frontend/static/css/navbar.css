@@ -3,10 +3,9 @@
   position: sticky;
   top: 0;
   width: 100%;
-  max-width: 1180px;
   z-index: 100;
-  margin: 0 auto;
-  padding: 14px 24px;
+  margin: 0;
+  padding: 0 24px;
   height: 56px;
   font-family: "Poppins", sans-serif;
   font-size: 14px;
@@ -14,13 +13,19 @@
   line-height: 1.5;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 24px;
   border-bottom: 1px solid var(--line);
   background: var(--white);
 }
 
-body:not(.login-page) {
-  padding-top: 76px;
+.landing-navbar-inner {
+  width: 100%;
+  max-width: 1180px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 24px;
 }
 
 .landing-brand {
@@ -37,8 +42,7 @@ body:not(.login-page) {
 }
 
 .landing-navigation {
-  margin-left: auto;
-  margin-right: auto;
+  justify-self: center;
   display: flex;
   align-items: center;
   gap: clamp(12px, 2vw, 27px);
@@ -70,9 +74,9 @@ body:not(.login-page) {
 .nav-utility-actions {
   display: flex;
   flex: 0 0 auto;
+  justify-self: end;
   align-items: center;
   gap: 6px;
-  margin-left: auto;
 }
 
 .nav-icon {
