@@ -140,6 +140,52 @@ button.button:hover {
   margin: 52px auto 26px;
 }
 
+.notification-list {
+  display: grid;
+  width: min(900px, calc(100% - 48px));
+  gap: 12px;
+  margin: 0 auto 48px;
+  padding: 0;
+  list-style: none;
+}
+
+.notification-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--white);
+}
+
+.notification-item.is-unread {
+  border-left: 4px solid var(--green);
+  background: var(--paper);
+}
+
+.notification-item h2 {
+  margin: 5px 0;
+  font-size: 18px;
+}
+
+.notification-item p:not(.eyebrow) {
+  margin: 5px 0;
+}
+
+.notification-item time {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+@media (max-width: 600px) {
+  .notification-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
 .page-heading h1 {
   margin-bottom: 8px;
 }

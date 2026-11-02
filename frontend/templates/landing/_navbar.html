@@ -31,6 +31,12 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg>
     </button>
     {% if current_user %}
+      <a class="icon-button nav-icon" href="{{ url_for('notifications.index') }}"
+         aria-label="Notifications, {{ notification_count }} unread"
+         title="Notifications">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M10 21h4"></path></svg>
+        {% if notification_count %}<span class="nav-count">{{ notification_count }}</span>{% endif %}
+      </a>
       <details class="account-dropdown" data-account-dropdown>
         <summary class="nav-icon" aria-label="Open account menu" data-account-open>
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M4.5 20c.8-4 3.3-6 7.5-6s6.7 2 7.5 6"></path></svg>

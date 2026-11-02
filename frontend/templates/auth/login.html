@@ -73,8 +73,8 @@
                     <p class="eyebrow form-eyebrow">WELCOME BACK</p>
                     <h2 id="form-title">Sign in to your account</h2>
                     <p class="form-intro">Your books are waiting right where you left them.</p>
-                    {% if success_message %}<p class="preview-message" role="status">{{ success_message }}</p>{% endif %}
-                    {% if error_message and (page or request.args.get('page')) != 'register' %}
+                    {% if success_message and not suppress_inline_message %}<p class="preview-message" role="status">{{ success_message }}</p>{% endif %}
+                    {% if error_message and not suppress_inline_message and (page or request.args.get('page')) != 'register' %}
                     <p class="preview-message" role="alert">{{ error_message }}</p>
                     {% endif %}
                     <form class="login-form" method="post" action="{{ url_for('auth.login') }}">

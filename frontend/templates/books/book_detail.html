@@ -21,6 +21,8 @@
     {% if book.description %}<p>{{ book.description }}</p>{% endif %}
     <p>Status:
       {% if not book.catalog %}Archived
+      {% elif reservation_info.held_for_other %}Reserved for another patron
+      {% elif reservation_info.ready_for_patron %}Ready for you
       {% elif book.can_borrow() %}Available
       {% elif book.available %}In-library use
       {% else %}On loan
@@ -37,12 +39,26 @@
   {% elif not user %}
     <a class="button" href="{{ url_for('auth.login') }}">♡ Save book</a>
   {% endif %}
-  {% if user and user.is_patron() and book.can_borrow() %}
+  {% if user and user.is_patron() and reservation_info.ready_for_patron %}
+    <p>Your reservation is ready. Borrow it before someone else can check it out.</p>
+    <form method="post" action="{{ url_for('loans.borrow', book_id=book.book_id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit">Borrow your reserved book</button>
+    </form>
+  {% elif user and user.is_patron() and book.can_borrow() and not reservation_info.held_for_other %}
     <form method="post" action="{{ url_for('patron.basket_add', book_id=book.book_id) }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="next" value="{{ url_for('books.detail', book_id=book.book_id) }}">
       <button type="submit">Add to basket</button>
     </form>
+  {% elif user and user.is_patron() and active_loan and not reservation_info.own_reservation %}
+    <p>{{ reservation_info.waiting_count }} patron{{ "" if reservation_info.waiting_count == 1 else "s" }} waiting</p>
+    <form method="post" action="{{ url_for('loans.reserve', book_id=book.book_id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit">Join reservation queue</button>
+    </form>
+  {% elif reservation_info.own_reservation %}
+    <p>Your reservation is {{ reservation_info.own_reservation.status }}.</p>
   {% endif %}
   <section class="reviews-section" aria-labelledby="reviews-title">
     <h2 id="reviews-title">Book reviews</h2>

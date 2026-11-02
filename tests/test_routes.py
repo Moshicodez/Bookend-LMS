@@ -12,6 +12,7 @@ from backend.app import create_app
 from backend.app.extensions import db
 from backend.app.models.book import Book
 from backend.app.models.book_record import BookRecord
+from backend.app.models.reservation_record import ReservationRecord
 from backend.app.models.user_record import UserRecord
 from backend.app.repositories.book_repository import BookRepository
 
@@ -94,6 +95,28 @@ class BackendRouteTests(unittest.TestCase):
         returned = self.post(f"/loans/return/{book.book_id}")
         self.assertEqual(returned.status_code, 302)
         self.assertTrue(BookRepository().find_book(book.book_id).available)
+
+    def test_patron_can_join_a_reservation_queue_for_a_borrowed_book(self):
+        book = BookRepository().create(Book(None, "Popular book", "Writer", "", ""))
+        self.register_patron("borrower")
+        self.assertEqual(self.post(f"/loans/borrow/{book.book_id}").status_code, 302)
+
+        self.post("/logout")
+        self.register_patron("waiter")
+        detail = self.client.get(f"/books/{book.book_id}")
+        self.assertIn(b"Join reservation queue", detail.data)
+
+        response = self.post(f"/loans/reserve/{book.book_id}")
+
+        self.assertEqual(response.status_code, 302)
+        reservation = db.session.execute(
+            db.select(ReservationRecord)
+        ).scalar_one()
+        self.assertEqual(reservation.status, "waiting")
+        self.assertIn(
+            b"Your reservation is waiting",
+            self.client.get(f"/books/{book.book_id}").data,
+        )
 
     def test_librarian_can_add_book_and_manage_members(self):
         self.register_patron()

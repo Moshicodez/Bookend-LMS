@@ -32,10 +32,14 @@ def index():
     else:
         loans = []
         loan_cards = loan_service.loan_cards(user)
+    reservation_cards = (
+        loan_service.reservation_cards(user) if user.is_patron() else []
+    )
     return render_template(
         "loans/loans.html",
         loans=loans,
         loan_cards=loan_cards,
+        reservation_cards=reservation_cards,
         user=user,
         q=q,
         status=status,
@@ -58,6 +62,15 @@ def borrow(book_id):
     if response:
         return response
     loan_service.borrow_book(user, book_id)
+    return redirect(url_for("books.detail", book_id=book_id))
+
+
+@loans_bp.route("/reserve/<int:book_id>", methods=["POST"])
+def reserve(book_id):
+    user, response = _require_user()
+    if response:
+        return response
+    loan_service.reserve_book(user, book_id)
     return redirect(url_for("books.detail", book_id=book_id))
 
 

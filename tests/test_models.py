@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from werkzeug.security import generate_password_hash
 
 from backend.app.exceptions import PermissionDenied, ValidationError
+from backend.app.data_structures import BookLinkedList, GenreTree
 from backend.app.models.book import Book, NewReleaseBook, ReferenceBook
 from backend.app.models.fine import LateFee, LossFee
 from backend.app.models.librarian import Librarian
@@ -46,6 +47,27 @@ class BookModelTests(unittest.TestCase):
         book = ReferenceBook(1, "Reference", "Author", "", "")
         with self.assertRaises(ValidationError):
             book.borrow()
+
+
+class CatalogDataStructureTests(unittest.TestCase):
+    def test_book_linked_list_appends_finds_and_removes_without_fixed_capacity(self):
+        first = Book(1, "First", "Writer", "", "")
+        second = Book(2, "Second", "Writer", "", "")
+        books = BookLinkedList((first, second))
+        books.append(Book(3, "Third", "Writer", "", ""))
+
+        self.assertEqual(len(books), 3)
+        self.assertIs(books.find(2), second)
+        self.assertTrue(books.remove(1))
+        self.assertEqual([book.book_id for book in books], [2, 3])
+        self.assertFalse(books.remove(99))
+
+    def test_genre_tree_keeps_case_insensitive_unique_sorted_navigation(self):
+        genres = GenreTree(("Mystery", "Fantasy", "history", "FANTASY"))
+
+        self.assertEqual(genres.in_order(), ["Fantasy", "history", "Mystery"])
+        self.assertTrue(genres.contains("HISTORY"))
+        self.assertFalse(genres.contains("Science Fiction"))
 
 
 class UserModelTests(unittest.TestCase):

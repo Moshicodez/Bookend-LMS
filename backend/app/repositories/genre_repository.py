@@ -1,5 +1,6 @@
 from sqlalchemy.exc import IntegrityError
 
+from ..data_structures import GenreTree
 from ..exceptions import ValidationError
 from ..extensions import db
 from ..models.book_record import BookRecord
@@ -22,7 +23,7 @@ class GenreRepository:
             cleaned_name = (name or "").strip()
             if cleaned_name:
                 names.setdefault(cleaned_name.casefold(), cleaned_name)
-        return sorted(names.values(), key=str.casefold)
+        return GenreTree(names.values()).in_order()
 
     def list_for_management(self):
         return [

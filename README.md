@@ -59,12 +59,21 @@ tables. Domain models are kept separate from their database records; repository
 classes translate records to and from domain objects, and services enforce
 permissions and library rules.
 
+The catalog uses a dynamically growing linked list for in-memory book
+collections, avoiding fixed-capacity book containers, and an AVL tree for
+case-insensitive, ordered genre navigation. Reservations are persisted in the
+application database and promoted FIFO when a book is returned. Active
+reservations count toward the same per-patron limit as active loans.
+Signed-in users can review persisted in-app notifications from the bell icon.
+Loan due-soon, due-tomorrow, and overdue reminders are generated on the
+patron's next visit to the app; they are not email or push notifications.
+
 After signing in:
 
 - `/books/` lists and searches the catalog; librarians can add, edit, and archive
   books.
-- `/loans/` lists the current user's loans; patrons can borrow, return, and pay
-  eligible fees.
+- `/loans/` lists the current user's loans; patrons can borrow, return, pay
+  eligible fees, and view or check out ready reservations.
 - `/loans/overdue` lists overdue loans for librarians.
 - `/members/` lets librarians activate or deactivate patron accounts.
 

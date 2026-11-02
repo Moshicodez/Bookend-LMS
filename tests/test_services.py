@@ -13,11 +13,14 @@ from backend.app.extensions import db
 from backend.app.models.book import Book
 from backend.app.repositories.book_repository import BookRepository
 from backend.app.repositories.loan_repository import LoanRepository
+from backend.app.repositories.notification_repository import NotificationRepository
 from backend.app.repositories.user_repository import UserRepository
 from backend.app.services.book_service import BookService
 from backend.app.services.auth_service import AuthService
 from backend.app.services.librarian_service import LibrarianService
 from backend.app.services.loan_service import LoanService
+from backend.app.repositories.notification_repository import NotificationRepository
+from backend.app.services.notification_service import NotificationService
 
 
 class BackendServiceTests(unittest.TestCase):
@@ -63,12 +66,24 @@ class BackendServiceTests(unittest.TestCase):
         matches = self.book_service.search_books("archive author")
         self.assertEqual(len(matches), 1)
         self.assertEqual(matches[0].book_id, book.book_id)
+        book_notifications = NotificationRepository().for_user(
+            self.librarian.user_id
+        )
+        self.assertEqual(book_notifications[0].title, "Book added to the catalog")
 
         changed = self.book_service.edit_book(
             self.librarian, book.book_id, "Revised", "B. Writer", "Drama", ""
         )
         self.assertEqual(changed.title, "Revised")
+        self.assertEqual(
+            NotificationRepository().for_user(self.librarian.user_id)[0].title,
+            "Book details updated",
+        )
         self.book_service.archive_book(self.librarian, book.book_id)
+        self.assertEqual(
+            NotificationRepository().for_user(self.librarian.user_id)[0].title,
+            "Book archived",
+        )
         self.assertEqual(self.book_service.search_books(), [])
 
     def test_book_cover_upload_is_saved_and_replaced_safely(self):
@@ -172,18 +187,131 @@ class BackendServiceTests(unittest.TestCase):
 
         self.assertEqual(loan.patron_id, self.patron.user_id)
         self.assertFalse(self.books.find_book(book.book_id).available)
+        self.assertEqual(
+            NotificationRepository().for_user(self.patron.user_id)[0].title,
+            "Book borrowed",
+        )
         with self.assertRaises(ValidationError):
             self.loan_service.borrow_book(self.patron, book.book_id)
 
         returned = self.loan_service.return_book(self.patron, book.book_id)
         self.assertTrue(returned.is_returned())
         self.assertTrue(self.books.find_book(book.book_id).available)
+        self.assertEqual(
+            NotificationRepository().for_user(self.patron.user_id)[0].title,
+            "Book returned",
+        )
 
         reference = self.book_service.add_book(
             self.librarian, "Reference", "Writer", "", "", "reference"
         )
         with self.assertRaises(ValidationError):
             self.loan_service.borrow_book(self.patron, reference.book_id)
+
+    def test_reservation_queue_promotes_fifo_and_ready_patron_can_borrow(self):
+        book = self.books.create(Book(None, "Popular book", "Writer", "", ""))
+        borrower = self.users.create(
+            "borrower@example.com",
+            "borrower",
+            generate_password_hash("StrongPass1!"),
+            "patron",
+        )
+        next_patron = self.users.create(
+            "next@example.com",
+            "next",
+            generate_password_hash("StrongPass1!"),
+            "patron",
+        )
+        last_patron = self.users.create(
+            "last@example.com",
+            "last",
+            generate_password_hash("StrongPass1!"),
+            "patron",
+        )
+
+        self.loan_service.borrow_book(borrower, book.book_id)
+        first_reservation = self.loan_service.reserve_book(
+            next_patron, book.book_id
+        )
+        second_reservation = self.loan_service.reserve_book(
+            last_patron, book.book_id
+        )
+        self.loan_service.return_book(borrower, book.book_id)
+
+        self.assertEqual(first_reservation.status, "waiting")
+        self.assertEqual(second_reservation.status, "waiting")
+        first_status = self.loan_service.reservation_status(
+            next_patron, book.book_id
+        )
+        self.assertTrue(first_status["ready_for_patron"])
+        self.assertEqual(first_status["waiting_count"], 1)
+        with self.assertRaisesRegex(ValidationError, "reserved for a patron"):
+            self.book_service.archive_book(self.librarian, book.book_id)
+
+        self.loan_service.borrow_book(next_patron, book.book_id)
+        self.assertFalse(self.books.find_book(book.book_id).available)
+        self.assertEqual(
+            self.loan_service.reservation_status(
+                last_patron, book.book_id
+            )["own_reservation"].status,
+            "waiting",
+        )
+
+        self.loan_service.return_book(next_patron, book.book_id)
+        self.assertTrue(
+            self.loan_service.reservation_status(
+                last_patron, book.book_id
+            )["ready_for_patron"]
+        )
+
+    def test_reservations_consume_the_patron_loan_limit(self):
+        other_patron = self.users.create(
+            "other-reader@example.com",
+            "other-reader",
+            generate_password_hash("StrongPass1!"),
+            "patron",
+        )
+        active_books = [
+            self.books.create(Book(None, f"Active {index}", "Writer", "", ""))
+            for index in range(self.patron.loan_limit - 1)
+        ]
+        for book in active_books:
+            self.loan_service.borrow_book(self.patron, book.book_id)
+
+        first_waiting_book = self.books.create(
+            Book(None, "Waiting one", "Writer", "", "")
+        )
+        second_waiting_book = self.books.create(
+            Book(None, "Waiting two", "Writer", "", "")
+        )
+        self.loan_service.borrow_book(other_patron, first_waiting_book.book_id)
+        self.loan_service.borrow_book(other_patron, second_waiting_book.book_id)
+        self.loan_service.reserve_book(self.patron, first_waiting_book.book_id)
+
+        with self.assertRaisesRegex(ValidationError, "borrow or reserve"):
+            self.loan_service.reserve_book(self.patron, second_waiting_book.book_id)
+
+    def test_due_date_notifications_are_staged_and_deduplicated(self):
+        book = self.books.create(Book(None, "Due soon", "Writer", "", ""))
+        today = date.today()
+        loan = self.loans.create_loan(
+            self.patron.user_id,
+            book.book_id,
+            today,
+            today + timedelta(days=3),
+        )
+        service = NotificationService(NotificationRepository(), self.loans)
+
+        service.sync_due_date_reminders(self.patron.user_id)
+        service.sync_due_date_reminders(self.patron.user_id)
+        due_soon = NotificationRepository().for_user(self.patron.user_id)
+        self.assertEqual(len(due_soon), 1)
+        self.assertEqual(due_soon[0].title, "Book due soon")
+
+        loan.mark_returned(today)
+        self.loans.update_loan(loan)
+        service.sync_due_date_reminders(self.patron.user_id)
+        self.assertEqual(len(NotificationRepository().for_user(self.patron.user_id)), 1)
 
     def test_patron_cannot_create_book_or_access_another_users_loan(self):
         with self.assertRaises(PermissionDenied):
@@ -220,6 +348,13 @@ class BackendServiceTests(unittest.TestCase):
     def test_librarian_lost_return_closes_loan_and_removes_book_from_catalog(self):
         book = self.books.create(Book(None, "Lost book", "Writer", "", ""))
         loan = self.loan_service.borrow_book(self.patron, book.book_id)
+        waiting_patron = self.users.create(
+            "waiting@example.com",
+            "waiting",
+            generate_password_hash("StrongPass1!"),
+            "patron",
+        )
+        self.loan_service.reserve_book(waiting_patron, book.book_id)
 
         updated_loan = self.librarian_service.update_return_status(
             self.librarian, book.book_id, lost=True
@@ -233,6 +368,10 @@ class BackendServiceTests(unittest.TestCase):
         self.assertIsNone(self.loans.find_active_loan_by_book(book.book_id))
         self.assertFalse(updated_book.available)
         self.assertFalse(updated_book.catalog)
+        self.assertEqual(
+            self.loan_service.reservations_for(waiting_patron),
+            [],
+        )
 
     def test_librarian_can_toggle_patron_account(self):
         deactivated = self.librarian_service.manage_member(

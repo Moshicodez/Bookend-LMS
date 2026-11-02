@@ -1,11 +1,18 @@
 from ..exceptions import NotFoundError, ValidationError
 from ..models.book import Book
+from ..repositories.notification_repository import NotificationRepository
+from ..repositories.reservation_repository import ReservationRepository
 from .cover_service import CoverService
+from .notification_service import NotificationService
 
 
 class BookService:
-    def __init__(self, book_repo):
+    def __init__(self, book_repo, reservation_repo=None, notification_service=None):
         self._book_repo = book_repo
+        self._reservations = reservation_repo or ReservationRepository()
+        self._notifications = notification_service or NotificationService(
+            NotificationRepository()
+        )
         self._covers = CoverService()
 
     def _get_book(self, book_id):
@@ -17,7 +24,7 @@ class BookService:
         return book
 
     def search_books(self, search_term="", genre=None):
-        books = self._book_repo.find_all()
+        books = list(self._book_repo.find_all())
 
         if search_term:
             books = [book for book in books if book.search_book(search_term)]
@@ -88,6 +95,13 @@ class BookService:
         try:
             result = self._book_repo.create(book)
             saved = True
+            self._notifications.notify_role(
+                "librarian",
+                "Book added to the catalog",
+                f"{result.title} is now in the catalog.",
+                category="book",
+                link=f"/books/{result.book_id}",
+            )
             return result
         finally:
             if not saved:
@@ -121,14 +135,32 @@ class BookService:
         if filename:
             self._covers.delete(previous_cover)
 
+        self._notifications.notify_role(
+            "librarian",
+            "Book details updated",
+            f"The catalog details for {book.title} were updated.",
+            category="book",
+            link=f"/books/{book.book_id}",
+        )
         return book
 
     def archive_book(self, librarian, book_id):
         librarian.require("archive_book")
         book = self._get_book(book_id)
+        if self._reservations.find_ready_for_book(book_id):
+            raise ValidationError(
+                "This book is reserved for a patron and cannot be archived."
+            )
 
         book.archive()
         self._book_repo.update_book(book)
+        self._notifications.notify_role(
+            "librarian",
+            "Book archived",
+            f"{book.title} was archived from the catalog.",
+            category="book",
+            link="/books/archived",
+        )
 
         return book
 
@@ -139,6 +171,13 @@ class BookService:
             raise ValidationError("This book is already in the catalog.")
         book.restore()
         self._book_repo.update_book(book)
+        self._notifications.notify_role(
+            "librarian",
+            "Book restored",
+            f"{book.title} was restored to the catalog.",
+            category="book",
+            link=f"/books/{book.book_id}",
+        )
         return book
 
     def mark_book_lost(self, librarian, book_id):

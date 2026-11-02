@@ -1,4 +1,4 @@
-from flask import Blueprint, abort, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
 
 from ..exceptions import ValidationError
 from ..repositories.user_repository import UserRepository
@@ -35,9 +35,11 @@ def login():
         )
     except ValidationError as error:
         status_code = 403 if "deactivated" in str(error).lower() else 401
+        flash(str(error), "error")
         return render_template(
             "auth/login.html",
             error_message=str(error),
+            suppress_inline_message=True,
             username=request.form.get("username", ""),
             page="login",
         ), status_code
@@ -46,6 +48,7 @@ def login():
     session["user_id"] = user.user_id
     session["username"] = user.username
     session["role"] = user.role
+    flash("You signed in successfully.", "success")
     return redirect(url_for("landing.index"))
 
 
@@ -63,6 +66,7 @@ def register():
             request.form.get("confirm_password"),
         )
     except ValidationError as error:
+        flash(str(error), "error")
         field_errors = {}
         if str(error) == "Password must be at least 8 characters.":
             field_errors["password"] = str(error)
@@ -71,6 +75,7 @@ def register():
         return render_template(
             "auth/login.html",
             error_message=str(error),
+            suppress_inline_message=True,
             field_errors=field_errors,
             form_data={
                 "email": request.form.get("email", ""),
@@ -79,10 +84,12 @@ def register():
             page="register",
         ), 400
 
+    flash("Account created. Please sign in.", "success")
     return render_template(
         "auth/login.html",
         page="login",
         success_message="Account created. Please sign in.",
+        suppress_inline_message=True,
     )
 
 

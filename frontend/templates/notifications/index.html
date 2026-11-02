@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Notifications | Bookend Library{% endblock %}
+{% block content %}
+  <section class="page-heading">
+    <p class="eyebrow">UPDATES</p>
+    <h1>Notifications</h1>
+    {% if notifications %}
+      <form method="post" action="{{ url_for('notifications.mark_all_read') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="button button-secondary" type="submit">Mark all as read</button>
+      </form>
+    {% endif %}
+  </section>
+  {% if notifications %}
+    <ul class="notification-list">
+      {% for notification in notifications %}
+        <li class="notification-item {% if not notification.read_at %}is-unread{% endif %}">
+          <div>
+            <p class="eyebrow">{{ notification.category|title }}</p>
+            <h2>{{ notification.title }}</h2>
+            <p>{{ notification.message }}</p>
+            <time datetime="{{ notification.created_at.isoformat() }}">{{ notification.created_at.strftime("%b %d, %Y %I:%M %p") }}</time>
+          </div>
+          {% if not notification.read_at %}
+            <form method="post" action="{{ url_for('notifications.mark_read', notification_id=notification.notification_id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="button button-secondary" type="submit">Mark as read</button>
+            </form>
+          {% elif notification.link %}
+            <a class="button button-secondary" href="{{ notification.link }}">View</a>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <section class="empty-state"><h2>You’re all caught up</h2><p>New updates will appear here.</p></section>
+  {% endif %}
+{% endblock %}

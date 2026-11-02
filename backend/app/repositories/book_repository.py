@@ -1,5 +1,6 @@
 from sqlalchemy.exc import IntegrityError
 
+from ..data_structures import BookLinkedList, GenreTree
 from ..exceptions import NotFoundError, ValidationError
 from ..extensions import db
 from ..models.book import Book
@@ -8,13 +9,18 @@ from ..models.book_record import BookRecord
 
 class BookRepository:
     def list_genres(self):
-        return list(
-            db.session.execute(
-                db.select(BookRecord.genre)
-                .where(BookRecord.catalog.is_(True), BookRecord.genre != "")
-                .distinct()
-                .order_by(BookRecord.genre.collate("NOCASE"))
-            ).scalars()
+        names = db.session.execute(
+            db.select(BookRecord.genre)
+            .where(BookRecord.catalog.is_(True), BookRecord.genre != "")
+            .distinct()
+        ).scalars()
+        return GenreTree(names).in_order()
+
+    @staticmethod
+    def _book_collection(records):
+        return BookLinkedList(
+            BookRepository._to_domain_book(record)
+            for record in records
         )
 
     def find_more_in_genre(self, genre, exclude_book_id, limit=4):
@@ -108,11 +114,14 @@ class BookRepository:
         return self._to_domain_book(record) if record else None
 
     def find_all(self, include_archived=False):
-        statement = db.select(BookRecord).order_by(BookRecord.title, BookRecord.book_id)
+        statement = db.select(BookRecord).order_by(
+            BookRecord.title.collate("NOCASE"),
+            BookRecord.book_id,
+        )
         if not include_archived:
             statement = statement.where(BookRecord.catalog.is_(True))
         records = db.session.execute(statement).scalars()
-        return [self._to_domain_book(record) for record in records]
+        return self._book_collection(records)
 
     def find_archived(self):
         records = db.session.execute(
@@ -120,7 +129,7 @@ class BookRepository:
             .where(BookRecord.catalog.is_(False), BookRecord.available.is_(True))
             .order_by(BookRecord.title, BookRecord.book_id)
         ).scalars()
-        return [self._to_domain_book(record) for record in records]
+        return self._book_collection(records)
 
     def update_book(self, book):
         book_id = self._valid_id(book.book_id)

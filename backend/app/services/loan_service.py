@@ -1,13 +1,27 @@
 from ..config import Config
 from ..exceptions import NotFoundError, ValidationError
+from ..models.reservation import Reservation
+from ..repositories.notification_repository import NotificationRepository
+from ..repositories.reservation_repository import ReservationRepository
 from ..repositories.user_repository import UserRepository
+from .notification_service import NotificationService
 from ..utils.date_utils import add_days, today
 
 
 class LoanService:
-    def __init__(self, book_repo, loan_repo):
+    def __init__(
+        self,
+        book_repo,
+        loan_repo,
+        reservation_repo=None,
+        notification_service=None,
+    ):
         self._book_repo = book_repo
         self._loan_repo = loan_repo
+        self._reservations = reservation_repo or ReservationRepository()
+        self._notifications = notification_service or NotificationService(
+            NotificationRepository()
+        )
 
     def _get_book(self, book_id):
         book = self._book_repo.find_book(book_id)
@@ -29,13 +43,43 @@ class LoanService:
         patron.require("view_loans")
         return self._loan_repo.find_patron_loans(patron.user_id)
 
-    def _prepare_borrow(self, patron, book_id, loans, pending_count=0):
+    def _prepare_borrow(
+        self,
+        patron,
+        book_id,
+        loans,
+        pending_count=0,
+        reservation=None,
+    ):
         patron.require("borrow_book")
         book = self._get_book(book_id)
         borrowed_at = today()
         active_loans = [loan for loan in loans if not loan.is_returned()]
+        existing_reservation = self._reservations.find_for_patron_book(
+            patron.user_id, book_id
+        )
+        if existing_reservation and existing_reservation.status != Reservation.READY:
+            raise ValidationError("You already have a reservation in the queue.")
+        ready_reservation = self._reservations.find_ready_for_book(book_id)
+        if ready_reservation and ready_reservation.patron_id != patron.user_id:
+            raise ValidationError("This book is being held for another patron.")
+        if ready_reservation is not None and existing_reservation is None:
+            raise ValidationError("This book is being held for another patron.")
+        if existing_reservation and existing_reservation.status == Reservation.READY:
+            reservation = existing_reservation
 
-        if len(active_loans) + pending_count >= patron.loan_limit:
+        reservation_count = self._reservations.count_open_for_patron(
+            patron.user_id
+        )
+
+        additional_book = 0 if reservation is not None else 1
+        if (
+            len(active_loans)
+            + reservation_count
+            + pending_count
+            + additional_book
+            > patron.loan_limit
+        ):
             raise ValidationError(f"You can only borrow {patron.loan_limit} books at a time.")
 
         if any(loan.outstanding(borrowed_at) > 0 for loan in loans):
@@ -46,20 +90,29 @@ class LoanService:
 
         book.borrow()
         due_date = add_days(borrowed_at, book.loan_days)
-        return book, borrowed_at, due_date
+        return book, borrowed_at, due_date, reservation
 
     def borrow_book(self, patron, book_id):
         loans = self._loan_repo.find_patron_loans(patron.user_id)
-        book, borrowed_at, due_date = self._prepare_borrow(
+        book, borrowed_at, due_date, reservation = self._prepare_borrow(
             patron, book_id, loans
         )
         loan = self._loan_repo.create_loan(
             patron.user_id,
             book.book_id,
             borrowed_at,
-            due_date
+            due_date,
+            reservation_id=(
+                reservation.reservation_id if reservation is not None else None
+            ),
         )
-        self._book_repo.update_book(book)
+        self._notifications.notify(
+            patron.user_id,
+            "Book borrowed",
+            f"{book.title} is due on {loan.due_date:%b %d, %Y}.",
+            category="loan",
+            link="/loans/",
+        )
         return loan
 
     def borrow_books(self, patron, book_ids):
@@ -71,16 +124,108 @@ class LoanService:
 
         loans = self._loan_repo.find_patron_loans(patron.user_id)
         entries = []
-        for pending_count, book_id in enumerate(book_ids):
+        pending_count = 0
+        for book_id in book_ids:
+            entry = self._prepare_borrow(
+                patron,
+                book_id,
+                loans,
+                pending_count=pending_count,
+            )
+            book, borrowed_at, due_date, reservation = entry
             entries.append(
-                self._prepare_borrow(
-                    patron,
-                    book_id,
-                    loans,
-                    pending_count=pending_count,
+                (
+                    book,
+                    borrowed_at,
+                    due_date,
+                    reservation.reservation_id if reservation else None,
                 )
             )
-        return self._loan_repo.create_loans_atomic(patron.user_id, entries)
+            if reservation is None:
+                pending_count += 1
+        loans = self._loan_repo.create_loans_atomic(patron.user_id, entries)
+        for loan in loans:
+            book = self._book_repo.find_book(loan.book_id)
+            self._notifications.notify(
+                patron.user_id,
+                "Book borrowed",
+                f"{book.title if book else 'Your book'} is due on {loan.due_date:%b %d, %Y}.",
+                category="loan",
+                link="/loans/",
+            )
+        return loans
+
+    def reserve_book(self, patron, book_id):
+        patron.require("borrow_book")
+        book = self._get_book(book_id)
+        if not book.catalog:
+            raise ValidationError("This book is no longer in the catalog.")
+        if book.kind == "reference":
+            raise ValidationError("Reference books can only be read in the library.")
+        if book.available:
+            raise ValidationError("This book is available to borrow now.")
+        if self._loan_repo.find_active_loan(patron.user_id, book_id):
+            raise ValidationError("You are already borrowing this book.")
+        if self._reservations.find_for_patron_book(patron.user_id, book_id):
+            raise ValidationError("You already have a reservation for this book.")
+
+        loans = self._loan_repo.find_patron_loans(patron.user_id)
+        if any(loan.outstanding(today()) > 0 for loan in loans):
+            raise ValidationError("Please settle your outstanding fees before reserving.")
+        active_count = sum(not loan.is_returned() for loan in loans)
+        reservation_count = self._reservations.count_open_for_patron(
+            patron.user_id
+        )
+        if active_count + reservation_count >= patron.loan_limit:
+            raise ValidationError(
+                f"You can only borrow or reserve {patron.loan_limit} books at a time."
+            )
+        reservation = self._reservations.create_waiting(patron.user_id, book_id)
+        self._notifications.notify(
+            patron.user_id,
+            "Reservation added",
+            f"You joined the queue for {book.title}.",
+            category="loan",
+            link=f"/books/{book.book_id}",
+        )
+        return reservation
+
+    def reservation_status(self, patron, book_id):
+        own_reservation = (
+            self._reservations.find_for_patron_book(patron.user_id, book_id)
+            if patron is not None and patron.is_patron()
+            else None
+        )
+        ready_reservation = self._reservations.find_ready_for_book(book_id)
+        return {
+            "own_reservation": own_reservation,
+            "held_for_other": (
+                ready_reservation is not None
+                and (patron is None or ready_reservation.patron_id != patron.user_id)
+            ),
+            "ready_for_patron": (
+                ready_reservation is not None
+                and patron is not None
+                and ready_reservation.patron_id == patron.user_id
+            ),
+            "waiting_count": self._reservations.waiting_count(book_id),
+        }
+
+    def reservations_for(self, patron):
+        patron.require("view_loans")
+        return self._reservations.find_for_patron(patron.user_id)
+
+    def reservation_cards(self, patron):
+        return [
+            {
+                "reservation": reservation,
+                "book": self._book_repo.find_book(reservation.book_id),
+            }
+            for reservation in self.reservations_for(patron)
+        ]
+
+    def active_reservation_count(self, patron_id):
+        return self._reservations.count_open_for_patron(patron_id)
 
     def loan_cards(self, patron):
         patron.require("view_loans")
@@ -153,11 +298,15 @@ class LoanService:
         returned_at = today()
 
         loan.mark_returned(returned_at)
-        self._loan_repo.return_record(loan.loan_id, returned_at)
-        self._loan_repo.update_loan(loan)
-
         book.return_book()
-        self._book_repo.update_book(book)
+        self._loan_repo.complete_return(loan)
+        self._notifications.notify(
+            patron.user_id,
+            "Book returned",
+            f"{book.title} was successfully returned.",
+            category="loan",
+            link="/loans/",
+        )
 
         return loan
 
@@ -220,10 +369,19 @@ class LoanService:
         else:
             returned_at = today()
             loan.mark_returned(returned_at)
-            self._loan_repo.return_record(loan.loan_id, returned_at)
             book.return_book()
 
-        self._loan_repo.update_loan(loan)
-        self._book_repo.update_book(book)
+        self._loan_repo.complete_return(loan)
+        self._notifications.notify(
+            loan.patron_id,
+            "Loan closed",
+            (
+                f"{book.title} was marked as lost."
+                if lost
+                else f"{book.title} was returned."
+            ),
+            category="loan",
+            link="/loans/",
+        )
 
         return loan

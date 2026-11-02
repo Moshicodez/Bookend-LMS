@@ -79,6 +79,7 @@ def detail(book_id):
     user = _signed_in_user()
     book = book_service.get_book(book_id)
     active_loan = loan_repository.find_active_loan_by_book(book_id)
+    reservation_info = loan_service.reservation_status(user, book_id)
     reviews = review_service.for_book(book_id)
     rating = review_service.summary(book_id)
     more_books = book_service.more_in_genre(book)
@@ -94,6 +95,7 @@ def detail(book_id):
         "books/book_detail.html",
         book=book,
         active_loan=active_loan,
+        reservation_info=reservation_info,
         reviews=reviews,
         rating=rating,
         more_books=more_books,

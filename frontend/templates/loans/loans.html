@@ -8,6 +8,25 @@
 
   {% if user.is_patron() %}
     <p><a class="button" href="{{ url_for('patron.basket_index') }}">Open borrow basket</a></p>
+    {% if reservation_cards %}
+      <section aria-labelledby="reservations-title">
+        <h2 id="reservations-title">Your reservations</h2>
+        <ul>
+          {% for card in reservation_cards %}
+            <li>
+              <a href="{{ url_for('books.detail', book_id=card.reservation.book_id) }}">{{ card.book.title if card.book else "Book" }}</a>
+              — {{ card.reservation.status|title }}
+              {% if card.reservation.status == "ready" %}
+                <form method="post" action="{{ url_for('loans.borrow', book_id=card.reservation.book_id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit">Borrow reserved book</button>
+                </form>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+    {% endif %}
   {% elif not user.is_librarian() %}
     <p><a href="{{ url_for('loans.issue') }}">Borrow a book</a></p>
   {% elif not overdue %}
