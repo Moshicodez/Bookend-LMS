@@ -51,6 +51,15 @@ flask --app main reset-user-password reader@example.com
 The CLI prompts for a new password and confirmation. Signed-in users can also
 change their password from the landing-page navigation.
 
+## Database backups
+
+Librarians can download or restore a database backup from the librarian
+dashboard. Restore replaces all current database records, including accounts,
+so use a backup from the same application version and test restores before
+relying on them. Backup files include password hashes and should be stored
+securely. The download contains database records only; cover image files in
+`frontend/static/uploads` need a separate filesystem backup.
+
 ## Backend
 
 The backend lives in `backend/app`. `create_app()` registers the authentication,

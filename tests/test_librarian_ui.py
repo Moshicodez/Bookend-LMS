@@ -1,6 +1,8 @@
+import json
 import re
 import unittest
 from datetime import date, timedelta
+from io import BytesIO
 
 from werkzeug.security import generate_password_hash
 
@@ -134,10 +136,77 @@ class LibrarianUiTests(unittest.TestCase):
         self.assertIn(b"Archived", self.client.get("/books/manage").data)
 
     def test_patron_cannot_access_librarian_dashboard_books_or_reviews(self):
-        self._sign_in(self.patron)
+        token = self._sign_in(self.patron)
         self.assertEqual(self.client.get("/librarian").status_code, 403)
         self.assertEqual(self.client.get("/books/manage").status_code, 403)
         self.assertEqual(self.client.get("/librarian/reviews").status_code, 403)
+        self.assertEqual(
+            self.client.get("/librarian/backup/export").status_code,
+            403,
+        )
+        response = self.client.post(
+            "/librarian/backup/import",
+            data={"csrf_token": token},
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_librarian_can_export_and_restore_backup(self):
+        token = self._sign_in(self.librarian)
+        dashboard = self.client.get("/librarian")
+        self.assertIn(b"Backup and restore", dashboard.data)
+        self.assertIn(b"Download backup", dashboard.data)
+
+        exported = self.client.get("/librarian/backup/export")
+        self.assertEqual(exported.status_code, 200)
+        self.assertEqual(exported.mimetype, "application/json")
+        backup = json.loads(exported.data)
+        self.assertEqual(backup["format"], "bookend-lms-backup")
+        self.assertEqual(
+            set(backup["tables"]),
+            {"books", "favorites", "genres", "loans", "notifications", "reservations", "reviews", "users"},
+        )
+
+        temporary_book = self.books.create(
+            Book(None, "Temporary book", "C. Writer", "Test", "")
+        )
+        restored = self.client.post(
+            "/librarian/backup/import",
+            data={
+                "csrf_token": token,
+                "backup_file": (BytesIO(exported.data), "backup.json"),
+            },
+            content_type="multipart/form-data",
+        )
+        self.assertEqual(restored.status_code, 302)
+        self.assertIsNone(self.books.find_book(temporary_book.book_id))
+        self.assertIsNotNone(self.books.find_book(self.history.book_id))
+
+    def test_failed_backup_restore_preserves_current_data(self):
+        token = self._sign_in(self.librarian)
+        exported = self.client.get("/librarian/backup/export")
+        backup = json.loads(exported.data)
+        duplicate_user = dict(
+            next(row for row in backup["tables"]["users"] if row["role"] == "patron")
+        )
+        duplicate_user["user_id"] = max(
+            row["user_id"] for row in backup["tables"]["users"]
+        ) + 1
+        backup["tables"]["users"].append(duplicate_user)
+        temporary_book = self.books.create(
+            Book(None, "Keep this book", "D. Writer", "Test", "")
+        )
+
+        response = self.client.post(
+            "/librarian/backup/import",
+            data={
+                "csrf_token": token,
+                "backup_file": (BytesIO(json.dumps(backup).encode("utf-8")), "invalid.json"),
+            },
+            content_type="multipart/form-data",
+            follow_redirects=True,
+        )
+        self.assertIn(b"existing data was kept", response.data)
+        self.assertIsNotNone(self.books.find_book(temporary_book.book_id))
 
     def test_member_detail_and_review_moderation(self):
         db.session.add(

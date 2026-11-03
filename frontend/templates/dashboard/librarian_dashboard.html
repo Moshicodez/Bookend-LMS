@@ -75,4 +75,19 @@
     <a href="{{ url_for('social.moderate_reviews') }}"><span aria-hidden="true">☆</span> Reviews</a>
     <a href="{{ url_for('genres.index') }}"><span aria-hidden="true">▧</span> Manage genres</a>
   </section>
+
+  <section class="admin-panel backup-panel" aria-labelledby="backup-title">
+    <div class="admin-panel-heading">
+      <div><p class="eyebrow">DATA SAFETY</p><h2 id="backup-title">Backup and restore</h2></div>
+      <a href="{{ url_for('dashboard.export_backup') }}">Download backup</a>
+    </div>
+    <p class="muted">A backup contains account and library records. Store downloaded files securely.</p>
+    <form method="post" action="{{ url_for('dashboard.import_backup') }}" enctype="multipart/form-data" onsubmit="return confirm('Restore this backup? It will replace all current library data, including accounts and loan history.');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label for="backup-file">Restore from backup file</label>
+      <input id="backup-file" name="backup_file" type="file" accept=".json,application/json" required>
+      <button class="button" type="submit">Restore backup</button>
+      <p class="muted">Restoring replaces all current library data.</p>
+    </form>
+  </section>
 {% endblock %}
