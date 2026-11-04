@@ -11,13 +11,13 @@ class GenreRepository:
     def list_genres(self):
         names = {}
         saved_names = db.session.execute(
-            db.select(GenreRecord.name).order_by(GenreRecord.name.collate("NOCASE"))
+            db.select(GenreRecord.name).order_by(db.func.lower(GenreRecord.name))
         ).scalars()
         book_names = db.session.execute(
             db.select(BookRecord.genre)
             .where(BookRecord.catalog.is_(True), BookRecord.genre != "")
             .distinct()
-            .order_by(BookRecord.genre.collate("NOCASE"))
+            .order_by(db.func.lower(BookRecord.genre))
         ).scalars()
         for name in (*saved_names, *book_names):
             cleaned_name = (name or "").strip()

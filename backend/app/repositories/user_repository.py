@@ -26,24 +26,32 @@ class UserRepository:
 
     def find_username(self, username):
         record = db.session.execute(
-            db.select(UserRecord).where(UserRecord.username == username)
+            db.select(UserRecord).where(
+                db.func.lower(UserRecord.username) == (username or "").lower()
+            )
         ).scalar_one_or_none()
         return self._to_domain_user(record) if record else None
 
     def find_email(self, email):
         record = db.session.execute(
-            db.select(UserRecord).where(UserRecord.email == email)
+            db.select(UserRecord).where(
+                db.func.lower(UserRecord.email) == (email or "").lower()
+            )
         ).scalar_one_or_none()
         return self._to_domain_user(record) if record else None
 
     def email_exists(self, email):
         return db.session.execute(
-            db.select(UserRecord.user_id).where(UserRecord.email == email)
+            db.select(UserRecord.user_id).where(
+                db.func.lower(UserRecord.email) == (email or "").lower()
+            )
         ).first() is not None
 
     def username_exist(self, username):
         return db.session.execute(
-            db.select(UserRecord.user_id).where(UserRecord.username == username)
+            db.select(UserRecord.user_id).where(
+                db.func.lower(UserRecord.username) == (username or "").lower()
+            )
         ).first() is not None
 
     def username_exists(self, username):
