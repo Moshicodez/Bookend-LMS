@@ -15,6 +15,7 @@
   data-author="{{ book.author|e }}"
   data-cover="{{ cover_url|e }}"
   data-url="{{ book_url|e }}"
+  data-basket-action="{{ url_for('patron.basket_add', book_id=book.book_id)|e }}"
   data-available="{{ 'true' if can_borrow else 'false' }}"
   data-role="{{ role|e }}"
   data-csrf="{{ csrf_token()|e }}"

@@ -9,8 +9,8 @@
   --green-dark: #344936;
   --line: #e5e3da;
   --rust: #bd7657;
-  --serif: Georgia, "Times New Roman", serif;
-  --sans: "Aptos", "Segoe UI", sans-serif;
+  --serif: "Anton", Impact, sans-serif;
+  --sans: "Poppins", "Segoe UI", sans-serif;
 }
 
 * {

@@ -314,4 +314,250 @@
   }
 }
 
+.books-page {
+  --books-green: var(--green);
+  --books-green-dark: var(--green-dark);
+  --books-cream: var(--paper);
+  --books-paper: var(--white);
+  --books-ink: var(--ink);
+  --books-muted: var(--muted);
+  --books-line: var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Poppins", "Segoe UI", sans-serif;
+}
 
+.books-page main:not(.landing-main) {
+  padding-top: 40px;
+}
+
+.books-page main .catalog-heading {
+  margin-bottom: 24px;
+}
+
+.books-page main .catalog-heading .eyebrow {
+  margin: 0 0 9px;
+  color: var(--green);
+  font-family: "Poppins", "Segoe UI", sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.books-page main .catalog-heading .catalog-display {
+  margin: 0;
+  color: var(--ink);
+  font-family: "Anton", Impact, sans-serif;
+  font-size: clamp(42px, 5vw, 58px);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0.4px;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.catalog-add-book,
+.catalog-toolbar .button {
+  min-height: 46px;
+  padding: 0 22px;
+  border: 1px solid var(--green);
+  border-radius: 12px;
+  background: var(--green);
+  color: var(--white);
+  font-family: "Poppins", "Segoe UI", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.catalog-add-book:hover,
+.catalog-toolbar .button:hover {
+  transform: translateY(-1px);
+  border-color: var(--green-dark);
+  background: var(--green-dark);
+}
+
+.catalog-toolbar-wrap {
+  gap: 18px;
+}
+
+.catalog-toolbar {
+  gap: 12px;
+}
+
+.catalog-toolbar input,
+.catalog-toolbar select {
+  height: 46px;
+  border-color: var(--line);
+  border-radius: 10px;
+  background: var(--white);
+  color: var(--ink);
+  font-family: "Poppins", "Segoe UI", sans-serif;
+  font-size: 13px;
+}
+
+.catalog-toolbar input {
+  padding: 0 15px;
+}
+
+.catalog-toolbar input::placeholder {
+  color: var(--muted);
+  opacity: 0.9;
+}
+
+.catalog-toolbar input:focus,
+.catalog-toolbar select:focus {
+  outline: 3px solid rgb(67 91 67 / 17%);
+  border-color: var(--green);
+}
+
+.catalog-archived-link {
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.catalog-count {
+  margin: 18px 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.books-page .catalog-book-grid {
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  justify-items: stretch;
+  gap: 22px 18px;
+}
+
+.catalog-book-card {
+  max-width: 220px;
+  border-color: var(--line);
+  border-radius: 10px;
+  background: var(--white);
+  box-shadow: 0 4px 14px rgb(37 42 37 / 7%);
+}
+
+.catalog-book-card:hover {
+  box-shadow: 0 8px 20px rgb(37 42 37 / 11%);
+}
+
+.catalog-book-copy {
+  padding: 12px 13px 13px;
+}
+
+.catalog-book-copy h2 {
+  min-height: 2.4em;
+  margin: 0 0 5px;
+  font-family: "Anton", Impact, sans-serif;
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: 0.1px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.catalog-book-author {
+  min-height: 1.5em;
+  color: var(--muted);
+  font-family: "Poppins", "Segoe UI", sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.catalog-status-badge {
+  margin-top: 8px;
+  border-color: #cdddcf;
+  background: #edf3eb;
+  color: var(--green);
+  font-family: "Poppins", "Segoe UI", sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.catalog-status-badge.is-on-loan {
+  border-color: #ecc9b8;
+  background: #f8ece6;
+  color: #a44235;
+}
+
+.catalog-status-badge.is-archived {
+  border-color: var(--line);
+  background: var(--paper-deep);
+  color: var(--muted);
+}
+
+.catalog-book-rating {
+  margin: 7px 0 0;
+  color: #9b712d;
+  font-family: "Poppins", "Segoe UI", sans-serif;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.catalog-book-action .catalog-card-button {
+  min-height: 40px;
+  border-radius: 10px;
+  font-family: "Poppins", "Segoe UI", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.catalog-empty {
+  border-color: var(--line);
+  background: var(--white);
+}
+
+@media (min-width: 1200px) {
+  .books-page .catalog-book-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .books-page main:not(.landing-main) {
+    padding-top: 32px;
+  }
+
+  .catalog-toolbar-wrap {
+    gap: 8px;
+  }
+
+  .catalog-toolbar {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 680px) {
+  .books-page main:not(.landing-main) {
+    padding-top: 28px;
+  }
+
+  .books-page main .catalog-heading .catalog-display {
+    font-size: clamp(36px, 10vw, 46px);
+  }
+
+  .catalog-add-book {
+    min-height: 42px;
+    padding: 0 15px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 420px) {
+  .books-page main .catalog-heading {
+    align-items: flex-start;
+  }
+
+  .catalog-toolbar .button {
+    flex-basis: 100%;
+  }
+}

@@ -273,6 +273,9 @@ class LandingRouteTests(unittest.TestCase):
         )
         db.session.add(patron)
         db.session.commit()
+        book = BookRepository().create(
+            Book(None, "The Harbor Archive", "A. Writer", "History", "A story.")
+        )
         with self.client.session_transaction() as user_session:
             user_session["user_id"] = patron.user_id
             user_session["role"] = "patron"
@@ -284,6 +287,10 @@ class LandingRouteTests(unittest.TestCase):
         self.assertIn(b'href="/patron">Dashboard</a>', response.data)
         self.assertIn(b"Log out", response.data)
         self.assertIn(b'class="account-dropdown"', response.data)
+        self.assertIn(
+            f'data-basket-action="/basket/add/{book.book_id}"'.encode(),
+            response.data,
+        )
 
 
 if __name__ == "__main__":

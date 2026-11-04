@@ -271,18 +271,6 @@
   text-overflow: ellipsis;
 }
 
-.account-chevron {
-  margin-left: 1px;
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 1;
-}
-
-.account-dropdown summary::after {
-  margin-left: 6px;
-  content: "⌄";
-}
-
 .account-dropdown-menu {
   position: absolute;
   top: calc(100% + 15px);

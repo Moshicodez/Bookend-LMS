@@ -52,16 +52,19 @@ html::-webkit-scrollbar {
 .page-heading h1 {
   margin: 4px 0 22px;
   font-family: var(--serif);
-  font-size: clamp(32px, 5vw, 48px);
+  font-size: clamp(38px, 5vw, 58px);
   font-weight: 400;
+  letter-spacing: 0.4px;
+  line-height: 1.08;
 }
 
 .eyebrow {
   margin: 0;
   color: var(--green);
-  font-size: 11px;
+  font-family: var(--sans);
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 2px;
+  letter-spacing: 3px;
   text-transform: uppercase;
 }
 
@@ -85,16 +88,19 @@ button.button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 42px;
-  padding: 10px 16px;
+  min-height: 46px;
+  padding: 0 20px;
   border: 1px solid var(--green);
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--green);
   color: var(--white);
   cursor: pointer;
-  font: inherit;
+  font-family: var(--sans);
   font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
   text-decoration: none;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
 }
 
 .overlay-search-form .button:hover,
@@ -136,8 +142,8 @@ button.button:hover {
 }
 
 .page-heading {
-  width: min(1320px, calc(100% - 48px));
-  margin: 52px auto 26px;
+  width: min(1180px, calc(100% - 48px));
+  margin: 40px auto 28px;
 }
 
 .notification-list {
@@ -187,24 +193,63 @@ button.button:hover {
 }
 
 .page-heading h1 {
-  margin-bottom: 8px;
+  margin: 0 0 10px;
+  text-transform: uppercase;
 }
 
 .page-heading > p:last-child {
   color: var(--muted);
+  font-size: 14px;
+  line-height: 1.65;
 }
 
 body > main:not(.landing-main) {
-  width: min(1320px, calc(100% - 48px));
-  margin: 0 auto 72px;
+  width: min(1180px, calc(100% - 48px));
+  margin: 0 auto 64px;
+}
+
+body:not(.landing-page):not(.login-page) main:not(.landing-main) > h1 {
+  margin: 40px 0 18px;
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: clamp(38px, 5vw, 58px);
+  font-weight: 400;
+  letter-spacing: 0.4px;
+  line-height: 1.08;
+  text-transform: uppercase;
+}
+
+body:not(.landing-page):not(.login-page) main:not(.landing-main) > h2,
+body:not(.landing-page):not(.login-page) main:not(.landing-main) section > h2 {
+  color: var(--ink);
+  font-family: var(--serif);
+  font-weight: 400;
+  letter-spacing: 0.25px;
+  line-height: 1.15;
+}
+
+body:not(.landing-page):not(.login-page) main:not(.landing-main) p {
+  line-height: 1.6;
+}
+
+body:not(.landing-page):not(.login-page) main:not(.landing-main) form:not(.basket-list) > label:not(.visually-hidden) {
+  display: block;
+  margin: 12px 0 6px;
+}
+
+body:not(.landing-page):not(.login-page) main:not(.landing-main) form:not([method="get"]):not(.catalog-toolbar) > input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),
+body:not(.landing-page):not(.login-page) main:not(.landing-main) form:not([method="get"]):not(.catalog-toolbar) > select,
+body:not(.landing-page):not(.login-page) main:not(.landing-main) form:not([method="get"]):not(.catalog-toolbar) > textarea {
+  display: block;
+  width: 100%;
 }
 
 main:not(.landing-main) > form[method="get"] {
   display: flex;
-  max-width: 540px;
+  max-width: 760px;
   align-items: center;
   gap: 10px;
-  margin: 20px 0;
+  margin: 18px 0 24px;
 }
 
 main:not(.landing-main) > form[method="get"] label {
@@ -216,13 +261,42 @@ main:not(.landing-main) > form[method="get"] label {
   white-space: nowrap;
 }
 
+main:not(.landing-main) > form[method="get"] input,
+body:not(.landing-page):not(.login-page) main:not(.landing-main) input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),
+body:not(.landing-page):not(.login-page) main:not(.landing-main) select,
+body:not(.landing-page):not(.login-page) main:not(.landing-main) textarea {
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 10px 13px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--white);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 13px;
+}
+
 main:not(.landing-main) > form[method="get"] input {
   min-width: 0;
   flex: 1;
-  padding: 11px 13px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--white);
+}
+
+body:not(.landing-page):not(.login-page) main:not(.landing-main) textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+body:not(.landing-page):not(.login-page) main:not(.landing-main) input:focus,
+body:not(.landing-page):not(.login-page) main:not(.landing-main) select:focus,
+body:not(.landing-page):not(.login-page) main:not(.landing-main) textarea:focus {
+  outline: 3px solid rgb(67 91 67 / 18%);
+  border-color: var(--green);
+}
+
+body:not(.landing-page):not(.login-page) main:not(.landing-main) label:not(.visually-hidden) {
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .genre-filters {
@@ -296,6 +370,7 @@ main:not(.landing-main) > form[method="get"] input {
   font-family: var(--serif);
   font-size: 20px;
   font-weight: 400;
+  line-height: 1.2;
 }
 
 .book-card-copy h3 a {
@@ -369,9 +444,25 @@ main:not(.landing-main) > form[method="get"] input {
 
 .empty-state {
   padding: 48px 20px;
-  border: 1px dashed #c9c8bd;
+  border: 1px solid var(--line);
   border-radius: 14px;
+  background: var(--white);
   text-align: center;
+}
+
+.empty-state h2,
+.reviews-section h2,
+.admin-panel-heading h2,
+.book-detail-layout > h1,
+.basket-book h2,
+.receipt-book h2,
+.loan-card h2,
+.basket-summary h2,
+.profile-card h2,
+.moderation-review h2 {
+  font-family: var(--serif);
+  font-weight: 400;
+  letter-spacing: 0.25px;
 }
 
 .global-flashes {
@@ -438,7 +529,6 @@ main:not(.landing-main) > form[method="get"] input {
   color: var(--ink);
   font-family: var(--serif);
   font-size: clamp(1.75rem, 3.5vw, 2.5rem);
-  font-style: normal;
   font-weight: 400;
   line-height: 1.15;
   letter-spacing: -0.5px;
@@ -855,8 +945,9 @@ main:not(.landing-main) > form[method="get"] input {
 .receipt-book {
   padding: 20px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--white);
+  box-shadow: 0 4px 16px rgb(37 42 37 / 5%);
 }
 
 .basket-book img,
@@ -1001,20 +1092,23 @@ main:not(.landing-main) > form[method="get"] input {
 .loan-status {
   display: inline-block;
   padding: 5px 9px;
-  border-radius: 20px;
-  background: #e6eee4;
+  border: 1px solid #cdddcf;
+  border-radius: 999px;
+  background: #edf3eb;
   color: var(--green-dark) !important;
-  font-size: 10px !important;
+  font-size: 11px !important;
   font-weight: 700;
 }
 
 .loan-status.status-overdue,
 .loan-status.status-lost {
-  background: #f3e6e2;
-  color: #8a342e !important;
+  border-color: #ecc9b8;
+  background: #f8ece6;
+  color: #a44235 !important;
 }
 
 .loan-status.status-returned {
+  border-color: var(--line);
   background: var(--paper-deep);
   color: var(--muted) !important;
 }
@@ -1100,13 +1194,15 @@ main:not(.landing-main) > form[method="get"] input {
   align-content: space-between;
   padding: 18px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--white);
+  box-shadow: 0 4px 16px rgb(37 42 37 / 5%);
 }
 
 .admin-stat-card span {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .admin-stat-card strong {
@@ -1126,8 +1222,9 @@ main:not(.landing-main) > form[method="get"] input {
   min-width: 0;
   padding: 20px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--white);
+  box-shadow: 0 4px 16px rgb(37 42 37 / 5%);
 }
 
 .admin-panel-heading {
@@ -1141,8 +1238,9 @@ main:not(.landing-main) > form[method="get"] input {
 .admin-panel-heading h2 {
   margin: 4px 0 0;
   font-family: var(--serif);
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 400;
+  line-height: 1.15;
 }
 
 .admin-panel-heading > a {
@@ -1167,17 +1265,22 @@ main:not(.landing-main) > form[method="get"] input {
   border-bottom: 1px solid var(--line);
   color: var(--muted);
   font-size: 10px;
-  font-weight: 650;
-  letter-spacing: 0.8px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
 .admin-table td {
-  padding: 13px 12px;
+  padding: 14px 12px;
   border-bottom: 1px solid var(--line);
-  font-size: 12px;
+  color: var(--ink);
+  font-size: 13px;
   vertical-align: middle;
+}
+
+.admin-table tbody tr:hover {
+  background: #faf9f5;
 }
 
 .admin-table td small,
@@ -1307,8 +1410,9 @@ main:not(.landing-main) > form[method="get"] input {
   gap: 18px;
   padding: 24px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--white);
+  box-shadow: 0 4px 16px rgb(37 42 37 / 5%);
 }
 
 .member-profile-card h1 {
@@ -1342,11 +1446,12 @@ main:not(.landing-main) > form[method="get"] input {
 
 .member-list > li {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 14px;
   padding: 14px 16px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--white);
 }
 
@@ -1481,4 +1586,8 @@ main:not(.landing-main) > form[method="get"] input {
     align-items: flex-start;
     flex-direction: column;
   }
+}
+
+body:not(.login-page) :is(h1, h2, h3, h4, h5, h6) {
+  font-style: italic;
 }

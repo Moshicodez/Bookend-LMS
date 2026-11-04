@@ -8,12 +8,11 @@ import './FlipCard.css';
  * The plain fallback card is kept in the markup; this island swaps it out
  * once React hydrates the element.
  */
-function BookCard({ title, author, cover, url, available, role, bookId, csrf, description, isFavorite }) {
+function BookCard({ title, author, cover, url, basketAction, available, role, bookId, csrf, description, isFavorite }) {
   const canBorrow = available === 'true' || available === '1';
   const availabilityLabel = canBorrow ? 'Available' : 'On loan';
   const isLibrarian = role === 'librarian';
   const favoriteAction = `/books/${bookId}/favorite`;
-  const basketAction = `/patron/basket/add/${bookId}`;
   const editUrl = `/books/${bookId}/edit`;
   const archiveAction = `/books/${bookId}/archive`;
 
@@ -147,6 +146,7 @@ function mountCards() {
     const author = el.dataset.author || '';
     const cover = el.dataset.cover || '';
     const url = el.dataset.url || '#';
+    const basketAction = el.dataset.basketAction || '';
     const available = el.dataset.available || 'false';
     const role = el.dataset.role || '';
     const bookId = el.dataset.bookId || '';
@@ -160,6 +160,7 @@ function mountCards() {
           author={author}
           cover={cover}
           url={url}
+          basketAction={basketAction}
           available={available}
           role={role}
           bookId={bookId}
