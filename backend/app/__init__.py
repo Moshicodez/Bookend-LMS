@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 from datetime import date
 
 import click
@@ -8,7 +9,7 @@ from flask import Flask, session
 from .config import COVER_COLORS, Config
 from .csrf import CSRFProtect
 from .exceptions import NotFoundError, PermissionDenied, ValidationError
-from .extensions import db
+from .extensions import db, migrate
 
 
 def create_app(test_config=None):
@@ -24,8 +25,14 @@ def create_app(test_config=None):
 
     os.makedirs(app.instance_path, exist_ok=True)
     db.init_app(app)
+    migrate.init_app(
+        app,
+        db,
+        directory=os.path.join(project_root, "backend", "migrations"),
+    )
     CSRFProtect().init_app(app)
 
+    from . import models
     from .routes.auth import auth_bp
     from .routes.books import books_bp
     from .routes.dashboard import dashboard_bp
@@ -38,14 +45,33 @@ def create_app(test_config=None):
     from .routes.social import social_bp
     from .schema_migrations import upgrade_legacy_sqlite_schema
     from .services.auth_service import AuthService
+    from .services.backup_service import BackupService
     from .services.book_service import BookService
+    from .services.catalog_seed_service import CatalogSeedService
     from .repositories.book_repository import BookRepository
     from .repositories.favorite_repository import FavoriteRepository
     from .repositories.genre_repository import GenreRepository
     from .repositories.user_repository import UserRepository
 
+    initialize_from_starter_database = (
+        not test_config
+        and app.config["SQLALCHEMY_DATABASE_URI"] == "sqlite:///bookend.db"
+        and not os.path.exists(os.path.join(app.instance_path, "bookend.db"))
+    )
+
+    if initialize_from_starter_database:
+        starter_database_path = os.path.join(
+            os.path.dirname(__file__),
+            "bookend-starter.sqlite",
+        )
+        shutil.copyfile(
+            starter_database_path,
+            os.path.join(app.instance_path, "bookend.db"),
+        )
+
     with app.app_context():
-        db.create_all()
+        if app.config.get("TESTING"):
+            db.create_all()
         upgrade_legacy_sqlite_schema()
 
     app.register_blueprint(landing_bp)
@@ -148,6 +174,25 @@ def create_app(test_config=None):
         except ValidationError as error:
             raise click.ClickException(str(error)) from error
         click.echo(f"Added {seeded_count} demo books.")
+
+    @app.cli.command("seed-catalog")
+    def seed_catalog_command():
+        """Copy local SQLite books and genres into the configured database."""
+        source_path = os.path.join(app.instance_path, "bookend.db")
+        if not os.path.isfile(source_path):
+            source_path = os.path.join(
+                os.path.dirname(__file__),
+                "bookend-starter.sqlite",
+            )
+        try:
+            row_counts = CatalogSeedService().seed_from_sqlite(source_path)
+        except (OSError, ValueError, RuntimeError) as error:
+            raise click.ClickException(str(error)) from error
+        click.echo(
+            "Seeded "
+            f"{row_counts['books']} books and "
+            f"{row_counts['genres']} genres from {source_path}."
+        )
 
     @app.cli.command("reset-user-password")
     @click.argument("email")

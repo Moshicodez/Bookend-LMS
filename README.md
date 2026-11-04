@@ -17,10 +17,51 @@ The landing-page genre carousel uses the ReactBits CircularCarousel component.
 Its source and license are in `frontend/react`; rebuild its static assets with
 `npm run build` from that directory after changing the component.
 
-The app creates its SQLite database and its `users`, `books`, and `loans` tables
-automatically in Flask's instance folder. Set `BOOKEND_DATABASE_URL` to use a
-different SQLAlchemy database URL, and set `BOOKEND_SECRET_KEY` to a long,
-random value before deploying.
+## Shared Database Setup
+
+The app uses Flask-SQLAlchemy with PostgreSQL through psycopg. Neon is the
+recommended provider because its PostgreSQL connection works directly with the
+driver already used by this project.
+
+1. Create a Neon PostgreSQL project on its free plan and copy its connection string.
+2. Copy `.env.example` to `.env` and set `DATABASE_URL` to the Neon URL. Replace
+   `BOOKEND_SECRET_KEY` with a random value. Keep `.env` private; it is ignored
+   by Git. The app configures Neon `postgresql://` URLs to use psycopg.
+
+```powershell
+Copy-Item .env.example .env
+pip install -r requirements.txt
+flask --app main db upgrade
+```
+
+3. Seed books and genres from your local database, or from the committed starter
+   catalog if there is no local database. Then start the app:
+
+```powershell
+flask --app main seed-catalog
+python main.py
+```
+
+Both collaborators put the same Neon URL in their own ignored `.env` file. Do
+not commit `.env`; migrations and seed data must never include passwords.
+
+Whoever changes the models creates and reviews a migration, then commits and
+pushes it:
+
+```powershell
+flask --app main db migrate -m "Describe the schema change"
+git add backend/migrations
+git commit -m "Add database migration"
+git push
+```
+
+The other person pulls the changes and runs the migration before starting the
+app:
+
+```powershell
+git pull
+flask --app main db upgrade
+```
 
 Public signup creates patron accounts only. Email addresses are checked for
 valid syntax; the app does not send email or verify mailbox ownership. Create a
