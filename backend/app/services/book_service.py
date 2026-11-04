@@ -43,7 +43,7 @@ class BookService:
 
     def management_search(self, librarian, term="", status="all"):
         librarian.require("edit_book")
-        if status not in {"all", "available", "on_loan", "archived"}:
+        if status not in {"all", "available", "on_loan", "unavailable", "archived"}:
             status = "all"
         books, _ = self._book_repo.search(term, "", status, "title", 1, 500)
         return books
@@ -88,10 +88,19 @@ class BookService:
         description,
         kind="standard",
         cover_file=None,
+        total_stock=1,
     ):
         librarian.require("add_book")
 
-        book = Book.create(kind, None, title, author, genre, description)
+        book = Book.create(
+            kind,
+            None,
+            title,
+            author,
+            genre,
+            description,
+            total_stock=total_stock,
+        )
         filename = self._covers.save(cover_file)
         book.set_cover(filename)
         saved = False
@@ -105,6 +114,15 @@ class BookService:
                 category="book",
                 link=f"/books/{result.book_id}",
             )
+            if result.available_stock == 0:
+                self._notifications.notify_role(
+                    "librarian",
+                    "Book out of stock",
+                    f"No copies of {result.title} are currently available to borrow.",
+                    category="inventory",
+                    link=f"/books/{result.book_id}",
+                    dedupe_key=f"book:{result.book_id}:stock-zero:created",
+                )
             return result
         finally:
             if not saved:
@@ -119,11 +137,15 @@ class BookService:
         genre,
         description,
         cover_file=None,
+        total_stock=None,
     ):
         librarian.require("edit_book")
         book = self._get_book(book_id)
+        was_available = book.available_stock > 0
 
         book.update_details(title, author, genre, description)
+        if total_stock is not None:
+            book.set_total_stock(total_stock)
         previous_cover = book.cover
         filename = self._covers.save(cover_file)
         if filename:
@@ -145,6 +167,18 @@ class BookService:
             category="book",
             link=f"/books/{book.book_id}",
         )
+        if was_available and book.available_stock == 0:
+            self._notifications.notify_role(
+                "librarian",
+                "Book out of stock",
+                f"No copies of {book.title} are currently available to borrow.",
+                category="inventory",
+                link=f"/books/{book.book_id}",
+                dedupe_key=(
+                    f"book:{book.book_id}:stock-zero:edit:"
+                    f"{today().isoformat()}:{book.total_stock}:{book.borrowed_stock}"
+                ),
+            )
         return book
 
     def archive_book(self, librarian, book_id):

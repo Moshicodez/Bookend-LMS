@@ -30,16 +30,40 @@
   {% elif not user.is_librarian() %}
     <p><a href="{{ url_for('loans.issue') }}">Borrow a book</a></p>
   {% elif not overdue %}
-    <p><a class="button button-secondary" href="{{ url_for('loans.overdue') }}">View overdue loans</a></p>
+    <p class="loan-page-actions">
+      <a class="button" href="{{ url_for('loans.issue') }}">Issue a loan</a>
+      <a class="button button-secondary" href="{{ url_for('loans.overdue') }}">View overdue loans</a>
+    </p>
   {% endif %}
 
-  {% if user.is_librarian() and not overdue %}
-    <form method="get" action="{{ url_for('loans.index') }}" role="search">
+  {% if user.is_librarian() %}
+    <section class="loan-summary" aria-label="Loan summary">
+      <article><span>Total loans</span><strong>{{ summary.total }}</strong></article>
+      <article><span>Active</span><strong>{{ summary.active }}</strong></article>
+      <article><span>Returned</span><strong>{{ summary.returned }}</strong></article>
+      <article><span>Overdue</span><strong>{{ summary.overdue }}</strong></article>
+    </section>
+  {% endif %}
+
+  {% if user.is_librarian() %}
+    <form class="loan-filters" method="get" action="{{ url_for('loans.index') }}" role="search">
       <label class="visually-hidden" for="loan-q">Search loans</label>
-      <input id="loan-q" name="q" type="search" value="{{ q or '' }}" placeholder="Book title or patron">
+      <input id="loan-q" name="q" type="search" value="{{ q or '' }}" placeholder="Loan ID, book title, or patron">
       <select name="status" aria-label="Filter by status">
-        {% for value, label in [("","All"),("on-loan","On loan"),("overdue","Overdue"),("returned","Returned"),("lost","Lost")] %}
+        {% for value, label in [("","All loans"),("active","Active"),("on-loan","On loan"),("overdue","Overdue"),("returned","Returned"),("lost","Lost")] %}
           <option value="{{ value }}" {{ 'selected' if (status or '') == value }}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <select name="member_id" aria-label="Filter by member">
+        <option value="">All members</option>
+        {% for patron in patrons %}
+          <option value="{{ patron.user_id }}" {% if member_id|string == patron.user_id|string %}selected{% endif %}>{{ patron.username }}</option>
+        {% endfor %}
+      </select>
+      <select name="book_id" aria-label="Filter by book">
+        <option value="">All books</option>
+        {% for book in books %}
+          <option value="{{ book.book_id }}" {% if book_id|string == book.book_id|string %}selected{% endif %}>{{ book.title }}</option>
         {% endfor %}
       </select>
       <button class="button" type="submit">Filter</button>
@@ -58,8 +82,10 @@
           <div class="loan-card-content">
             <p class="loan-status status-{{ card.status|lower|replace(' ', '-') }}">{{ card.status }}</p>
             <h2>{{ card.book.title if card.book else "Book" }}</h2>
+            <p><a href="{{ url_for('loans.detail', loan_id=card.loan.loan_id) }}">Loan #{{ card.loan.loan_id }} · View details</a></p>
             <p>Borrowed {{ card.loan.borrowed_at.strftime("%b %d, %Y") }}</p>
             <p>Due {{ card.loan.due_date.strftime("%b %d, %Y") }}</p>
+            {% if card.days_overdue %}<p>{{ card.days_overdue }} day{{ "" if card.days_overdue == 1 else "s" }} overdue</p>{% endif %}
             {% if card.loan.returned_at %}<p>Returned {{ card.loan.returned_at.strftime("%b %d, %Y") }}</p>{% endif %}
             {% if card.loan.lost %}<p>Marked lost</p>{% endif %}
             <p>Fees: ${{ "%.2f"|format(card.outstanding) }}</p>
@@ -84,23 +110,27 @@
   {% elif user.is_librarian() and loan_cards %}
     <div class="table-scroll">
       <table class="admin-table">
-        <thead><tr><th>Book</th><th>Patron</th><th>Borrowed</th><th>Due</th><th>Status</th><th>Fees</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Loan</th><th>Book</th><th>Patron</th><th>Borrowed</th><th>Due</th><th>Status</th><th>Fees</th><th>Actions</th></tr></thead>
         <tbody>
           {% for card in loan_cards %}
             <tr>
+              <td><a href="{{ url_for('loans.detail', loan_id=card.loan.loan_id) }}">#{{ card.loan.loan_id }} · Details</a></td>
               <td>{{ card.book.title if card.book else "Book #" ~ card.loan.book_id }}</td>
               <td>{{ card.patron_name }}</td>
               <td>{{ card.loan.borrowed_at.strftime("%b %d, %Y") }}</td>
               <td>{{ card.loan.due_date.strftime("%b %d, %Y") }}</td>
-              <td><span class="loan-status status-{{ card.status|lower|replace(' ', '-') }}">{{ card.status }}</span></td>
+              <td>
+                <span class="loan-status status-{{ card.status|lower|replace(' ', '-') }}">{{ card.status }}</span>
+                {% if card.days_overdue %}<small>{{ card.days_overdue }} day{{ "" if card.days_overdue == 1 else "s" }} overdue</small>{% endif %}
+              </td>
               <td>${{ "%.2f"|format(card.outstanding) }}</td>
               <td class="admin-actions">
                 {% if not card.loan.returned_at and not card.loan.lost %}
-                  <form method="post" action="{{ url_for('loans.librarian_return_book', book_id=card.loan.book_id) }}">
+                  <form method="post" action="{{ url_for('loans.librarian_return_loan', loan_id=card.loan.loan_id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button class="button button-secondary" type="submit">Mark returned</button>
                   </form>
-                  <form method="post" action="{{ url_for('loans.librarian_mark_lost', book_id=card.loan.book_id) }}">
+                  <form method="post" action="{{ url_for('loans.librarian_mark_loan_lost', loan_id=card.loan.loan_id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button class="button button-danger" type="submit">Mark lost</button>
                   </form>

@@ -66,7 +66,6 @@ class LegacySchemaMigrationTests(unittest.TestCase):
             {"password_hash": generate_password_hash("StrongPass1!")},
         )
         db.session.commit()
-        upgrade_legacy_sqlite_schema()
         db.session.execute(
             text(
                 "INSERT INTO books "
@@ -86,6 +85,7 @@ class LegacySchemaMigrationTests(unittest.TestCase):
             },
         )
         db.session.commit()
+        upgrade_legacy_sqlite_schema()
         self.client = self.app.test_client()
 
     def tearDown(self):
@@ -105,6 +105,7 @@ class LegacySchemaMigrationTests(unittest.TestCase):
 
         self.assertEqual(book.title, "Legacy Book")
         self.assertEqual(book.kind, "standard")
+        self.assertEqual(book.total_stock, 2)
         self.assertTrue(
             {"kind", "cover"}.issubset(columns["books"])
         )

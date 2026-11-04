@@ -115,8 +115,13 @@ case-insensitive, ordered genre navigation. Reservations are persisted in the
 application database and promoted FIFO when a book is returned. Active
 reservations count toward the same per-patron limit as active loans.
 Signed-in users can review persisted in-app notifications from the bell icon.
-Loan due-soon, due-tomorrow, and overdue reminders are generated on the
-patron's next visit to the app; they are not email or push notifications.
+Loan due-soon, due-tomorrow, due-today, and overdue reminders are generated
+when a patron visits and by the `sync-notifications` command. Schedule
+`flask --app main sync-notifications` to run daily in the host's task scheduler
+to deliver reminders even when patrons do not sign in; the command is safe to
+repeat and does not create duplicate reminders. Librarians also receive
+deduplicated overdue and zero-stock alerts, and can send announcements from the
+notification bell. These are in-app notifications, not email or push alerts.
 
 After signing in:
 

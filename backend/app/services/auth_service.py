@@ -4,12 +4,17 @@ from ..exceptions import ValidationError
 from ..models.password_rule import PASSWORD_RULES
 from ..models.librarian import Librarian
 from ..models.patron import Patron
+from ..repositories.notification_repository import NotificationRepository
+from .notification_service import NotificationService
 from ..utils.validators import is_valid_email, is_valid_username
 
 
 class AuthService:
-    def __init__(self, user_repo):
+    def __init__(self, user_repo, notification_service=None):
         self._user_repo = user_repo
+        self._notifications = notification_service or NotificationService(
+            NotificationRepository()
+        )
 
     @staticmethod
     def pass_strength(password):
@@ -58,12 +63,20 @@ class AuthService:
         if self._user_repo.username_exist(username):
             raise ValidationError("That username is taken.")
 
-        return self._user_repo.create(
+        patron = self._user_repo.create(
             email,
             username,
             generate_password_hash(password),
             Patron.ROLE,
         )
+        self._notifications.notify_role(
+            "librarian",
+            "New patron registered",
+            f"{patron.username} created a library account.",
+            category="member",
+            link=f"/members/{patron.user_id}",
+        )
+        return patron
 
     def create_librarian(self, email, username, password):
         email = (email or "").strip().lower()

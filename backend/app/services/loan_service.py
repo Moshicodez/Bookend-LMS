@@ -5,7 +5,7 @@ from ..repositories.notification_repository import NotificationRepository
 from ..repositories.reservation_repository import ReservationRepository
 from ..repositories.user_repository import UserRepository
 from .notification_service import NotificationService
-from ..utils.date_utils import add_days, today
+from ..utils.date_utils import add_days, today, to_date
 
 
 class LoanService:
@@ -30,6 +30,18 @@ class LoanService:
             raise NotFoundError("Book not found.")
 
         return book
+
+    def _notify_stock_exhaustion(self, book, loan_id):
+        if book.available_stock != 0:
+            return
+        self._notifications.notify_role(
+            "librarian",
+            "Book out of stock",
+            f"No copies of {book.title} are currently available to borrow.",
+            category="inventory",
+            link=f"/books/{book.book_id}",
+            dedupe_key=f"loan:{loan_id}:stock-zero",
+        )
 
     def _get_own_loan(self, patron, loan_id):
         loan = self._loan_repo.find_loan(loan_id)
@@ -106,11 +118,12 @@ class LoanService:
                 reservation.reservation_id if reservation is not None else None
             ),
         )
+        self._notify_stock_exhaustion(book, loan.loan_id)
         self._notifications.notify(
             patron.user_id,
             "Book borrowed",
             f"{book.title} is due on {loan.due_date:%b %d, %Y}.",
-            category="loan",
+            category="borrow",
             link="/loans/",
         )
         return loan
@@ -146,14 +159,98 @@ class LoanService:
         loans = self._loan_repo.create_loans_atomic(patron.user_id, entries)
         for loan in loans:
             book = self._book_repo.find_book(loan.book_id)
+            if book is not None:
+                self._notify_stock_exhaustion(book, loan.loan_id)
             self._notifications.notify(
                 patron.user_id,
                 "Book borrowed",
                 f"{book.title if book else 'Your book'} is due on {loan.due_date:%b %d, %Y}.",
-                category="loan",
+                category="borrow",
                 link="/loans/",
             )
         return loans
+
+    def issue_for_patron(
+        self,
+        librarian,
+        patron_id,
+        book_id,
+        borrowed_at,
+        due_date,
+    ):
+        librarian.require("manage_loans")
+        try:
+            patron_id = int(patron_id)
+            book_id = int(book_id)
+            borrowed_at = to_date(borrowed_at)
+            due_date = to_date(due_date)
+        except (TypeError, ValueError) as error:
+            raise ValidationError("Choose a valid patron, book, and loan date.") from error
+
+        patron = UserRepository().find_by_id(patron_id)
+        if patron is None or not patron.is_patron() or not patron.active:
+            raise ValidationError("Choose an active patron account.")
+        if borrowed_at is None or due_date is None or due_date <= borrowed_at:
+            raise ValidationError("The due date must be after the borrowing date.")
+        if borrowed_at > today():
+            raise ValidationError("The borrowing date cannot be in the future.")
+
+        book = self._get_book(book_id)
+        if not book.catalog:
+            raise ValidationError("This book is no longer in the catalog.")
+        if book.kind == "reference":
+            raise ValidationError("Reference books can only be read in the library.")
+        if not book.can_borrow():
+            raise ValidationError(
+                "This book is currently unavailable because there are no copies in stock."
+            )
+
+        loans = self._loan_repo.find_patron_loans(patron.user_id)
+        active_loans = [loan for loan in loans if not loan.is_returned()]
+        reservation_count = self._reservations.count_open_for_patron(patron.user_id)
+        if len(active_loans) + reservation_count >= patron.loan_limit:
+            raise ValidationError(
+                f"This patron has reached the {patron.loan_limit}-book loan limit."
+            )
+        if any(loan.outstanding(borrowed_at) > 0 for loan in loans):
+            raise ValidationError("This patron has outstanding fees.")
+        if self._loan_repo.find_active_loan(patron.user_id, book_id):
+            raise ValidationError("This patron is already borrowing this book.")
+
+        existing_reservation = self._reservations.find_for_patron_book(
+            patron.user_id, book_id
+        )
+        if existing_reservation and existing_reservation.status != Reservation.READY:
+            raise ValidationError("This patron already has a reservation for the book.")
+        ready_reservation = self._reservations.find_ready_for_book(book_id)
+        if ready_reservation and (
+            existing_reservation is None
+            or ready_reservation.patron_id != patron.user_id
+        ):
+            raise ValidationError("This book is being held for another patron.")
+
+        book.borrow()
+        loan = self._loan_repo.create_loan(
+            patron.user_id,
+            book.book_id,
+            borrowed_at,
+            due_date,
+            reservation_id=(
+                existing_reservation.reservation_id
+                if existing_reservation is not None
+                and existing_reservation.status == Reservation.READY
+                else None
+            ),
+        )
+        self._notify_stock_exhaustion(book, loan.loan_id)
+        self._notifications.notify(
+            patron.user_id,
+            "Book borrowed",
+            f"{book.title} is due on {loan.due_date:%b %d, %Y}.",
+            category="borrow",
+            link="/loans/",
+        )
+        return loan
 
     def reserve_book(self, patron, book_id):
         patron.require("borrow_book")
@@ -185,8 +282,16 @@ class LoanService:
             patron.user_id,
             "Reservation added",
             f"You joined the queue for {book.title}.",
-            category="loan",
+            category="reservation",
             link=f"/books/{book.book_id}",
+        )
+        self._notifications.notify_role(
+            "librarian",
+            "New reservation request",
+            f"{patron.username} joined the queue for {book.title}.",
+            category="reservation",
+            link=f"/books/{book.book_id}",
+            dedupe_key=f"reservation:{reservation.reservation_id}:requested",
         )
         return reservation
 
@@ -241,9 +346,16 @@ class LoanService:
                     "status": status,
                     "outstanding": loan.outstanding(current_date),
                     "fees": loan.fee_breakdown(current_date),
+                    "days_overdue": self._days_overdue(loan, current_date),
                 }
             )
         return cards
+
+    @staticmethod
+    def _days_overdue(loan, current_date):
+        if loan.lost or loan.is_returned() or loan.due_date >= current_date:
+            return 0
+        return (current_date - loan.due_date).days
 
     @staticmethod
     def _loan_status(loan, current_date):
@@ -255,7 +367,15 @@ class LoanService:
             return "Overdue"
         return "On loan"
 
-    def management_cards(self, librarian, overdue_only=False, search="", status=""):
+    def management_cards(
+        self,
+        librarian,
+        overdue_only=False,
+        search="",
+        status="",
+        member_id="",
+        book_id="",
+    ):
         librarian.require("manage_loans")
         loans = (
             self._loan_repo.find_overdue()
@@ -272,7 +392,14 @@ class LoanService:
             loan_status = self._loan_status(loan, today())
             if status and loan_status.lower().replace(" ", "-") != status:
                 continue
-            haystack = f"{book.title if book else ''} {patron_name}".casefold()
+            if member_id and str(loan.patron_id) != str(member_id):
+                continue
+            if book_id and str(loan.book_id) != str(book_id):
+                continue
+            haystack = (
+                f"{book.title if book else ''} {patron_name} "
+                f"#{loan.loan_id} #{loan.book_id}"
+            ).casefold()
             if term and term not in haystack:
                 continue
             cards.append(
@@ -282,9 +409,41 @@ class LoanService:
                     "patron_name": patron_name,
                     "status": loan_status,
                     "outstanding": loan.outstanding(today()),
+                    "days_overdue": self._days_overdue(loan, today()),
                 }
             )
         return cards
+
+    def management_summary(self, librarian):
+        librarian.require("manage_loans")
+        current_date = today()
+        loans = self._loan_repo.find_all()
+        statuses = [self._loan_status(loan, current_date) for loan in loans]
+        return {
+            "total": len(loans),
+            "active": sum(not loan.is_returned() and not loan.lost for loan in loans),
+            "returned": sum(loan.is_returned() and not loan.lost for loan in loans),
+            "overdue": statuses.count("Overdue"),
+        }
+
+    def loan_detail_card(self, user, loan_id):
+        loan = self._loan_repo.find_loan(loan_id)
+        if loan is None:
+            raise NotFoundError("Loan not found.")
+        if user.is_librarian():
+            user.require("manage_loans")
+        elif not user.is_patron() or loan.patron_id != user.user_id:
+            raise NotFoundError("Loan not found.")
+        patron = UserRepository().find_by_id(loan.patron_id)
+        current_date = today()
+        return {
+            "loan": loan,
+            "book": self._book_repo.find_book(loan.book_id),
+            "patron_name": patron.username if patron else f"#{loan.patron_id}",
+            "status": self._loan_status(loan, current_date),
+            "outstanding": loan.outstanding(current_date),
+            "days_overdue": self._days_overdue(loan, current_date),
+        }
 
     def return_book(self, patron, book_id):
         patron.require("return_book")
@@ -304,7 +463,7 @@ class LoanService:
             patron.user_id,
             "Book returned",
             f"{book.title} was successfully returned.",
-            category="loan",
+            category="return",
             link="/loans/",
         )
 
@@ -356,13 +515,19 @@ class LoanService:
 
     def process_return(self, librarian, book_id, lost=False):
         librarian.require("update_return_status")
-        book = self._get_book(book_id)
-
         loan = self._loan_repo.find_active_loan_by_book(book_id)
-
         if loan is None:
             raise NotFoundError("That book has no active loan.")
+        return self.process_return_loan(librarian, loan.loan_id, lost=lost)
 
+    def process_return_loan(self, librarian, loan_id, lost=False):
+        librarian.require("update_return_status")
+        loan = self._loan_repo.find_loan(loan_id)
+        if loan is None:
+            raise NotFoundError("Loan not found.")
+        if loan.is_returned():
+            raise ValidationError("This loan has already been returned.")
+        book = self._get_book(loan.book_id)
         if lost:
             loan.mark_lost(Config.LOSS_FEE)
             book.mark_lost()
@@ -372,6 +537,8 @@ class LoanService:
             book.return_book()
 
         self._loan_repo.complete_return(loan)
+        if lost:
+            self._notify_stock_exhaustion(book, loan.loan_id)
         self._notifications.notify(
             loan.patron_id,
             "Loan closed",
@@ -380,7 +547,7 @@ class LoanService:
                 if lost
                 else f"{book.title} was returned."
             ),
-            category="loan",
+            category="lost" if lost else "return",
             link="/loans/",
         )
 

@@ -125,7 +125,7 @@ class BrowseUiTests(unittest.TestCase):
         navigation = page.data.split(b'class="landing-navigation"', 1)[1].split(b"</nav>", 1)[0]
         self.assertNotIn(b"About", navigation)
         self.assertNotIn(b"class=\"genre-dropdown\"", page.data)
-        self.assertNotIn(b"Notifications, ", page.data)
+        self.assertIn(b"Notifications, 0 unread", page.data)
 
     def test_catalog_most_borrowed_sort_orders_by_loan_count(self):
         today = date.today()

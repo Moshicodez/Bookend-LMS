@@ -62,8 +62,9 @@
           <div class="catalog-book-copy">
             <h2><a href="{{ book_url }}">{{ book.title }}</a></h2>
             <p class="catalog-book-author">{{ book.author }}</p>
-            {% set status_label = "Archived" if not book.catalog else ("On loan" if not book.available else "Available") %}
-            <span class="catalog-status-badge{% if status_label == 'On loan' %} is-on-loan{% elif status_label == 'Archived' %} is-archived{% endif %}">{{ status_label }}</span>
+            {% set status_label = "Archived" if not book.catalog else ("In-library use" if book.kind == "reference" else ("Available" if book.available_stock > 0 else ("On loan" if book.borrowed_stock > 0 else "Unavailable"))) %}
+            <span class="catalog-status-badge{% if status_label == 'On loan' %} is-on-loan{% elif status_label == 'Archived' %} is-archived{% elif status_label == 'Unavailable' %} is-unavailable{% endif %}">{{ status_label }}</span>
+            <p class="catalog-book-stock">{{ book.available_stock }} available / {{ book.total_stock }} total</p>
             <p class="catalog-book-rating" aria-label="{{ '%.1f'|format(rating.average) }} out of 5 stars from {{ rating.count }} reviews">
               <span aria-hidden="true">{{ "★" if rating.count else "☆" }} {{ "%.1f"|format(rating.average) }} ({{ rating.count }})</span>
             </p>
@@ -76,6 +77,8 @@
                   <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
                   <button class="button catalog-card-button" type="submit">Borrow</button>
                 </form>
+              {% elif user and user.is_patron() and book.kind != "reference" %}
+                <button class="button catalog-card-button" type="button" disabled>Unavailable</button>
               {% elif not user and can_borrow %}
                 <a class="button catalog-card-button" href="{{ url_for('auth.login') }}">Sign in to borrow</a>
               {% endif %}

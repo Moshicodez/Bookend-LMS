@@ -22,8 +22,14 @@ class BasketService:
         book = self._books.find_book(book_id)
         if book is None or not book.catalog:
             raise NotFoundError("Book not found.")
+        if book.kind == "reference":
+            raise ValidationError(
+                "This book is not currently available to borrow; reference books can only be read in the library."
+            )
         if not book.can_borrow():
-            raise ValidationError("This book is not currently available to borrow.")
+            raise ValidationError(
+                "This book is currently unavailable because there are no copies in stock."
+            )
         if self._loan_service.reservation_status(patron, book_id)["held_for_other"]:
             raise ValidationError("This book is being held for another patron.")
 

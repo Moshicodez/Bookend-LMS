@@ -26,13 +26,15 @@
       <span>({{ rating.count }} reviews)</span>
     </p>
     {% if book.description %}<p>{{ book.description }}</p>{% endif %}
+    <p>Stock: {{ book.available_stock }} available / {{ book.total_stock }} total ({{ book.borrowed_stock }} on loan)</p>
     <p>Status:
       {% if not book.catalog %}Archived
       {% elif reservation_info.held_for_other %}Reserved for another patron
       {% elif reservation_info.ready_for_patron %}Ready for you
       {% elif book.can_borrow() %}Available
-      {% elif book.available %}In-library use
-      {% else %}On loan
+      {% elif book.kind == "reference" %}In-library use
+      {% elif book.borrowed_stock > 0 %}On loan
+      {% else %}Unavailable
       {% endif %}
     </p>
     {% if book.can_borrow() %}<p>Loan period: {{ book.loan_days }} days</p>{% endif %}

@@ -8,9 +8,17 @@ import './FlipCard.css';
  * The plain fallback card is kept in the markup; this island swaps it out
  * once React hydrates the element.
  */
-function BookCard({ title, author, cover, url, basketAction, available, role, bookId, csrf, description, isFavorite }) {
+function BookCard({ title, author, cover, url, basketAction, available, stockTotal, stockAvailable, stockBorrowed, bookKind, catalog, role, bookId, csrf, description, isFavorite }) {
   const canBorrow = available === 'true' || available === '1';
-  const availabilityLabel = canBorrow ? 'Available' : 'On loan';
+  const availabilityLabel = catalog !== 'true'
+    ? 'Archived'
+    : bookKind === 'reference'
+      ? 'In-library use'
+      : canBorrow
+        ? 'Available'
+        : Number(stockBorrowed) > 0
+          ? 'On loan'
+          : 'Unavailable';
   const isLibrarian = role === 'librarian';
   const favoriteAction = `/books/${bookId}/favorite`;
   const editUrl = `/books/${bookId}/edit`;
@@ -62,6 +70,7 @@ function BookCard({ title, author, cover, url, basketAction, available, role, bo
       ) : (
         <span className="flip-card__availability is-borrowed">{availabilityLabel}</span>
       )}
+      <p className="flip-card__stock">{stockAvailable} available / {stockTotal} total</p>
       {description ? (
         <p className="flip-card__description">{description}</p>
       ) : null}
@@ -78,12 +87,16 @@ function BookCard({ title, author, cover, url, basketAction, available, role, bo
                 {isFavorite ? 'Saved' : 'Save'}
               </button>
             </form>
-            {canBorrow ? (
-              <form method="post" action={basketAction} className="flip-card__form">
-                <input type="hidden" name="csrf_token" value={csrf} />
-                <input type="hidden" name="next" value={url} />
-                <button type="submit" className="flip-card__button flip-card__button--primary basket">Add to basket</button>
-              </form>
+            {bookKind !== 'reference' ? (
+              canBorrow ? (
+                <form method="post" action={basketAction} className="flip-card__form">
+                  <input type="hidden" name="csrf_token" value={csrf} />
+                  <input type="hidden" name="next" value={url} />
+                  <button type="submit" className="flip-card__button flip-card__button--primary basket">Add to basket</button>
+                </form>
+              ) : (
+                <button type="button" className="flip-card__button flip-card__button--primary basket" disabled>Unavailable</button>
+              )
             ) : null}
           </>
         ) : isLibrarian ? (
@@ -148,6 +161,11 @@ function mountCards() {
     const url = el.dataset.url || '#';
     const basketAction = el.dataset.basketAction || '';
     const available = el.dataset.available || 'false';
+    const stockTotal = el.dataset.stockTotal || '0';
+    const stockAvailable = el.dataset.stockAvailable || '0';
+    const stockBorrowed = el.dataset.stockBorrowed || '0';
+    const bookKind = el.dataset.bookKind || 'standard';
+    const catalog = el.dataset.bookCatalog || 'true';
     const role = el.dataset.role || '';
     const bookId = el.dataset.bookId || '';
     const csrf = el.dataset.csrf || '';
@@ -162,6 +180,11 @@ function mountCards() {
           url={url}
           basketAction={basketAction}
           available={available}
+          stockTotal={stockTotal}
+          stockAvailable={stockAvailable}
+          stockBorrowed={stockBorrowed}
+          bookKind={bookKind}
+          catalog={catalog}
           role={role}
           bookId={bookId}
           csrf={csrf}

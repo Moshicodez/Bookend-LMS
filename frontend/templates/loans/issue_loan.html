@@ -1,22 +1,56 @@
 {% extends "base.html" %}
 {% block title %}Borrow a book | Bookend Library{% endblock %}
 {% block content %}
-  <h1>Borrow a book</h1>
-  <ul>
-    {% for book in books %}
-      <li>
-        {{ book.title }} by {{ book.author }}
-        {% if book.can_borrow() %}
-          <form method="post" action="{{ url_for('loans.borrow', book_id=book.book_id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit">Borrow</button>
-          </form>
-        {% else %}
-          <span>Unavailable</span>
-        {% endif %}
-      </li>
-    {% else %}
-      <li>No books are currently available.</li>
-    {% endfor %}
-  </ul>
+  {% if user.is_librarian() %}
+    <section class="page-heading">
+      <p class="eyebrow">LIBRARIAN TOOLS</p>
+      <h1>Issue a loan</h1>
+      <p>Select the patron, book, and loan dates.</p>
+    </section>
+    <form method="post" action="{{ url_for('loans.issue') }}" class="loan-issue-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label for="patron_id">Patron</label>
+      <select id="patron_id" name="patron_id" required>
+        <option value="">Select a patron</option>
+        {% for patron in patrons %}
+          {% if patron.active %}
+            <option value="{{ patron.user_id }}" {% if request.form.get('patron_id') == patron.user_id|string %}selected{% endif %}>{{ patron.username }} ({{ patron.email }})</option>
+          {% endif %}
+        {% endfor %}
+      </select>
+      <label for="book_id">Book</label>
+      <select id="book_id" name="book_id" required>
+        <option value="">Select an available book</option>
+        {% for book in books %}
+          {% if book.can_borrow() %}
+            <option value="{{ book.book_id }}" {% if request.form.get('book_id') == book.book_id|string %}selected{% endif %}>{{ book.title }} — {{ book.available_stock }} available</option>
+          {% endif %}
+        {% endfor %}
+      </select>
+      <label for="borrowed_at">Borrow date</label>
+      <input id="borrowed_at" name="borrowed_at" type="date" value="{{ borrowed_at }}" required>
+      <label for="due_date">Due date</label>
+      <input id="due_date" name="due_date" type="date" value="{{ due_date }}" required>
+      <button class="button" type="submit">Create loan</button>
+    </form>
+  {% else %}
+    <h1>Borrow a book</h1>
+    <ul>
+      {% for book in books %}
+        <li>
+          {{ book.title }} by {{ book.author }} — {{ book.available_stock }} available / {{ book.total_stock }} total
+          {% if book.can_borrow() %}
+            <form method="post" action="{{ url_for('loans.borrow', book_id=book.book_id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit">Borrow</button>
+            </form>
+          {% else %}
+            <span>Unavailable</span>
+          {% endif %}
+        </li>
+      {% else %}
+        <li>No books are currently available.</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
 {% endblock %}

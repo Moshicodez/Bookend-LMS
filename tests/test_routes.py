@@ -15,6 +15,7 @@ from backend.app.models.book_record import BookRecord
 from backend.app.models.reservation_record import ReservationRecord
 from backend.app.models.user_record import UserRecord
 from backend.app.repositories.book_repository import BookRepository
+from backend.app.utils.date_utils import add_days, today
 
 
 class BackendRouteTests(unittest.TestCase):
@@ -138,14 +139,73 @@ class BackendRouteTests(unittest.TestCase):
                 "genre": "Fiction",
                 "description": "",
                 "kind": "new_release",
+                "total_stock": "4",
             },
         )
         self.assertEqual(created.status_code, 302)
+        saved_book = BookRepository().find_by_title_author(
+            "New catalog book", "Writer"
+        )
+        self.assertEqual(saved_book.total_stock, 4)
         self.assertEqual(self.client.get("/members/").status_code, 200)
 
         self.post(f"/members/{patron.user_id}/toggle")
         updated = db.session.get(UserRecord, patron.user_id)
         self.assertFalse(updated.active)
+
+    def test_librarian_receives_stock_validation_on_invalid_book_input(self):
+        self.create_librarian()
+        self.post(
+            "/login",
+            data={"username": "staff", "password": "StrongPass1!"},
+        )
+
+        response = self.post(
+            "/books/new",
+            data={
+                "title": "Invalid stock book",
+                "author": "Writer",
+                "total_stock": "-1",
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b"Stock must be a whole number", response.data)
+        self.assertIsNone(
+            BookRepository().find_by_title_author("Invalid stock book", "Writer")
+        )
+
+    def test_librarian_can_issue_a_loan_and_open_its_detail_page(self):
+        self.register_patron()
+        patron = db.session.execute(
+            db.select(UserRecord).where(UserRecord.username == "reader")
+        ).scalar_one()
+        self.post("/logout")
+        self.create_librarian()
+        self.post(
+            "/login",
+            data={"username": "staff", "password": "StrongPass1!"},
+        )
+        book = BookRepository().create(
+            Book(None, "Staff-issued book", "Writer", "Fiction", "", total_stock=2)
+        )
+
+        response = self.post(
+            "/loans/issue",
+            data={
+                "patron_id": str(patron.user_id),
+                "book_id": str(book.book_id),
+                "borrowed_at": today().isoformat(),
+                "due_date": add_days(today(), 14).isoformat(),
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        detail = self.client.get(response.location)
+        self.assertEqual(detail.status_code, 200)
+        self.assertIn(b"Staff-issued book", detail.data)
+        self.assertIn(b"Patron: reader", detail.data)
+        self.assertEqual(BookRepository().find_book(book.book_id).borrowed_stock, 1)
 
     def test_librarian_can_upload_jpg_cover_for_book(self):
         upload_directory = tempfile.TemporaryDirectory()
@@ -241,7 +301,10 @@ class BackendRouteTests(unittest.TestCase):
 
         self.assertEqual(restored.status_code, 302)
         self.assertEqual(restored.location, "/books/archived")
-        self.assertNotIn(b"Archived title", self.client.get("/books/archived").data)
+        self.assertNotIn(
+            b"<strong>Archived title</strong>",
+            self.client.get("/books/archived").data,
+        )
         self.assertIn(b"Archived title", self.client.get("/books/").data)
 
     def test_patron_cannot_view_or_restore_archived_books(self):

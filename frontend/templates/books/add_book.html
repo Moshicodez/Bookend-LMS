@@ -5,20 +5,22 @@
   <form method="post" action="{{ url_for('books.add') }}" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label for="title">Title</label>
-    <input id="title" name="title" maxlength="250" required>
+    <input id="title" name="title" value="{{ request.form.get('title', '') }}" maxlength="250" required>
     <label for="author">Author</label>
-    <input id="author" name="author" maxlength="160" required>
+    <input id="author" name="author" value="{{ request.form.get('author', '') }}" maxlength="160" required>
     <label for="genre">Genre</label>
-    <input id="genre" name="genre" maxlength="100">
+    <input id="genre" name="genre" value="{{ request.form.get('genre', '') }}" maxlength="100">
     <label for="description">Description</label>
-    <textarea id="description" name="description"></textarea>
+    <textarea id="description" name="description">{{ request.form.get('description', '') }}</textarea>
+    <label for="total_stock">Total stock</label>
+    <input id="total_stock" name="total_stock" type="number" min="0" step="1" value="{{ request.form.get('total_stock', '1') }}" required>
     <label for="cover">Book cover (JPG, PNG, or WebP; max 2 MB)</label>
     <input id="cover" name="cover" type="file" accept=".jpg,.png,.webp,image/jpeg,image/png,image/webp">
     <label for="kind">Book type</label>
     <select id="kind" name="kind">
-      <option value="standard">Standard</option>
-      <option value="new_release">New release</option>
-      <option value="reference">Reference (in-library use)</option>
+      <option value="standard" {% if request.form.get('kind', 'standard') == 'standard' %}selected{% endif %}>Standard</option>
+      <option value="new_release" {% if request.form.get('kind') == 'new_release' %}selected{% endif %}>New release</option>
+      <option value="reference" {% if request.form.get('kind') == 'reference' %}selected{% endif %}>Reference (in-library use)</option>
     </select>
     <button type="submit">Save book</button>
   </form>

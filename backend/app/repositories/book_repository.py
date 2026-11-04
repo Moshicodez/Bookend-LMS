@@ -9,6 +9,33 @@ from ..models.loan_record import LoanRecord
 
 
 class BookRepository:
+    @staticmethod
+    def _active_loan_count_expression():
+        return (
+            db.select(db.func.count(LoanRecord.loan_id))
+            .where(
+                LoanRecord.book_id == BookRecord.book_id,
+                LoanRecord.returned_at.is_(None),
+                LoanRecord.lost.is_(False),
+            )
+            .scalar_subquery()
+        )
+
+    @staticmethod
+    def _active_counts(book_ids):
+        if not book_ids:
+            return {}
+        rows = db.session.execute(
+            db.select(LoanRecord.book_id, db.func.count(LoanRecord.loan_id))
+            .where(
+                LoanRecord.book_id.in_(book_ids),
+                LoanRecord.returned_at.is_(None),
+                LoanRecord.lost.is_(False),
+            )
+            .group_by(LoanRecord.book_id)
+        )
+        return {book_id: count for book_id, count in rows}
+
     def list_genres(self):
         names = db.session.execute(
             db.select(BookRecord.genre)
@@ -30,8 +57,14 @@ class BookRepository:
 
     @staticmethod
     def _book_collection(records):
+        records = list(records)
+        borrowed_counts = BookRepository._active_counts(
+            [record.book_id for record in records]
+        )
         return BookLinkedList(
-            BookRepository._to_domain_book(record)
+            BookRepository._to_domain_book(
+                record, borrowed_counts.get(record.book_id, 0)
+            )
             for record in records
         )
 
@@ -48,18 +81,30 @@ class BookRepository:
             .order_by(BookRecord.title, BookRecord.book_id)
             .limit(limit)
         ).scalars()
-        return [self._to_domain_book(record) for record in records]
+        return self._book_collection(records)
 
     def search(self, term="", genre="", status="", sort="title", page=1, per_page=12):
         stmt = db.select(BookRecord)
+        active_loan_count = self._active_loan_count_expression()
+        has_stock = BookRecord.total_stock > active_loan_count
         if status == "available":
             stmt = stmt.where(
                 BookRecord.catalog.is_(True),
-                BookRecord.available.is_(True),
+                has_stock,
                 BookRecord.kind != "reference",
             )
         elif status == "on_loan":
-            stmt = stmt.where(BookRecord.catalog.is_(True), BookRecord.available.is_(False))
+            stmt = stmt.where(
+                BookRecord.catalog.is_(True),
+                BookRecord.total_stock <= active_loan_count,
+                active_loan_count > 0,
+            )
+        elif status == "unavailable":
+            stmt = stmt.where(
+                BookRecord.catalog.is_(True),
+                BookRecord.kind != "reference",
+                BookRecord.total_stock <= active_loan_count,
+            )
         elif status == "archived":
             stmt = stmt.where(BookRecord.catalog.is_(False))
         elif status != "all":
@@ -113,7 +158,7 @@ class BookRepository:
             .limit(per_page)
             .offset((max(page, 1) - 1) * per_page)
         ).scalars()
-        return [self._to_domain_book(record) for record in rows], total
+        return list(self._book_collection(rows)), total
 
     def create(self, book):
         record = BookRecord(
@@ -123,7 +168,8 @@ class BookRepository:
             genre=book.genre,
             description=book.description,
             cover=book.cover,
-            available=book.available,
+            total_stock=book.total_stock,
+            available=book.total_stock > book.borrowed_stock,
             catalog=book.catalog,
         )
         db.session.add(record)
@@ -135,7 +181,9 @@ class BookRepository:
         if book_id is None:
             return None
         record = db.session.get(BookRecord, book_id)
-        return self._to_domain_book(record) if record else None
+        return self._to_domain_book(
+            record, self._active_counts([book_id]).get(book_id, 0)
+        ) if record else None
 
     def find_by_title_author(self, title, author):
         record = db.session.execute(
@@ -159,7 +207,10 @@ class BookRepository:
     def find_archived(self):
         records = db.session.execute(
             db.select(BookRecord)
-            .where(BookRecord.catalog.is_(False), BookRecord.available.is_(True))
+            .where(
+                BookRecord.catalog.is_(False),
+                BookRecord.total_stock > 0,
+            )
             .order_by(BookRecord.title, BookRecord.book_id)
         ).scalars()
         return self._book_collection(records)
@@ -171,15 +222,51 @@ class BookRepository:
         record = db.session.get(BookRecord, book_id)
         if record is None:
             raise NotFoundError("Book not found.")
-        record.kind = book.kind
-        record.title = book.title
-        record.author = book.author
-        record.genre = book.genre
-        record.description = book.description
-        record.cover = book.cover
-        record.available = book.available
-        record.catalog = book.catalog
-        self._commit()
+        try:
+            active_count = (
+                db.select(db.func.count(LoanRecord.loan_id))
+                .where(
+                    LoanRecord.book_id == BookRecord.book_id,
+                    LoanRecord.returned_at.is_(None),
+                    LoanRecord.lost.is_(False),
+                )
+                .scalar_subquery()
+            )
+            result = db.session.execute(
+                db.update(BookRecord)
+                .where(
+                    BookRecord.book_id == book_id,
+                    book.total_stock >= active_count,
+                )
+                .values(
+                    kind=book.kind,
+                    title=book.title,
+                    author=book.author,
+                    genre=book.genre,
+                    description=book.description,
+                    cover=book.cover,
+                    total_stock=book.total_stock,
+                    available=book.total_stock > active_count,
+                    catalog=book.catalog,
+                )
+            )
+            if result.rowcount != 1:
+                borrowed_count = self._active_counts([book_id]).get(book_id, 0)
+                if book.total_stock < borrowed_count:
+                    raise ValidationError(
+                        f"Total stock cannot be lower than the {borrowed_count} copies currently on loan."
+                    )
+                raise NotFoundError("Book not found.")
+            db.session.commit()
+        except IntegrityError as error:
+            db.session.rollback()
+            raise ValidationError("The book could not be saved.") from error
+        except ValidationError:
+            db.session.rollback()
+            raise
+        except NotFoundError:
+            db.session.rollback()
+            raise
         return book
 
     @staticmethod
@@ -190,7 +277,7 @@ class BookRepository:
             return None
 
     @staticmethod
-    def _to_domain_book(record):
+    def _to_domain_book(record, borrowed_stock=0):
         return Book.create(
             record.kind,
             record.book_id,
@@ -198,9 +285,11 @@ class BookRepository:
             record.author,
             record.genre,
             record.description,
-            available=record.available,
+            available=record.available and record.total_stock > borrowed_stock,
             catalog=record.catalog,
             cover=record.cover,
+            total_stock=record.total_stock,
+            borrowed_stock=borrowed_stock,
         )
 
     @staticmethod

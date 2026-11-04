@@ -5,13 +5,16 @@
   <form method="post" action="{{ url_for('books.edit', book_id=book.book_id) }}" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label for="title">Title</label>
-    <input id="title" name="title" value="{{ book.title }}" maxlength="250" required>
+    <input id="title" name="title" value="{{ request.form.get('title', book.title) }}" maxlength="250" required>
     <label for="author">Author</label>
-    <input id="author" name="author" value="{{ book.author }}" maxlength="160" required>
+    <input id="author" name="author" value="{{ request.form.get('author', book.author) }}" maxlength="160" required>
     <label for="genre">Genre</label>
-    <input id="genre" name="genre" value="{{ book.genre }}" maxlength="100">
+    <input id="genre" name="genre" value="{{ request.form.get('genre', book.genre) }}" maxlength="100">
     <label for="description">Description</label>
-    <textarea id="description" name="description">{{ book.description }}</textarea>
+    <textarea id="description" name="description">{{ request.form.get('description', book.description) }}</textarea>
+    <label for="total_stock">Total stock</label>
+    <input id="total_stock" name="total_stock" type="number" min="{{ book.borrowed_stock }}" step="1" value="{{ request.form.get('total_stock', book.total_stock) }}" required>
+    <p>Currently on loan: {{ book.borrowed_stock }} · Available: {{ book.available_stock }}</p>
     {% if book.cover %}<p>Current cover: <img src="{{ url_for('static', filename='uploads/' ~ book.cover) }}" alt="Cover of {{ book.title }}" width="100"></p>{% endif %}
     <label for="cover">Replace cover (JPG, PNG, or WebP; max 2 MB)</label>
     <input id="cover" name="cover" type="file" accept=".jpg,.png,.webp,image/jpeg,image/png,image/webp">

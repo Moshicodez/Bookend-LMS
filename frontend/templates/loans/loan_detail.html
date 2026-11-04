@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Loan #{{ card.loan.loan_id }} | Bookend Library{% endblock %}
+{% block content %}
+  <section class="page-heading">
+    <p class="eyebrow">{{ "LIBRARIAN TOOLS" if user.is_librarian() else "YOUR LOANS" }}</p>
+    <h1>Loan #{{ card.loan.loan_id }}</h1>
+    <p><a href="{{ url_for('loans.index') }}">Back to loans</a></p>
+  </section>
+  <article class="loan-detail-card">
+    <h2>{{ card.book.title if card.book else "Book #" ~ card.loan.book_id }}</h2>
+    {% if card.book %}<p>By {{ card.book.author }}</p>{% endif %}
+    {% if user.is_librarian() %}<p>Patron: {{ card.patron_name }}</p>{% endif %}
+    <p>Status: <span class="loan-status status-{{ card.status|lower|replace(' ', '-') }}">{{ card.status }}</span></p>
+    <dl>
+      <div><dt>Borrowed</dt><dd>{{ card.loan.borrowed_at.strftime("%b %d, %Y") }}</dd></div>
+      <div><dt>Due</dt><dd>{{ card.loan.due_date.strftime("%b %d, %Y") }}</dd></div>
+      <div><dt>Returned</dt><dd>{{ card.loan.returned_at.strftime("%b %d, %Y") if card.loan.returned_at else "Not returned" }}</dd></div>
+      <div><dt>Days overdue</dt><dd>{{ card.days_overdue }}</dd></div>
+      <div><dt>Outstanding fees</dt><dd>${{ "%.2f"|format(card.outstanding) }}</dd></div>
+    </dl>
+    {% if not card.loan.returned_at and not card.loan.lost %}
+      {% if user.is_librarian() %}
+        <div class="admin-actions">
+          <form method="post" action="{{ url_for('loans.librarian_return_loan', loan_id=card.loan.loan_id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="button button-secondary" type="submit">Mark returned</button>
+          </form>
+          <form method="post" action="{{ url_for('loans.librarian_mark_loan_lost', loan_id=card.loan.loan_id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="button button-danger" type="submit">Mark lost</button>
+          </form>
+        </div>
+      {% else %}
+        <form method="post" action="{{ url_for('loans.return_book', book_id=card.loan.book_id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="button" type="submit">Return book</button>
+        </form>
+      {% endif %}
+    {% endif %}
+  </article>
+{% endblock %}

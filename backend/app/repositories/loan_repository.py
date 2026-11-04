@@ -13,6 +13,28 @@ from ..models.notification_record import NotificationRecord
 
 
 class LoanRepository:
+    @staticmethod
+    def _claim_available_copy(book_id):
+        active_count = (
+            db.select(db.func.count(LoanRecord.loan_id))
+            .where(
+                LoanRecord.book_id == BookRecord.book_id,
+                LoanRecord.returned_at.is_(None),
+                LoanRecord.lost.is_(False),
+            )
+            .scalar_subquery()
+        )
+        return db.session.execute(
+            db.update(BookRecord)
+            .where(
+                BookRecord.book_id == book_id,
+                BookRecord.catalog.is_(True),
+                BookRecord.kind != "reference",
+                BookRecord.total_stock > active_count,
+            )
+            .values(available=BookRecord.total_stock > active_count + 1)
+        )
+
     def create_loan(
         self,
         patron_id,
@@ -22,22 +44,28 @@ class LoanRepository:
         reservation_id=None,
     ):
         try:
+            claim = self._claim_available_copy(book_id)
             book_record = db.session.get(BookRecord, book_id)
-            active_loan_id = db.session.scalar(
-                db.select(LoanRecord.loan_id)
-                .where(
-                    LoanRecord.book_id == book_id,
-                    LoanRecord.returned_at.is_(None),
-                )
-                .limit(1)
-            )
-            if (
-                book_record is None
-                or not book_record.catalog
-                or active_loan_id is not None
-            ):
+            if book_record is None or not book_record.catalog:
                 title = book_record.title if book_record else "This book"
                 raise ValidationError(f"{title} is no longer available to borrow.")
+            if book_record.kind == "reference":
+                raise ValidationError("Reference books can only be read in the library.")
+            if claim.rowcount != 1:
+                raise ValidationError(
+                    "This book is currently unavailable because there are no copies in stock."
+                )
+            if db.session.scalar(
+                db.select(LoanRecord.loan_id)
+                .where(
+                    LoanRecord.patron_id == patron_id,
+                    LoanRecord.book_id == book_id,
+                    LoanRecord.returned_at.is_(None),
+                    LoanRecord.lost.is_(False),
+                )
+                .limit(1)
+            ) is not None:
+                raise ValidationError("You are already borrowing this book.")
             ready_reservation = self._ready_reservation(book_id)
             if ready_reservation is not None and (
                 ready_reservation.reservation_id != reservation_id
@@ -47,7 +75,6 @@ class LoanRepository:
             if reservation_id is not None and ready_reservation is None:
                 raise ValidationError("This reservation is no longer ready.")
 
-            book_record.available = False
             record = LoanRecord(
                 patron_id=patron_id,
                 book_id=book_id,
@@ -72,14 +99,32 @@ class LoanRepository:
             for entry in entries:
                 book, borrowed_at, due_date = entry[:3]
                 reservation_id = entry[3] if len(entry) > 3 else None
+                claim = self._claim_available_copy(book.book_id)
                 book_record = db.session.get(BookRecord, book.book_id)
-                if (
-                    book_record is None
-                    or not book_record.catalog
-                    or not book_record.available
-                ):
+                if book_record is None or not book_record.catalog:
                     raise ValidationError(
-                        f"{book.title} is no longer available to borrow."
+                        f"{book.title} is no longer in the catalog."
+                    )
+                if book_record.kind == "reference":
+                    raise ValidationError(
+                        f"{book.title} is a reference book and cannot be borrowed."
+                    )
+                if claim.rowcount != 1:
+                    raise ValidationError(
+                        f"{book.title} is currently unavailable because there are no copies in stock."
+                    )
+                if db.session.scalar(
+                    db.select(LoanRecord.loan_id)
+                    .where(
+                        LoanRecord.patron_id == patron_id,
+                        LoanRecord.book_id == book.book_id,
+                        LoanRecord.returned_at.is_(None),
+                        LoanRecord.lost.is_(False),
+                    )
+                    .limit(1)
+                ) is not None:
+                    raise ValidationError(
+                        f"You are already borrowing {book.title}."
                     )
                 ready_reservation = self._ready_reservation(book.book_id)
                 if ready_reservation is not None and (
@@ -93,7 +138,6 @@ class LoanRepository:
                     raise ValidationError(
                         f"The reservation for {book.title} is no longer ready."
                     )
-                book_record.available = False
                 records.append(
                     LoanRecord(
                         patron_id=patron_id,
@@ -144,13 +188,25 @@ class LoanRepository:
             db.select(LoanRecord).where(
                 LoanRecord.book_id == book_id,
                 LoanRecord.returned_at.is_(None),
-            )
+                LoanRecord.lost.is_(False),
+            ).order_by(LoanRecord.loan_id).limit(1)
         ).scalar_one_or_none()
         return self._to_domain_loan(record) if record else None
 
     def find_all(self):
         records = db.session.execute(
             db.select(LoanRecord).order_by(LoanRecord.borrowed_at.desc())
+        ).scalars()
+        return [self._to_domain_loan(record) for record in records]
+
+    def find_active_loans(self):
+        records = db.session.execute(
+            db.select(LoanRecord)
+            .where(
+                LoanRecord.returned_at.is_(None),
+                LoanRecord.lost.is_(False),
+            )
+            .order_by(LoanRecord.due_date, LoanRecord.loan_id)
         ).scalars()
         return [self._to_domain_loan(record) for record in records]
 
@@ -204,14 +260,28 @@ class LoanRepository:
                 raise NotFoundError("Book not found.")
 
             details = loan.to_record()
-            record.returned_at = loan.returned_at
-            record.fee_paid = details["fee_paid"]
-            record.lost = details["lost"]
-            record.loss_fee = details["loss_fee"]
-            record.loss_paid = details["loss_paid"]
-            book.available = not loan.lost
+            result = db.session.execute(
+                db.update(LoanRecord)
+                .where(
+                    LoanRecord.loan_id == loan_id,
+                    LoanRecord.returned_at.is_(None),
+                )
+                .values(
+                    returned_at=loan.returned_at,
+                    fee_paid=details["fee_paid"],
+                    lost=details["lost"],
+                    loss_fee=details["loss_fee"],
+                    loss_paid=details["loss_paid"],
+                )
+            )
+            if result.rowcount != 1:
+                raise ValidationError("This loan has already been returned.")
             if loan.lost:
-                book.catalog = False
+                if book.total_stock < 1:
+                    raise ValidationError("Book stock is already at zero.")
+                book.total_stock -= 1
+                if book.total_stock == 0:
+                    book.catalog = False
                 db.session.execute(
                     db.update(ReservationRecord)
                     .where(
@@ -235,7 +305,7 @@ class LoanRepository:
                     db.session.add(
                         NotificationRecord(
                             user_id=next_reservation.patron_id,
-                            category="loan",
+                            category="reservation",
                             title="Reserved book ready",
                             message=(
                                 "A book in your reservation queue is ready "
@@ -247,6 +317,14 @@ class LoanRepository:
                             ),
                         )
                     )
+            active_count = db.session.scalar(
+                db.select(db.func.count(LoanRecord.loan_id)).where(
+                    LoanRecord.book_id == book.book_id,
+                    LoanRecord.returned_at.is_(None),
+                    LoanRecord.lost.is_(False),
+                )
+            ) or 0
+            book.available = book.total_stock > active_count
             db.session.commit()
         except IntegrityError as error:
             db.session.rollback()

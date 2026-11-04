@@ -21,9 +21,19 @@ class Book:
         available=True,
         catalog=True,
         cover=None,
+        total_stock=1,
+        borrowed_stock=None,
     ):
         self._book_id = book_id
-        self._available = bool(available)
+        self._total_stock = self._validated_stock(total_stock)
+        self._borrowed_stock = (
+            self._total_stock - (1 if available else 0)
+            if borrowed_stock is None
+            else self._validated_stock(borrowed_stock)
+        )
+        self._available = bool(
+            available and self._total_stock > self._borrowed_stock
+        )
         self._catalog = bool(catalog)
         self._cover = cover
         self._set_details(title, author, genre, description)
@@ -82,8 +92,43 @@ class Book:
     def cover(self):
         return self._cover
 
+    @property
+    def total_stock(self):
+        return self._total_stock
+
+    @property
+    def borrowed_stock(self):
+        return self._borrowed_stock
+
+    @property
+    def available_stock(self):
+        return max(self._total_stock - self._borrowed_stock, 0)
+
     def set_cover(self, filename):
         self._cover = filename
+
+    def set_total_stock(self, value):
+        total_stock = self._validated_stock(value)
+        if total_stock < self._borrowed_stock:
+            raise ValidationError(
+                f"Total stock cannot be lower than the {self._borrowed_stock} copies currently on loan."
+            )
+        self._total_stock = total_stock
+        self._available = self.available_stock > 0
+
+    @staticmethod
+    def _validated_stock(value):
+        if isinstance(value, bool):
+            raise ValidationError("Stock must be a whole number greater than or equal to zero.")
+        try:
+            stock = int(value)
+        except (TypeError, ValueError) as error:
+            raise ValidationError(
+                "Stock must be a whole number greater than or equal to zero."
+            ) from error
+        if stock < 0 or str(value).strip() != str(stock):
+            raise ValidationError("Stock must be a whole number greater than or equal to zero.")
+        return stock
 
     @property
     def kind(self):
@@ -107,12 +152,14 @@ class Book:
     def display_book_info(self):
         if not self._catalog:
             status = "Archived"
-        elif self.can_borrow():
-            status = "Available"
-        elif self._available:
+        elif self.KIND == "reference":
             status = "In-library use"
-        else:
+        elif self.available_stock > 0 and self._available:
+            status = "Available"
+        elif self.borrowed_stock:
             status = "On loan"
+        else:
+            status = "Unavailable"
 
         return {
             "book_id": self._book_id,
@@ -123,35 +170,53 @@ class Book:
             "cover": self._cover,
             "kind": self.KIND,
             "loan_days": self.loan_days,
+            "total_stock": self.total_stock,
+            "borrowed_stock": self.borrowed_stock,
+            "available_stock": self.available_stock,
             "status": status
         }
 
     def can_borrow(self):
-        return self._catalog and self._available
+        return (
+            self._catalog
+            and self.KIND != "reference"
+            and self._available
+            and self.available_stock > 0
+        )
 
     def borrow(self):
         if not self._catalog:
             raise ValidationError("This book is no longer in the catalog.")
-        if not self._available:
-            raise ValidationError("This book is already on loan.")
-        self._available = False
+        if self.KIND == "reference":
+            raise ValidationError("Reference books can only be read in the library.")
+        if self.available_stock <= 0 or not self._available:
+            raise ValidationError(
+                "This book is currently unavailable because there are no copies in stock."
+            )
+        self._borrowed_stock += 1
+        self._available = self.available_stock > 0
 
     def return_book(self):
-        self._available = True
+        if self._borrowed_stock > 0:
+            self._borrowed_stock -= 1
+        self._available = self.available_stock > 0
 
     def archive(self):
-        if not self._available:
+        if self._borrowed_stock:
             raise ValidationError("This book is on loan. Process its return before archiving.")
         self._catalog = False
 
     def restore(self):
-        if not self._available:
-            raise ValidationError("An unavailable book cannot be restored to the catalog.")
         self._catalog = True
 
     def mark_lost(self):
-        self._available = False
-        self._catalog = False
+        if self._borrowed_stock:
+            self._borrowed_stock -= 1
+        if self._total_stock:
+            self._total_stock -= 1
+        self._available = self.available_stock > 0
+        if self._total_stock == 0:
+            self._catalog = False
 
     def to_record(self):
         return {
@@ -162,6 +227,7 @@ class Book:
             "genre": self._genre,
             "description": self._description,
             "cover": self._cover,
+            "total_stock": self._total_stock,
             "available": self._available,
             "catalog": self._catalog
         }

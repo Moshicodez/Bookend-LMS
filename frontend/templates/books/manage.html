@@ -4,7 +4,7 @@
   <section class="page-heading">
     <p class="eyebrow">LIBRARIAN TOOLS</p>
     <h1>Manage books</h1>
-    <p>Update catalog details, covers, and availability.</p>
+    <p>Update catalog details, covers, and stock.</p>
     <a class="button" href="{{ url_for('books.add') }}">Add a book</a>
   </section>
 
@@ -12,7 +12,7 @@
     <label class="visually-hidden" for="manage-q">Search books</label>
     <input id="manage-q" name="q" type="search" value="{{ q }}" placeholder="Title, author, genre">
     <select name="status" aria-label="Filter by status">
-      {% for value, label in [("all","All"),("available","Available"),("on_loan","On loan"),("archived","Archived")] %}
+      {% for value, label in [("all","All"),("available","Available"),("on_loan","On loan"),("unavailable","Unavailable"),("archived","Archived")] %}
         <option value="{{ value }}" {{ 'selected' if status == value }}>{{ label }}</option>
       {% endfor %}
     </select>
@@ -22,7 +22,7 @@
   {% if books %}
     <div class="table-scroll">
       <table class="admin-table books-admin-table">
-        <thead><tr><th>Cover</th><th>Book</th><th>Genre</th><th>Status</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Cover</th><th>Book</th><th>Genre</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
           {% for book in books %}
             <tr>
@@ -35,17 +35,19 @@
               </td>
               <td><strong>{{ book.title }}</strong><small>by {{ book.author }}</small></td>
               <td>{{ book.genre or "Uncategorized" }}</td>
+              <td>{{ book.available_stock }} available / {{ book.total_stock }} total<br><small>{{ book.borrowed_stock }} on loan</small></td>
               <td>
                 {% if not book.catalog %}Archived
-                {% elif book.can_borrow() %}Available
-                {% elif book.available %}In-library use
-                {% else %}On loan
+                {% elif book.kind == "reference" %}In-library use
+                {% elif book.available_stock > 0 %}Available
+                {% elif book.borrowed_stock > 0 %}On loan
+                {% else %}Unavailable
                 {% endif %}
               </td>
               <td class="admin-actions">
                 <a class="button button-secondary" href="{{ url_for('books.edit', book_id=book.book_id) }}">Edit</a>
                 {% if book.catalog %}
-                  {% if book.available %}
+                  {% if book.borrowed_stock == 0 %}
                     <form method="post" action="{{ url_for('books.delete', book_id=book.book_id) }}" onsubmit="return confirm('Remove this book from the catalog? Loan history will be kept.');">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <button class="button button-danger" type="submit">Delete</button>

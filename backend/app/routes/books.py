@@ -1,8 +1,9 @@
 from datetime import date
 
-from flask import Blueprint, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from ..config import COVER_COLORS
+from ..exceptions import ValidationError
 from ..models.book import Book
 from ..repositories.book_repository import BookRepository
 from ..repositories.loan_repository import LoanRepository
@@ -120,15 +121,20 @@ def add():
     if request.method == "GET":
         return render_template("books/add_book.html", user=user)
 
-    book = book_service.add_book(
-        user,
-        request.form.get("title"),
-        request.form.get("author"),
-        request.form.get("genre"),
-        request.form.get("description"),
-        request.form.get("kind", Book.KIND),
-        request.files.get("cover"),
-    )
+    try:
+        book = book_service.add_book(
+            user,
+            request.form.get("title"),
+            request.form.get("author"),
+            request.form.get("genre"),
+            request.form.get("description"),
+            request.form.get("kind", Book.KIND),
+            request.files.get("cover"),
+            request.form.get("total_stock", "1"),
+        )
+    except ValidationError as error:
+        flash(str(error), "error")
+        return render_template("books/add_book.html", user=user), 400
     return redirect(url_for("books.detail", book_id=book.book_id))
 
 
@@ -159,15 +165,22 @@ def edit(book_id):
     if request.method == "GET":
         return render_template("books/edit_book.html", book=book, user=user)
 
-    book = book_service.edit_book(
-        user,
-        book_id,
-        request.form.get("title"),
-        request.form.get("author"),
-        request.form.get("genre"),
-        request.form.get("description"),
-        request.files.get("cover"),
-    )
+    try:
+        book = book_service.edit_book(
+            user,
+            book_id,
+            request.form.get("title"),
+            request.form.get("author"),
+            request.form.get("genre"),
+            request.form.get("description"),
+            request.files.get("cover"),
+            request.form.get("total_stock", book.total_stock),
+        )
+    except ValidationError as error:
+        flash(str(error), "error")
+        return render_template(
+            "books/edit_book.html", book=book, user=user
+        ), 400
     return redirect(url_for("books.detail", book_id=book.book_id))
 
 

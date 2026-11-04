@@ -98,6 +98,7 @@ def create_app(test_config=None):
         basket_count = 0
         overdue_count = 0
         notification_count = 0
+        notification_items = []
         if current_user is not None and current_user.is_patron():
             favorite_ids = set(
                 FavoriteRepository().book_ids_for_user(current_user.user_id)
@@ -106,18 +107,31 @@ def create_app(test_config=None):
             basket_ids = session.get("basket_book_ids", [])
             basket_count = len(set(basket_ids)) if isinstance(basket_ids, list) else 0
             notification_repository = NotificationRepository()
-            NotificationService(
+            notification_service = NotificationService(
                 notification_repository,
                 LoanRepository(),
-            ).sync_due_date_reminders(current_user.user_id)
+            )
+            notification_service.sync_due_date_reminders(current_user.user_id)
             notification_count = notification_repository.unread_count(
                 current_user.user_id
             )
+            notification_items = notification_repository.for_user(
+                current_user.user_id,
+                limit=5,
+            )
         elif current_user is not None and current_user.is_librarian():
-            overdue_count = len(LoanRepository().find_overdue())
-
-            notification_count = NotificationRepository().unread_count(
-                current_user.user_id
+            notification_repository = NotificationRepository()
+            loan_repository = LoanRepository()
+            notification_service = NotificationService(
+                notification_repository,
+                loan_repository,
+            )
+            notification_service.sync_overdue_notifications()
+            overdue_count = len(loan_repository.find_overdue())
+            notification_count = notification_repository.unread_count(current_user.user_id)
+            notification_items = notification_repository.for_user(
+                current_user.user_id,
+                limit=5,
             )
         return {
             "current_user": current_user,
@@ -126,10 +140,31 @@ def create_app(test_config=None):
             "basket_count": basket_count,
             "overdue_count": overdue_count,
             "notification_count": notification_count,
+            "notification_items": notification_items,
             "navigation_genres": GenreRepository().list_genres(),
             "cover_colors": COVER_COLORS,
             "site_year": date.today().year,
         }
+
+    @app.cli.command("sync-notifications")
+    def sync_notifications_command():
+        """Create due-date reminders and overdue-loan alerts."""
+        from .repositories.loan_repository import LoanRepository
+        from .repositories.notification_repository import NotificationRepository
+        from .services.notification_service import NotificationService
+
+        service = NotificationService(
+            NotificationRepository(),
+            LoanRepository(),
+        )
+        patron_count = service.sync_all_due_date_reminders()
+        librarian_count = service.sync_overdue_notifications()
+        click.echo(
+            "Created "
+            f"{patron_count + librarian_count} notification(s): "
+            f"{patron_count} patron reminder(s), "
+            f"{librarian_count} librarian alert(s)."
+        )
 
     @app.cli.command("create-librarian")
     @click.option("--username", prompt=True)
