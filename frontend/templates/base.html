@@ -59,7 +59,10 @@
     {% block content %}{% endblock %}
   </main>
   {% block page_footer %}
-    <footer class="site-footer">&copy; Bookend Library</footer>
+    <footer class="site-footer">
+      <span>&copy; Bookend Library</span>
+      <a href="{{ url_for('landing.index') }}#about">About</a>
+    </footer>
   {% endblock %}
 </body>
 </html>

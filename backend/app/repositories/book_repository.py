@@ -5,6 +5,7 @@ from ..exceptions import NotFoundError, ValidationError
 from ..extensions import db
 from ..models.book import Book
 from ..models.book_record import BookRecord
+from ..models.loan_record import LoanRecord
 
 
 class BookRepository:
@@ -15,6 +16,17 @@ class BookRepository:
             .distinct()
         ).scalars()
         return GenreTree(names).in_order()
+
+    def genre_counts(self):
+        rows = db.session.execute(
+            db.select(
+                db.func.lower(BookRecord.genre),
+                db.func.count(BookRecord.book_id),
+            )
+            .where(BookRecord.catalog.is_(True), BookRecord.genre != "")
+            .group_by(db.func.lower(BookRecord.genre))
+        )
+        return {genre: count for genre, count in rows}
 
     @staticmethod
     def _book_collection(records):
@@ -70,13 +82,34 @@ class BookRepository:
             "title": BookRecord.title.collate("NOCASE"),
             "author": BookRecord.author.collate("NOCASE"),
             "newest": BookRecord.book_id.desc(),
-        }.get(sort, BookRecord.title.collate("NOCASE"))
+        }.get(sort)
+        if sort == "most_borrowed":
+            borrow_counts = (
+                db.select(
+                    LoanRecord.book_id,
+                    db.func.count(LoanRecord.loan_id).label("borrow_count"),
+                )
+                .group_by(LoanRecord.book_id)
+                .subquery()
+            )
+            stmt = stmt.outerjoin(
+                borrow_counts,
+                borrow_counts.c.book_id == BookRecord.book_id,
+            )
+            order = db.func.coalesce(borrow_counts.c.borrow_count, 0).desc()
+        elif order is None:
+            order = BookRecord.title.collate("NOCASE")
 
         total = db.session.scalar(
             db.select(db.func.count()).select_from(stmt.subquery())
         ) or 0
+        tie_breakers = (
+            (BookRecord.title.collate("NOCASE"), BookRecord.book_id)
+            if sort == "most_borrowed"
+            else (BookRecord.book_id,)
+        )
         rows = db.session.execute(
-            stmt.order_by(order, BookRecord.book_id)
+            stmt.order_by(order, *tie_breakers)
             .limit(per_page)
             .offset((max(page, 1) - 1) * per_page)
         ).scalars()

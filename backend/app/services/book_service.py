@@ -38,6 +38,9 @@ class BookService:
     def search_page(self, term="", genre="", status="", sort="title", page=1, per_page=12):
         return self._book_repo.search(term, genre, status, sort, page, per_page)
 
+    def catalog_genre_counts(self):
+        return self._book_repo.genre_counts()
+
     def management_search(self, librarian, term="", status="all"):
         librarian.require("edit_book")
         if status not in {"all", "available", "on_loan", "archived"}:

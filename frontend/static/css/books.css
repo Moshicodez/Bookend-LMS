@@ -26,21 +26,7 @@
   margin: 0 0 30px;
 }
 
-.books-page .catalog-display {
-  margin: 12px 0 0;
-  font-family: "Anton", Impact, sans-serif;
-  font-size: clamp(44px, 5.4vw, 64px);
-  font-style: italic;
-  font-weight: 400;
-  line-height: 1;
-  text-transform: uppercase;
-}
 
-.books-page .catalog-heading > p:last-child {
-  margin-top: 12px;
-  color: var(--books-muted);
-  font-size: 14px;
-}
 
 .catalog-search {
   display: flex;
@@ -327,3 +313,5 @@
     padding: 24px 20px;
   }
 }
+
+

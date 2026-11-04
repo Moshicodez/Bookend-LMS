@@ -66,11 +66,12 @@ def catalog():
         search_term=search_term,
         selected_genre=genre,
         genres=BookRepository().list_genres(),
-        ratings=ratings,
-        favorite_ids=favorite_ids,
-        cover_colors=COVER_COLORS,
+        genre_counts=book_service.catalog_genre_counts(),
         user=user,
         current_year=date.today().year,
+        cover_colors=COVER_COLORS,
+        ratings=ratings,
+        favorite_ids=favorite_ids,
     )
 
 

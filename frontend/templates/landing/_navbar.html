@@ -7,24 +7,13 @@
 
     <nav class="landing-navigation" aria-label="Main navigation" data-navigation>
     <a class="{% if request.endpoint == 'landing.index' %}is-current{% endif %}" {% if request.endpoint == 'landing.index' %}aria-current="page"{% endif %} href="{{ url_for('landing.index') }}">Home</a>
-    <a class="{% if request.endpoint == 'books.catalog' %}is-current{% endif %}" {% if request.endpoint == 'books.catalog' %}aria-current="page"{% endif %} href="{{ url_for('books.catalog') }}">Books</a>
+    <a class="{% if request.endpoint in ['books.catalog', 'books.detail'] %}is-current{% endif %}" {% if request.endpoint in ['books.catalog', 'books.detail'] %}aria-current="page"{% endif %} href="{{ url_for('books.catalog') }}">Books</a>
     {% if current_user and current_user.is_librarian() %}
       <a class="{% if request.endpoint == 'books.manage' %}is-current{% endif %}" {% if request.endpoint == 'books.manage' %}aria-current="page"{% endif %} href="{{ url_for('books.manage') }}">Manage Books</a>
       <a class="{% if request.endpoint == 'members.index' %}is-current{% endif %}" {% if request.endpoint == 'members.index' %}aria-current="page"{% endif %} href="{{ url_for('members.index') }}">Members</a>
       <a class="{% if request.endpoint == 'loans.index' %}is-current{% endif %}" {% if request.endpoint == 'loans.index' %}aria-current="page"{% endif %} href="{{ url_for('loans.index') }}">Loans</a>
       <a class="{% if request.endpoint == 'genres.index' %}is-current{% endif %}" {% if request.endpoint == 'genres.index' %}aria-current="page"{% endif %} href="{{ url_for('genres.index') }}">Genres</a>
     {% endif %}
-    <details class="genre-dropdown">
-      <summary class="{% if request.endpoint == 'books.catalog' and request.args.get('genre') %}is-current{% endif %}" {% if request.endpoint == 'books.catalog' and request.args.get('genre') %}aria-current="page"{% endif %}>Genres</summary>
-      <div class="genre-dropdown-menu">
-        {% for genre in navigation_genres %}
-          <a href="{{ url_for('books.catalog', genre=genre) }}">{{ genre }}</a>
-        {% else %}
-          <span>No genres yet</span>
-        {% endfor %}
-      </div>
-    </details>
-    <a href="{{ url_for('landing.index') }}#about">About</a>
   </nav>
 
   <div class="nav-utility-actions" aria-label="Account shortcuts">
@@ -32,16 +21,12 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg>
     </button>
     {% if current_user %}
-      <a class="icon-button nav-icon" href="{{ url_for('notifications.index') }}"
-         aria-label="Notifications, {{ notification_count }} unread"
-         title="Notifications">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M10 21h4"></path></svg>
-        {% if notification_count %}<span class="nav-count">{{ notification_count }}</span>{% endif %}
-      </a>
       <details class="account-dropdown" data-account-dropdown>
-        <summary class="nav-icon" aria-label="Open account menu" data-account-open>
+        <summary class="account-trigger" aria-label="Open account menu for {{ current_user.username }}" data-account-open>
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M4.5 20c.8-4 3.3-6 7.5-6s6.7 2 7.5 6"></path></svg>
+          <span class="nav-username">{{ current_user.username }}</span>
           {% if current_user.is_librarian() and overdue_count %}<span class="nav-count">{{ overdue_count }}</span>{% endif %}
+          <span class="account-chevron" aria-hidden="true">⌄</span>
         </summary>
         <div class="account-dropdown-menu" aria-hidden="true">
           <span class="nav-welcome">Hi, {{ current_user.username }}</span>

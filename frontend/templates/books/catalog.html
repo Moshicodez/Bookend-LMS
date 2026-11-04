@@ -10,39 +10,78 @@
 {% endblock %}
 {% block content %}
   <section class="page-heading catalog-heading">
-    <p class="eyebrow">THE COLLECTION</p>
-    <h1 class="catalog-display">Books to borrow</h1>
-    <p>Search by title or author, or pick a genre.</p>
+    <div>
+      <p class="eyebrow">THE COLLECTION</p>
+      <h1 class="catalog-display">{% if user and user.is_librarian() %}Catalog{% else %}Books to borrow{% endif %}</h1>
+    </div>
+    {% if user and user.is_librarian() %}
+      <a class="button catalog-add-book" href="{{ url_for('books.add') }}">Add a book</a>
+    {% endif %}
   </section>
 
-  <form class="catalog-search" method="get" action="{{ url_for('books.catalog') }}" role="search">
-    <label class="visually-hidden" for="catalog-search">Search books</label>
-    <input id="catalog-search" name="q" value="{{ search_term }}" type="search" placeholder="Search books, authors...">
-    {% if selected_genre %}<input type="hidden" name="genre" value="{{ selected_genre }}">{% endif %}
-    <button class="button" type="submit">Search</button>
-  </form>
-
-  <nav class="genre-filters catalog-chips" aria-label="Filter books by genre">
-    <a class="catalog-chip {% if not selected_genre %}is-active{% endif %}" href="{{ url_for('books.catalog', q=search_term or None) }}">All genres</a>
-    {% for genre in genres %}
-      <a class="catalog-chip {% if selected_genre|lower == genre|lower %}is-active{% endif %}" href="{{ url_for('books.catalog', q=search_term or None, genre=genre) }}">{{ genre }}</a>
-    {% endfor %}
-  </nav>
-
-  {% if user and user.is_librarian() %}
-    <nav class="catalog-admin-links" aria-label="Book management">
-      <a class="button button-secondary" href="{{ url_for('books.add') }}">Add a book</a>
-      <a class="button button-secondary" href="{{ url_for('books.manage') }}">Manage books</a>
-      <a class="button button-secondary" href="{{ url_for('books.archived') }}">Archived books</a>
-    </nav>
-  {% endif %}
+  <div class="catalog-toolbar-wrap">
+    <form class="catalog-toolbar" method="get" action="{{ url_for('books.catalog') }}" role="search">
+      <label class="visually-hidden" for="catalog-search">Search books</label>
+      <input id="catalog-search" name="q" value="{{ search_term }}" type="search" placeholder="Search books or authors...">
+      <label class="visually-hidden" for="catalog-genre">Filter by genre</label>
+      <select id="catalog-genre" name="genre">
+        <option value="">All genres</option>
+        {% for genre in genres %}
+          <option value="{{ genre }}" {% if selected_genre|lower == genre|lower %}selected{% endif %}>{{ genre }} ({{ genre_counts.get(genre|lower, 0) }})</option>
+        {% endfor %}
+      </select>
+      <label class="visually-hidden" for="catalog-sort">Sort books</label>
+      <select id="catalog-sort" name="sort">
+        <option value="title" {% if sort == "title" %}selected{% endif %}>Title</option>
+        <option value="newest" {% if sort == "newest" %}selected{% endif %}>Newest</option>
+        <option value="most_borrowed" {% if sort == "most_borrowed" %}selected{% endif %}>Most borrowed</option>
+      </select>
+      <button class="button" type="submit">Search</button>
+    </form>
+    {% if user and user.is_librarian() %}
+      <a class="catalog-archived-link" href="{{ url_for('books.archived') }}">Archived books</a>
+    {% endif %}
+  </div>
 
   {% if books %}
-    <p class="catalog-count">{{ books|length }} book{{ "" if books|length == 1 else "s" }} found</p>
+    <p class="catalog-count">{{ total }} book{{ "" if total == 1 else "s" }} found</p>
     <div class="book-grid catalog-book-grid">
       {% for book in books %}
         {% set cover_color = cover_colors[loop.index0 % cover_colors|length] %}
-        {% include "landing/_book_card.html" %}
+        {% set book_url = url_for('books.detail', book_id=book.book_id) %}
+        {% set can_borrow = book.can_borrow() %}
+        {% set rating = ratings.get(book.book_id, {"average": 0, "count": 0}) %}
+        <article class="catalog-book-card">
+          <a class="catalog-book-cover" href="{{ book_url }}" aria-label="View {{ book.title }} by {{ book.author }}">
+            {% if book.cover %}
+              <img src="{{ url_for('static', filename='uploads/' ~ book.cover) }}" alt="Cover of {{ book.title }}" loading="lazy">
+            {% else %}
+              <span class="catalog-cover-placeholder" style="--cover-color: {{ cover_color }}">{{ book.title }}</span>
+            {% endif %}
+          </a>
+          <div class="catalog-book-copy">
+            <h2><a href="{{ book_url }}">{{ book.title }}</a></h2>
+            <p class="catalog-book-author">{{ book.author }}</p>
+            {% set status_label = "Archived" if not book.catalog else ("On loan" if not book.available else "Available") %}
+            <span class="catalog-status-badge{% if status_label == 'On loan' %} is-on-loan{% elif status_label == 'Archived' %} is-archived{% endif %}">{{ status_label }}</span>
+            <p class="catalog-book-rating" aria-label="{{ '%.1f'|format(rating.average) }} out of 5 stars from {{ rating.count }} reviews">
+              <span aria-hidden="true">{{ "★" if rating.count else "☆" }} {{ "%.1f"|format(rating.average) }} ({{ rating.count }})</span>
+            </p>
+            <div class="catalog-book-action">
+              {% if user and user.is_librarian() %}
+                <a class="button catalog-card-button" href="{{ url_for('books.edit', book_id=book.book_id) }}">Edit</a>
+              {% elif user and user.is_patron() and can_borrow %}
+                <form method="post" action="{{ url_for('patron.basket_add', book_id=book.book_id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+                  <button class="button catalog-card-button" type="submit">Borrow</button>
+                </form>
+              {% elif not user and can_borrow %}
+                <a class="button catalog-card-button" href="{{ url_for('auth.login') }}">Sign in to borrow</a>
+              {% endif %}
+            </div>
+          </div>
+        </article>
       {% endfor %}
     </div>
   {% else %}
@@ -55,7 +94,4 @@
       {% endif %}
     </section>
   {% endif %}
-{% endblock %}
-{% block page_footer %}
-  <footer class="books-footer">&copy; {{ current_year }} Bookend Library</footer>
 {% endblock %}

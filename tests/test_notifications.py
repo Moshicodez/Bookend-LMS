@@ -97,7 +97,7 @@ class NotificationRouteTests(unittest.TestCase):
         landing = self.client.get(signed_in.location)
         self.assertIn(b"You signed in successfully.", landing.data)
 
-    def test_unread_notifications_show_inbox_icon_and_can_be_read(self):
+    def test_notifications_can_be_read_without_nav_bell(self):
         self._sign_in()
         notification = NotificationRepository().create(
             self.user.user_id,
@@ -111,7 +111,7 @@ class NotificationRouteTests(unittest.TestCase):
 
         self.assertEqual(inbox.status_code, 200)
         self.assertIn(b"Book returned", inbox.data)
-        self.assertIn(b"Notifications, 1 unread", inbox.data)
+        self.assertNotIn(b"Notifications, 1 unread", inbox.data)
 
         response = self.client.post(
             f"/notifications/{notification.notification_id}/read",

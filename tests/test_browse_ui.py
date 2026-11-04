@@ -1,4 +1,5 @@
 import unittest
+from datetime import date, timedelta
 
 from werkzeug.security import generate_password_hash
 
@@ -61,12 +62,17 @@ class BrowseUiTests(unittest.TestCase):
         self.assertIn(b"History of Libraries", catalog.data)
         self.assertIn(b"Books to borrow", catalog.data)
         self.assertIn(b'class="is-current" aria-current="page" href="/books/"', catalog.data)
-        self.assertIn(b'Search by title or author, or pick a genre.', catalog.data)
         self.assertIn(b'class="book-grid catalog-book-grid"', catalog.data)
+        self.assertIn(b"Search books or authors...", catalog.data)
+        self.assertIn(b"History (2)", catalog.data)
+        self.assertIn(b"Newest", catalog.data)
+        self.assertIn(b"Most borrowed", catalog.data)
         self.assertIn(b"data-search-dialog", catalog.data)
         self.assertIn(b"Search by title, author, or genre", catalog.data)
         self.assertIn(b"Sign in to borrow", catalog.data)
-        self.assertIn(b"Bookend Library</footer>", catalog.data)
+        self.assertIn(b"About</a>", catalog.data)
+        self.assertNotIn(b"Manage books", catalog.data)
+        self.assertNotIn(b"Notifications", catalog.data)
 
         detail = self.client.get(f"/books/{self.history.book_id}")
         self.assertEqual(detail.status_code, 200)
@@ -101,9 +107,56 @@ class BrowseUiTests(unittest.TestCase):
         catalog = self.client.get("/books/")
         self.assertIn(b"Saved books, 1 saved", catalog.data)
         self.assertIn(b"Borrow basket, 1 books", catalog.data)
-        self.assertIn(b"Add to basket", catalog.data)
+        self.assertIn(b">Borrow</button>", catalog.data)
         self.assertIn(b"My loans", catalog.data)
-        self.assertIn("\u2665".encode(), catalog.data)
+        self.assertIn(b"Books to borrow", catalog.data)
+        self.assertIn(b'name="csrf_token"', catalog.data)
+
+    def test_librarian_catalog_header_and_card_actions(self):
+        self._sign_in(self.librarian)
+        page = self.client.get("/books/")
+        self.assertIn(b">Catalog</h1>", page.data)
+        self.assertIn(b">Add a book</a>", page.data)
+        self.assertIn(b">Archived books</a>", page.data)
+        self.assertIn(b">Edit</a>", page.data)
+        self.assertNotIn(b">Borrow</button>", page.data)
+        self.assertNotIn(b"Manage books", page.data)
+        self.assertIn(b'<span class="nav-username">staff</span>', page.data)
+        navigation = page.data.split(b'class="landing-navigation"', 1)[1].split(b"</nav>", 1)[0]
+        self.assertNotIn(b"About", navigation)
+        self.assertNotIn(b"class=\"genre-dropdown\"", page.data)
+        self.assertNotIn(b"Notifications, ", page.data)
+
+    def test_catalog_most_borrowed_sort_orders_by_loan_count(self):
+        today = date.today()
+        db.session.add_all(
+            [
+                LoanRecord(
+                    patron_id=self.patron.user_id,
+                    book_id=self.mystery.book_id,
+                    borrowed_at=today,
+                    due_date=today + timedelta(days=14),
+                ),
+                LoanRecord(
+                    patron_id=self.patron.user_id,
+                    book_id=self.mystery.book_id,
+                    borrowed_at=today,
+                    due_date=today + timedelta(days=14),
+                ),
+                LoanRecord(
+                    patron_id=self.patron.user_id,
+                    book_id=self.history.book_id,
+                    borrowed_at=today,
+                    due_date=today + timedelta(days=14),
+                ),
+            ]
+        )
+        db.session.commit()
+        page = self.client.get("/books/?sort=most_borrowed")
+        self.assertLess(
+            page.data.index(b"Mystery in the Stacks"),
+            page.data.index(b"History of Libraries"),
+        )
 
     def test_patron_add_to_basket_and_guest_basket_redirect(self):
         self.assertEqual(self.client.get("/basket").location, "/login")
