@@ -1,9 +1,15 @@
-import unittest
-from datetime import date, timedelta
-from html import unescape
+import base64
 import json
 import re
+import unittest
+import uuid
+from datetime import date, timedelta
+from html import unescape
+from io import BytesIO
+from pathlib import Path
+from urllib.parse import unquote
 
+from PIL import Image
 from werkzeug.security import generate_password_hash
 
 from backend.app import create_app
@@ -143,6 +149,101 @@ class LandingRouteTests(unittest.TestCase):
             ["/books/?genre=History", "/books/?genre=Mystery"],
         )
         self.assertIn(b'id="genre-carousel-root"', response.data)
+
+    def test_carousel_uses_oldest_books_and_embeds_cover_thumbnail(self):
+        upload_dir = Path(self.app.static_folder) / "uploads"
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        cover_filename = f"landing-test-{uuid.uuid4().hex}.png"
+        cover_path = upload_dir / cover_filename
+        Image.new("RGB", (24, 36), (170, 40, 35)).save(cover_path)
+        self.addCleanup(cover_path.unlink, missing_ok=True)
+
+        oldest_books = [
+            BookRepository().create(
+                Book(None, "Zulu First", "A. Writer", "Fantasy", "", cover=cover_filename)
+            ),
+            BookRepository().create(
+                Book(None, "Alpha Second", "B. Writer", "Fantasy", "")
+            ),
+            BookRepository().create(
+                Book(None, "Middle Third", "C. Writer", "Fantasy", "")
+            ),
+        ]
+        BookRepository().create(
+            Book(None, "Aardvark Fourth", "D. Writer", "Fantasy", "")
+        )
+        BookRepository().create(
+            Book(None, "Poem Collection", "E. Writer", "Poetry", "")
+        )
+
+        response = self.client.get("/")
+
+        items_attribute = re.search(rb'data-items="([^"]+)"', response.data)
+        carousel_items = json.loads(unescape(items_attribute.group(1).decode()))
+        fantasy_item = next(item for item in carousel_items if item["title"] == "Fantasy")
+        svg = unquote(fantasy_item["src"].removeprefix("data:image/svg+xml,"))
+        book_ids = re.findall(r'data-book-id="(\d+)"', svg)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            book_ids,
+            [str(book.book_id) for book in oldest_books],
+        )
+        self.assertNotIn("Aardvark Fourth", svg)
+        self.assertIn("Alpha Second", svg)
+        self.assertIn("Middle Third", svg)
+        self.assertIn("data:image/jpeg;base64,", svg)
+
+        encoded_thumbnail = re.search(
+            r'href="data:image/jpeg;base64,([^"]+)"',
+            svg,
+        ).group(1)
+        thumbnail = Image.open(
+            BytesIO(base64.b64decode(encoded_thumbnail))
+        )
+        self.assertEqual(thumbnail.format, "JPEG")
+        self.assertEqual(thumbnail.size, (170, 270))
+
+        font_dir = Path(self.app.static_folder) / "fonts"
+        for weight, filename in (
+            (500, "Poppins-Medium-Latin.woff2"),
+            (600, "Poppins-SemiBold-Latin.woff2"),
+        ):
+            encoded_font = base64.b64encode(
+                (font_dir / filename).read_bytes()
+            ).decode("ascii")
+            self.assertIn(f"font-weight:{weight}", svg)
+            self.assertIn(f"data:font/woff2;base64,{encoded_font}", svg)
+
+        self.assertIn('font-size="30.0" font-weight="600"', svg)
+        self.assertIn('font-weight="500" letter-spacing="5"', svg)
+        self.assertIn('font-weight="500" letter-spacing="3"', svg)
+        self.assertIn('Poppins, &quot;Segoe UI&quot;, Arial, sans-serif', svg)
+
+    def test_long_genre_name_is_truncated_to_fit_carousel_card(self):
+        long_genre = "Historical Fiction and International Mystery"
+        BookRepository().create(
+            Book(None, "The Long Shelves", "A. Writer", long_genre, "")
+        )
+        BookRepository().create(
+            Book(None, "The Second Shelf", "B. Writer", "History", "")
+        )
+
+        response = self.client.get("/")
+        items_attribute = re.search(rb'data-items="([^"]+)"', response.data)
+        carousel_items = json.loads(unescape(items_attribute.group(1).decode()))
+        item = next(entry for entry in carousel_items if entry["title"] == long_genre)
+        svg = unquote(item["src"].removeprefix("data:image/svg+xml,"))
+        label = re.search(
+            r'<text x="300" y="526"[^>]*font-size="([\d.]+)"[^>]*>(.*?)</text>',
+            svg,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertLessEqual(len(label.group(2)), 27)
+        self.assertTrue(label.group(2).endswith("…"))
+        self.assertLessEqual(float(label.group(1)), 19)
+        self.assertNotIn(long_genre, svg)
 
     def test_landing_search_filters_by_selected_type(self):
         BookRepository().create(

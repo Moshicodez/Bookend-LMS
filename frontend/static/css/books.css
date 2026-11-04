@@ -137,20 +137,31 @@
 }
 
 .catalog-book-grid {
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 350px), 1fr));
-  gap: 22px;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  justify-items: center;
+  gap: 24px;
   margin-top: 16px;
 }
 
 .catalog-book-grid .landing-book-card {
   display: flex;
+  width: 100%;
+  max-width: 170px;
   min-width: 0;
-  gap: 16px;
-  padding: 18px;
-  border-color: var(--books-line);
-  border-radius: 12px;
-  background: var(--books-paper);
-  box-shadow: 0 8px 20px rgb(29 39 28 / 6%);
+  min-height: 0;
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.catalog-book-grid .landing-book-card:hover {
+  transform: none;
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .catalog-book-grid .book-cover-link {
@@ -305,7 +316,11 @@
   }
 
   .catalog-book-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+
+  .catalog-book-grid .landing-book-card {
+    max-width: 140px;
   }
 
   .books-footer {

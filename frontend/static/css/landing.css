@@ -325,8 +325,9 @@ html::-webkit-scrollbar {
 
 .landing-book-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  justify-items: center;
+  gap: 24px;
 }
 
 .landing-book-card {
@@ -521,9 +522,20 @@ html::-webkit-scrollbar {
 }
 
 .book-carousel .landing-book-card {
-  width: 270px;
-  flex: 0 0 270px;
+  width: 170px;
+  flex: 0 0 170px;
   scroll-snap-align: start;
+}
+
+@media (max-width: 480px) {
+  .landing-book-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+
+  .book-carousel .landing-book-card {
+    width: 140px;
+    flex-basis: 140px;
+  }
 }
 
 .landing-empty {
@@ -1264,5 +1276,3 @@ html::-webkit-scrollbar {
   font-weight: 400;
   letter-spacing: 0.03em;
 }
-
-

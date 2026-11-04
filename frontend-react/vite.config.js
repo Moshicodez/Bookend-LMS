@@ -11,7 +11,7 @@ export default defineConfig({
   },
   build: {
     outDir: '../frontend/static/dist',
-    emptyDir: true,
+    emptyOutDir: false,
     rollupOptions: {
       output: {
         entryFileNames: 'books.js',

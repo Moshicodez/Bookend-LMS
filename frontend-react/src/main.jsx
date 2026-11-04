@@ -21,7 +21,13 @@ function BookCard({ title, author, cover, url, available, role, bookId, csrf, de
     <img
       src={cover}
       alt={`Cover of ${title}`}
-      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+      style={{
+        width: '100%',
+        height: '100%',
+        objectFit: 'contain',
+        display: 'block',
+        background: '#27272a',
+      }}
     />
   ) : (
     <div
@@ -34,7 +40,8 @@ function BookCard({ title, author, cover, url, available, role, bookId, csrf, de
         padding: '1.2rem',
         background: '#435b43',
         color: '#fffefa',
-        fontFamily: 'Anton, Impact, sans-serif',
+        fontFamily: '"Poppins", "Segoe UI", Arial, sans-serif',
+        fontWeight: 600,
         fontSize: 'clamp(1rem, 4vw, 1.6rem)',
         lineHeight: 1.05,
         textAlign: 'center',
@@ -51,7 +58,7 @@ function BookCard({ title, author, cover, url, available, role, bookId, csrf, de
     <div className="flip-card__back-content">
       <h3 className="flip-card__title">{title}</h3>
       <p className="flip-card__author">{author}</p>
-      {available ? (
+      {canBorrow ? (
         <span className="flip-card__availability">Available</span>
       ) : (
         <span className="flip-card__availability is-borrowed">{availabilityLabel}</span>
@@ -62,32 +69,32 @@ function BookCard({ title, author, cover, url, available, role, bookId, csrf, de
       <a className="flip-card__link" href={url}>
         View details
       </a>
-      <div className="flip-card__actions" onClick={e => e.stopPropagation()}>
+      <div className="flip-card__actions">
         {role === 'patron' ? (
           <>
             <form method="post" action={favoriteAction} className="flip-card__form">
               <input type="hidden" name="csrf_token" value={csrf} />
               <input type="hidden" name="next" value={url} />
-              <button type="submit" className="flip-card__button heart">
-                {isFavorite ? 'Remove from saved' : 'Save to saved'}
+              <button type="submit" className="flip-card__button flip-card__button--secondary heart">
+                {isFavorite ? 'Saved' : 'Save'}
               </button>
             </form>
             {canBorrow ? (
               <form method="post" action={basketAction} className="flip-card__form">
                 <input type="hidden" name="csrf_token" value={csrf} />
                 <input type="hidden" name="next" value={url} />
-                <button type="submit" className="flip-card__button basket">Add to basket</button>
+                <button type="submit" className="flip-card__button flip-card__button--primary basket">Add to basket</button>
               </form>
             ) : null}
           </>
         ) : isLibrarian ? (
           <>
-            <a className="flip-card__button" href={editUrl}>
+            <a className="flip-card__button flip-card__button--primary" href={editUrl}>
               Edit
             </a>
             <form method="post" action={archiveAction} className="flip-card__form">
               <input type="hidden" name="csrf_token" value={csrf} />
-              <button type="submit" className="flip-card__button archive">Archive</button>
+              <button type="submit" className="flip-card__button flip-card__button--secondary archive">Archive</button>
             </form>
           </>
         ) : null}
@@ -117,9 +124,8 @@ function BookCard({ title, author, cover, url, available, role, bookId, csrf, de
       perspective={1100}
       stiffness={170}
       damping={20}
-      width={300}
-      height={450}
-      radius={22}
+      width={170}
+      radius={6}
       background="#27272a"
       color="#f5f5f5"
       shadow

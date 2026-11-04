@@ -1,16 +1,119 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import CircularCarousel from "./components/CircularCarousel.jsx";
 import "./genre-carousel-theme.css";
 
 const mount = document.getElementById("genre-carousel-root");
 
-if (mount) {
-  const items = JSON.parse(mount.dataset.items || "[]");
-  const genrePanels = Array.from(document.querySelectorAll("[data-genre-panel]"));
+function GenreCarousel({ items, genrePanels }) {
+  const [bookActive, setBookActive] = useState(false);
+  const bookActiveRef = useRef(bookActive);
+  const keyboardFocusRef = useRef(false);
+  const updateBookActive = (active) => {
+    bookActiveRef.current = active;
+    setBookActive(active);
+  };
 
-  createRoot(mount).render(
-    <div className="genre-carousel-stage">
+  useEffect(() => {
+    const panel = document.getElementById("genre-books-panel");
+    if (!panel) return undefined;
+
+    let hovered = false;
+    let held = false;
+    let focused = false;
+    let lastInputWasPointer = false;
+    let resumeTimer;
+
+    const cancelResume = () => {
+      window.clearTimeout(resumeTimer);
+      resumeTimer = undefined;
+    };
+    const activate = () => {
+      cancelResume();
+      updateBookActive(true);
+    };
+    const resumeWhenIdle = () => {
+      if (hovered || held || focused) return;
+      cancelResume();
+      resumeTimer = window.setTimeout(() => {
+        resumeTimer = undefined;
+        if (!hovered && !held && !focused) updateBookActive(false);
+      }, 600);
+    };
+    const handlePointerEnter = () => {
+      hovered = true;
+      activate();
+    };
+    const handlePointerLeave = () => {
+      hovered = false;
+      resumeWhenIdle();
+    };
+    const handlePointerDown = () => {
+      lastInputWasPointer = true;
+      focused = false;
+      keyboardFocusRef.current = false;
+      held = true;
+      activate();
+    };
+    const handlePointerEnd = () => {
+      held = false;
+      resumeWhenIdle();
+    };
+    const handleFocusIn = () => {
+      if (lastInputWasPointer) return;
+      focused = true;
+      keyboardFocusRef.current = true;
+      activate();
+    };
+    const handleKeyDown = () => {
+      lastInputWasPointer = false;
+      if (panel.contains(document.activeElement)) {
+        focused = true;
+        keyboardFocusRef.current = true;
+        activate();
+      }
+    };
+    const handleFocusOut = (event) => {
+      if (event.relatedTarget instanceof Node && panel.contains(event.relatedTarget)) return;
+      focused = false;
+      keyboardFocusRef.current = false;
+      resumeWhenIdle();
+    };
+
+    panel.addEventListener("pointerenter", handlePointerEnter);
+    panel.addEventListener("pointerleave", handlePointerLeave);
+    panel.addEventListener("pointerdown", handlePointerDown);
+    panel.addEventListener("pointerup", handlePointerEnd);
+    panel.addEventListener("pointercancel", handlePointerEnd);
+    window.addEventListener("pointerup", handlePointerEnd);
+    window.addEventListener("pointercancel", handlePointerEnd);
+    window.addEventListener("keydown", handleKeyDown, true);
+    panel.addEventListener("focusin", handleFocusIn);
+    panel.addEventListener("focusout", handleFocusOut);
+
+    return () => {
+      cancelResume();
+      panel.removeEventListener("pointerenter", handlePointerEnter);
+      panel.removeEventListener("pointerleave", handlePointerLeave);
+      panel.removeEventListener("pointerdown", handlePointerDown);
+      panel.removeEventListener("pointerup", handlePointerEnd);
+      panel.removeEventListener("pointercancel", handlePointerEnd);
+      window.removeEventListener("pointerup", handlePointerEnd);
+      window.removeEventListener("pointercancel", handlePointerEnd);
+      window.removeEventListener("keydown", handleKeyDown, true);
+      panel.removeEventListener("focusin", handleFocusIn);
+      panel.removeEventListener("focusout", handleFocusOut);
+    };
+  }, []);
+
+  return (
+    <div
+      className="genre-carousel-stage"
+      onPointerEnter={() => {
+        if (!keyboardFocusRef.current) updateBookActive(false);
+      }}
+      onFocusCapture={() => updateBookActive(false)}
+    >
       <CircularCarousel
         items={items}
         preset="cylinder"
@@ -23,7 +126,7 @@ if (mount) {
         tilt={-5}
         curve={1}
         perspective={2500}
-        autoplay="drift"
+        autoplay={bookActive ? "off" : "drift"}
         interval={3}
         direction="left"
         momentum={0.6}
@@ -38,6 +141,7 @@ if (mount) {
         innerShade={0.6}
         cornerRadius={12}
         onChange={(index) => {
+          if (bookActiveRef.current) return;
           const selectedGenre = items[index]?.title;
           genrePanels.forEach((panel) => {
             panel.hidden = panel.dataset.genreName !== selectedGenre;
@@ -45,5 +149,13 @@ if (mount) {
         }}
       />
     </div>
+  );
+}
+
+if (mount) {
+  const items = JSON.parse(mount.dataset.items || "[]");
+  const genrePanels = Array.from(document.querySelectorAll("[data-genre-panel]"));
+  createRoot(mount).render(
+    <GenreCarousel items={items} genrePanels={genrePanels} />
   );
 }

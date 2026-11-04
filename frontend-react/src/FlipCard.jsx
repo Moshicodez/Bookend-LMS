@@ -42,7 +42,7 @@ export default function FlipCard({
   stiffness = 170,
   damping = 20,
   width = 300,
-  height = 400,
+  height = null,
   radius = 22,
   background = '#27272a',
   color = '#f5f5f5',
@@ -121,6 +121,7 @@ export default function FlipCard({
   }, [disabled]);
 
   const onPointerDown = e => {
+    if (e.target.closest('button, a, form, input, select, textarea')) return;
     if (disabled || e.button !== 0 || grip.current) return;
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
@@ -139,6 +140,7 @@ export default function FlipCard({
   };
   const onPointerMove = e => {
     const g = grip.current;
+    if (!g && e.target.closest('button, a, form, input, select, textarea')) return;
     if (g && g.id === e.pointerId) {
       const d = axis === 'x' ? e.clientY - g.y : e.clientX - g.x;
       if (!g.moved) {
@@ -149,7 +151,7 @@ export default function FlipCard({
         tiltY.set(0);
         sheen.set(0);
       }
-      const span = dragDistance > 0 ? dragDistance : axis === 'x' ? height : width;
+      const span = dragDistance > 0 ? dragDistance : axis === 'x' ? (height ?? width * 1.5) : width;
       const deg = g.base + (axis === 'x' ? -1 : 1) * (d / span) * 180;
       turn.set(deg);
       const now = performance.now();
@@ -191,11 +193,13 @@ export default function FlipCard({
     settle(to, velocity, false);
   };
   const onKeyDown = e => {
+    if (e.target.closest('button, a, form, input, select, textarea')) return;
     if (disabled || (e.key !== 'Enter' && e.key !== ' ')) return;
     e.preventDefault();
     if (!e.repeat) flip(true);
   };
   const onClick = e => {
+    if (e.target.closest('button, a, form, input, select, textarea')) return;
     if (!disabled && e.detail === 0) flip(true);
   };
 
@@ -236,7 +240,7 @@ export default function FlipCard({
       onDragStart={e => e.preventDefault()}
       style={{
         '--fc-w': `${width}px`,
-        '--fc-h': `${height}px`,
+        ...(height ? { '--fc-h': `${height}px` } : {}),
         '--fc-radius': `${radius}px`,
         '--fc-bg': background,
         '--fc-ink': color,

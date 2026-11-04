@@ -7,7 +7,7 @@ export default defineConfig({
   publicDir: false,
   build: {
     outDir: "../static/dist",
-    emptyOutDir: true,
+    emptyOutDir: false,
     rollupOptions: {
       input: "src/main.jsx",
       output: {
