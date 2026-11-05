@@ -11,6 +11,7 @@ from backend.app.models.book_record import BookRecord
 from backend.app.models.favorite_record import FavoriteRecord
 from backend.app.models.review_record import ReviewRecord
 from backend.app.models.user_record import UserRecord
+from backend.app.repositories.book_repository import BookRepository
 from backend.app.schema_migrations import upgrade_legacy_sqlite_schema
 
 
@@ -65,8 +66,6 @@ class LegacySchemaMigrationTests(unittest.TestCase):
             ),
             {"password_hash": generate_password_hash("StrongPass1!")},
         )
-        db.session.commit()
-        upgrade_legacy_sqlite_schema()
         db.session.execute(
             text(
                 "INSERT INTO books "
@@ -86,6 +85,7 @@ class LegacySchemaMigrationTests(unittest.TestCase):
             },
         )
         db.session.commit()
+        upgrade_legacy_sqlite_schema()
         self.client = self.app.test_client()
 
     def tearDown(self):
@@ -105,8 +105,15 @@ class LegacySchemaMigrationTests(unittest.TestCase):
 
         self.assertEqual(book.title, "Legacy Book")
         self.assertEqual(book.kind, "standard")
+        self.assertEqual(book.total_copies, 1)
+        self.assertEqual(
+            BookRepository().find_book(book.book_id).available_copies,
+            0,
+        )
         self.assertTrue(
-            {"kind", "cover"}.issubset(columns["books"])
+            {"kind", "cover", "archived_at", "total_copies"}.issubset(
+                columns["books"]
+            )
         )
         self.assertTrue(
             {"fee_paid", "lost", "loss_fee", "loss_paid"}.issubset(columns["loans"])

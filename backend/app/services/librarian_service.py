@@ -5,6 +5,7 @@ from werkzeug.security import generate_password_hash
 
 from ..exceptions import NotFoundError, PermissionDenied
 from ..repositories.genre_repository import GenreRepository
+from ..repositories.reservation_repository import ReservationRepository
 from ..utils.date_utils import today
 from .auth_service import AuthService
 from .book_service import BookService
@@ -19,15 +20,48 @@ class LibrarianService:
         self._loan_repo = loan_repo
         self._user_repo = user_repo
         self._genre_repo = GenreRepository()
+        self._reservations = ReservationRepository()
 
-    def add_book(self, librarian, title, author, genre, description, kind="standard"):
+    def add_book(
+        self,
+        librarian,
+        title,
+        author,
+        genre,
+        description,
+        kind="standard",
+        total_copies=1,
+    ):
         return self._books.add_book(
-            librarian, title, author, genre, description, kind
+            librarian,
+            title,
+            author,
+            genre,
+            description,
+            kind,
+            total_copies=total_copies,
         )
 
-    def edit_book(self, librarian, book_id, title, author, genre, description):
+    def edit_book(
+        self,
+        librarian,
+        book_id,
+        title,
+        author,
+        genre,
+        description,
+        kind=None,
+        total_copies=None,
+    ):
         return self._books.edit_book(
-            librarian, book_id, title, author, genre, description
+            librarian,
+            book_id,
+            title,
+            author,
+            genre,
+            description,
+            kind=kind,
+            total_copies=total_copies,
         )
 
     def archive_book(self, librarian, book_id):
@@ -83,6 +117,9 @@ class LibrarianService:
             for fee in loan.fee_breakdown(today())
             if fee["paid"]
         )
+        reservation_counts = self._reservations.open_counts()
+        recent_reservations = self._reservations.find_for_management()[:6]
+        archived_books = list(self._book_repo.find_archived())
         return {
             "stats": {
                 "books": len(books),
@@ -91,10 +128,19 @@ class LibrarianService:
                 "overdue": len(overdue),
                 "patrons": len(patrons),
                 "fees_collected": round(fees_collected, 2),
+                "reservations_waiting": reservation_counts["waiting"],
+                "reservations_ready": reservation_counts["ready"],
+                "archived_books": len(archived_books),
             },
             "recent_loans": recent_loans,
             "most_borrowed": most_borrowed,
+            "recent_reservations": recent_reservations,
+            "archived_books": archived_books[:5],
         }
+
+    def reservation_management(self, librarian, status="", search=""):
+        librarian.require("manage_loans")
+        return self._reservations.find_for_management(status, search)
 
     def update_return_status(self, librarian, book_id, lost=False):
         return self._loans.process_return(librarian, book_id, lost)
@@ -125,13 +171,18 @@ class LibrarianService:
         return self._user_repo.find_patrons(search_term)
 
     def member_loan_history(self, librarian, user_id):
+        member, history, _ = self.member_detail_data(librarian, user_id)
+        return member, history
+
+    def member_detail_data(self, librarian, user_id):
         librarian.require("manage_mem")
         member = self._user_repo.find_by_id(user_id)
         if member is None or not member.is_patron():
             raise NotFoundError("Patron not found.")
 
         history = []
-        for loan in self._loan_repo.find_patron_loans(member.user_id):
+        loans = self._loan_repo.find_patron_loans(member.user_id)
+        for loan in loans:
             book = self._book_repo.find_book(loan.book_id)
             history.append({
                 "loan": loan,
@@ -141,7 +192,19 @@ class LibrarianService:
                 "fees": loan.fee_breakdown(),
                 "outstanding": loan.outstanding(),
             })
-        return member, history
+        stats = {
+            "active_loans": sum(not loan.is_returned() and not loan.lost for loan in loans),
+            "overdue": sum(self._loan_status(loan) == "Overdue" for loan in loans),
+            "fees_due": sum(loan.outstanding() for loan in loans),
+            "reservations": self._reservations.count_open_for_patron(member.user_id),
+        }
+        return member, history, stats
+
+    def member_rows(self, librarian, search_term="", status=""):
+        librarian.require("manage_mem")
+        if status not in {"active", "inactive"}:
+            status = ""
+        return self._user_repo.find_patron_summaries(search_term, status)
 
     @staticmethod
     def _loan_status(loan):

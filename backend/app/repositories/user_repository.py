@@ -4,6 +4,7 @@ from ..exceptions import ValidationError
 from ..extensions import db
 from ..models.user import User
 from ..models.user_record import UserRecord
+from ..models.loan_record import LoanRecord
 
 
 class UserRepository:
@@ -78,6 +79,49 @@ class UserRepository:
             statement.order_by(UserRecord.username)
         ).scalars()
         return [self._to_domain_user(record) for record in records]
+
+    def find_patron_summaries(self, search_term="", status=""):
+        statement = (
+            db.select(
+                UserRecord,
+                db.func.coalesce(
+                    db.func.sum(
+                        db.case(
+                            (LoanRecord.returned_at.is_(None), 1),
+                            else_=0,
+                        )
+                    ),
+                    0,
+                ).label("active_loans"),
+            )
+            .outerjoin(LoanRecord, LoanRecord.patron_id == UserRecord.user_id)
+            .where(UserRecord.role == "patron")
+            .group_by(UserRecord.user_id)
+        )
+        search_term = (search_term or "").strip()
+        if search_term:
+            pattern = f"%{search_term}%"
+            statement = statement.where(
+                db.or_(
+                    UserRecord.username.ilike(pattern),
+                    UserRecord.email.ilike(pattern),
+                )
+            )
+        if status == "active":
+            statement = statement.where(UserRecord.active.is_(True))
+        elif status == "inactive":
+            statement = statement.where(UserRecord.active.is_(False))
+
+        rows = db.session.execute(
+            statement.order_by(UserRecord.username.collate("NOCASE"))
+        )
+        return [
+            {
+                "member": self._to_domain_user(record),
+                "active_loans": active_loans,
+            }
+            for record, active_loans in rows
+        ]
 
     def find_by_id(self, user_id):
         record = db.session.get(UserRecord, user_id)

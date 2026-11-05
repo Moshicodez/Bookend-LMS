@@ -9,10 +9,13 @@ from ..models.loan import Loan
 from ..models.loan_record import LoanRecord
 from ..models.reservation import Reservation
 from ..models.reservation_record import ReservationRecord
-from ..models.notification_record import NotificationRecord
+from .reservation_repository import ReservationRepository
 
 
 class LoanRepository:
+    def __init__(self):
+        self._reservations = ReservationRepository()
+
     def create_loan(
         self,
         patron_id,
@@ -22,32 +25,16 @@ class LoanRepository:
         reservation_id=None,
     ):
         try:
-            book_record = db.session.get(BookRecord, book_id)
-            active_loan_id = db.session.scalar(
-                db.select(LoanRecord.loan_id)
-                .where(
-                    LoanRecord.book_id == book_id,
-                    LoanRecord.returned_at.is_(None),
-                )
-                .limit(1)
+            book_record = self._reserve_copy(
+                patron_id,
+                book_id,
+                reservation_id,
             )
-            if (
-                book_record is None
-                or not book_record.catalog
-                or active_loan_id is not None
-            ):
+            if book_record is None:
+                book_record = db.session.get(BookRecord, book_id)
                 title = book_record.title if book_record else "This book"
                 raise ValidationError(f"{title} is no longer available to borrow.")
-            ready_reservation = self._ready_reservation(book_id)
-            if ready_reservation is not None and (
-                ready_reservation.reservation_id != reservation_id
-                or ready_reservation.patron_id != patron_id
-            ):
-                raise ValidationError("This book is being held for another patron.")
-            if reservation_id is not None and ready_reservation is None:
-                raise ValidationError("This reservation is no longer ready.")
 
-            book_record.available = False
             record = LoanRecord(
                 patron_id=patron_id,
                 book_id=book_id,
@@ -55,7 +42,11 @@ class LoanRepository:
                 due_date=due_date,
             )
             db.session.add(record)
-            if ready_reservation is not None:
+            if reservation_id is not None:
+                ready_reservation = db.session.get(
+                    ReservationRecord,
+                    reservation_id,
+                )
                 ready_reservation.status = Reservation.FULFILLED
             db.session.commit()
         except IntegrityError as error:
@@ -72,39 +63,30 @@ class LoanRepository:
             for entry in entries:
                 book, borrowed_at, due_date = entry[:3]
                 reservation_id = entry[3] if len(entry) > 3 else None
-                book_record = db.session.get(BookRecord, book.book_id)
-                if (
-                    book_record is None
-                    or not book_record.catalog
-                    or not book_record.available
-                ):
+                book_record = self._reserve_copy(
+                    patron_id,
+                    book.book_id,
+                    reservation_id,
+                )
+                if book_record is None:
                     raise ValidationError(
                         f"{book.title} is no longer available to borrow."
                     )
-                ready_reservation = self._ready_reservation(book.book_id)
-                if ready_reservation is not None and (
-                    ready_reservation.reservation_id != reservation_id
-                    or ready_reservation.patron_id != patron_id
-                ):
-                    raise ValidationError(
-                        f"{book.title} is being held for another patron."
-                    )
-                if reservation_id is not None and ready_reservation is None:
-                    raise ValidationError(
-                        f"The reservation for {book.title} is no longer ready."
-                    )
-                book_record.available = False
-                records.append(
-                    LoanRecord(
-                        patron_id=patron_id,
-                        book_id=book.book_id,
-                        borrowed_at=borrowed_at,
-                        due_date=due_date,
-                    )
+                record = LoanRecord(
+                    patron_id=patron_id,
+                    book_id=book.book_id,
+                    borrowed_at=borrowed_at,
+                    due_date=due_date,
                 )
-                if ready_reservation is not None:
+                db.session.add(record)
+                if reservation_id is not None:
+                    ready_reservation = db.session.get(
+                        ReservationRecord,
+                        reservation_id,
+                    )
                     ready_reservation.status = Reservation.FULFILLED
-            db.session.add_all(records)
+                db.session.flush()
+                records.append(record)
             db.session.commit()
         except IntegrityError as error:
             db.session.rollback()
@@ -129,6 +111,18 @@ class LoanRepository:
         ).scalars()
         return [self._to_domain_loan(record) for record in records]
 
+    def active_book_ids(self, patron_id):
+        return set(
+            db.session.execute(
+                db.select(LoanRecord.book_id)
+                .where(
+                    LoanRecord.patron_id == patron_id,
+                    LoanRecord.returned_at.is_(None),
+                )
+                .distinct()
+            ).scalars()
+        )
+
     def find_active_loan(self, patron_id, book_id):
         record = db.session.execute(
             db.select(LoanRecord).where(
@@ -141,12 +135,26 @@ class LoanRepository:
 
     def find_active_loan_by_book(self, book_id):
         record = db.session.execute(
-            db.select(LoanRecord).where(
+            db.select(LoanRecord)
+            .where(
                 LoanRecord.book_id == book_id,
                 LoanRecord.returned_at.is_(None),
             )
+            .order_by(LoanRecord.loan_id)
+            .limit(1)
         ).scalar_one_or_none()
         return self._to_domain_loan(record) if record else None
+
+    def find_active_loans_by_book(self, book_id):
+        records = db.session.execute(
+            db.select(LoanRecord)
+            .where(
+                LoanRecord.book_id == book_id,
+                LoanRecord.returned_at.is_(None),
+            )
+            .order_by(LoanRecord.loan_id)
+        ).scalars()
+        return [self._to_domain_loan(record) for record in records]
 
     def find_all(self):
         records = db.session.execute(
@@ -209,44 +217,28 @@ class LoanRepository:
             record.lost = details["lost"]
             record.loss_fee = details["loss_fee"]
             record.loss_paid = details["loss_paid"]
-            book.available = not loan.lost
             if loan.lost:
-                book.catalog = False
-                db.session.execute(
-                    db.update(ReservationRecord)
-                    .where(
-                        ReservationRecord.book_id == book.book_id,
-                        ReservationRecord.status.in_(Reservation.OPEN_STATUSES),
-                    )
-                    .values(status=Reservation.CANCELLED)
-                )
-            else:
-                next_reservation = db.session.execute(
-                    db.select(ReservationRecord)
-                    .where(
-                        ReservationRecord.book_id == book.book_id,
-                        ReservationRecord.status == Reservation.WAITING,
-                    )
-                    .order_by(ReservationRecord.reservation_id)
-                    .limit(1)
-                ).scalar_one_or_none()
-                if next_reservation is not None:
-                    next_reservation.status = Reservation.READY
-                    db.session.add(
-                        NotificationRecord(
-                            user_id=next_reservation.patron_id,
-                            category="loan",
-                            title="Reserved book ready",
-                            message=(
-                                "A book in your reservation queue is ready "
-                                "to borrow."
-                            ),
-                            link=f"/books/{book.book_id}",
-                            dedupe_key=(
-                                f"reservation:{next_reservation.reservation_id}:ready"
-                            ),
+                book.total_copies = max(0, book.total_copies - 1)
+                if book.total_copies == 0:
+                    book.catalog = False
+                    db.session.execute(
+                        db.update(ReservationRecord)
+                        .where(
+                            ReservationRecord.book_id == book.book_id,
+                            ReservationRecord.status.in_(Reservation.OPEN_STATUSES),
                         )
+                        .values(status=Reservation.CANCELLED)
                     )
+            active_count = db.session.scalar(
+                db.select(db.func.count(LoanRecord.loan_id)).where(
+                    LoanRecord.book_id == book.book_id,
+                    LoanRecord.returned_at.is_(None),
+                )
+            ) or 0
+            book.available = book.total_copies > active_count
+            if not loan.lost:
+                db.session.flush()
+                self._reservations.promote_waiting(book.book_id, commit=False)
             db.session.commit()
         except IntegrityError as error:
             db.session.rollback()
@@ -273,13 +265,57 @@ class LoanRepository:
         return loan
 
     @staticmethod
-    def _ready_reservation(book_id):
-        return db.session.execute(
-            db.select(ReservationRecord).where(
-                ReservationRecord.book_id == book_id,
+    def _reserve_copy(patron_id, book_id, reservation_id):
+        book = db.session.get(BookRecord, book_id)
+        if book is None or not book.catalog:
+            return None
+
+        reservation_credit = 0
+        if reservation_id is not None:
+            reservation = db.session.get(ReservationRecord, reservation_id)
+            if (
+                reservation is None
+                or reservation.book_id != book_id
+                or reservation.patron_id != patron_id
+                or reservation.status != Reservation.READY
+            ):
+                raise ValidationError("This reservation is no longer ready.")
+            reservation_credit = 1
+
+        active_count = (
+            db.select(db.func.count(LoanRecord.loan_id))
+            .where(
+                LoanRecord.book_id == BookRecord.book_id,
+                LoanRecord.returned_at.is_(None),
+            )
+            .correlate(BookRecord)
+            .scalar_subquery()
+        )
+        reserved_count = (
+            db.select(db.func.count(ReservationRecord.reservation_id))
+            .where(
+                ReservationRecord.book_id == BookRecord.book_id,
                 ReservationRecord.status == Reservation.READY,
             )
-        ).scalar_one_or_none()
+            .correlate(BookRecord)
+            .scalar_subquery()
+        )
+        borrowable = (
+            BookRecord.total_copies
+            - active_count
+            - reserved_count
+            + reservation_credit
+        )
+        result = db.session.execute(
+            db.update(BookRecord)
+            .where(
+                BookRecord.book_id == book_id,
+                BookRecord.catalog.is_(True),
+                borrowable > 0,
+            )
+            .values(available=BookRecord.total_copies > active_count + 1)
+        )
+        return book if result.rowcount == 1 else None
 
     @staticmethod
     def _valid_id(value):

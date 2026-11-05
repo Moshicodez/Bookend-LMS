@@ -36,6 +36,10 @@
         <option value="newest" {% if sort == "newest" %}selected{% endif %}>Newest</option>
         <option value="most_borrowed" {% if sort == "most_borrowed" %}selected{% endif %}>Most borrowed</option>
       </select>
+      <label class="catalog-available-filter" for="catalog-available">
+        <input id="catalog-available" name="available" type="checkbox" value="1" {% if available_only %}checked{% endif %}>
+        <span>Available only</span>
+      </label>
       <button class="button" type="submit">Search</button>
     </form>
     {% if user and user.is_librarian() %}
@@ -44,7 +48,7 @@
   </div>
 
   {% if books %}
-    <p class="catalog-count">{{ total }} book{{ "" if total == 1 else "s" }} found</p>
+    <p class="catalog-count">{{ total }} book{{ "" if total == 1 else "s" }} found · Page {{ page }} of {{ pages }}</p>
     <div class="book-grid catalog-book-grid">
       {% for book in books %}
         {% set cover_color = cover_colors[loop.index0 % cover_colors|length] %}
@@ -62,15 +66,16 @@
           <div class="catalog-book-copy">
             <h2><a href="{{ book_url }}">{{ book.title }}</a></h2>
             <p class="catalog-book-author">{{ book.author }}</p>
-            {% set status_label = "Archived" if not book.catalog else ("On loan" if not book.available else "Available") %}
-            <span class="catalog-status-badge{% if status_label == 'On loan' %} is-on-loan{% elif status_label == 'Archived' %} is-archived{% endif %}">{{ status_label }}</span>
+            {% set status_label = book.availability_status %}
+            <span class="catalog-status-badge{% if status_label in ['On loan', 'Reserved', 'Out of stock'] %} is-on-loan{% elif status_label == 'Archived' %} is-archived{% endif %}">{{ status_label }}</span>
+            {% if book.catalog %}<p class="catalog-stock-count">{{ book.available_copies }} available of {{ book.total_copies }}</p>{% endif %}
             <p class="catalog-book-rating" aria-label="{{ '%.1f'|format(rating.average) }} out of 5 stars from {{ rating.count }} reviews">
               <span aria-hidden="true">{{ "★" if rating.count else "☆" }} {{ "%.1f"|format(rating.average) }} ({{ rating.count }})</span>
             </p>
             <div class="catalog-book-action">
               {% if user and user.is_librarian() %}
                 <a class="button catalog-card-button" href="{{ url_for('books.edit', book_id=book.book_id) }}">Edit</a>
-              {% elif user and user.is_patron() and can_borrow %}
+              {% elif user and user.is_patron() and can_borrow and book.book_id not in active_book_ids %}
                 <form method="post" action="{{ url_for('patron.basket_add', book_id=book.book_id) }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
@@ -80,6 +85,37 @@
                 <a class="button catalog-card-button" href="{{ url_for('auth.login') }}">Sign in to borrow</a>
               {% endif %}
             </div>
+            {% if pages > 1 %}
+              <nav class="catalog-pagination" aria-label="Catalog pages">
+                {% if page > 1 %}
+                  <a class="button button-secondary" href="{{ url_for('books.catalog', q=search_term, genre=selected_genre, sort=sort, available='1' if available_only else none, page=page - 1) }}">Previous</a>
+                {% else %}
+                  <span class="button button-secondary is-disabled" aria-disabled="true">Previous</span>
+                {% endif %}
+                <div class="catalog-page-numbers">
+                  {% if page_numbers[0] > 1 %}
+                    <a class="catalog-page-number" href="{{ url_for('books.catalog', q=search_term, genre=selected_genre, sort=sort, available='1' if available_only else none, page=1) }}">1</a>
+                    {% if page_numbers[0] > 2 %}<span class="catalog-page-ellipsis" aria-hidden="true">…</span>{% endif %}
+                  {% endif %}
+                  {% for page_number in page_numbers %}
+                    {% if page_number == page %}
+                      <span class="catalog-page-number is-current" aria-current="page">{{ page_number }}</span>
+                    {% else %}
+                      <a class="catalog-page-number" href="{{ url_for('books.catalog', q=search_term, genre=selected_genre, sort=sort, available='1' if available_only else none, page=page_number) }}">{{ page_number }}</a>
+                    {% endif %}
+                  {% endfor %}
+                  {% if page_numbers[-1] < pages %}
+                    {% if page_numbers[-1] < pages - 1 %}<span class="catalog-page-ellipsis" aria-hidden="true">…</span>{% endif %}
+                    <a class="catalog-page-number" href="{{ url_for('books.catalog', q=search_term, genre=selected_genre, sort=sort, available='1' if available_only else none, page=pages) }}">{{ pages }}</a>
+                  {% endif %}
+                </div>
+                {% if page < pages %}
+                  <a class="button button-secondary" href="{{ url_for('books.catalog', q=search_term, genre=selected_genre, sort=sort, available='1' if available_only else none, page=page + 1) }}">Next</a>
+                {% else %}
+                  <span class="button button-secondary is-disabled" aria-disabled="true">Next</span>
+                {% endif %}
+              </nav>
+            {% endif %}
           </div>
         </article>
       {% endfor %}

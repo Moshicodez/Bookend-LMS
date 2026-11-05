@@ -42,6 +42,7 @@ def create_app(test_config=None):
     from .routes.members import members_bp
     from .routes.notifications import notifications_bp
     from .routes.patron import patron_bp
+    from .routes.reservations import reservations_bp
     from .routes.social import social_bp
     from .schema_migrations import upgrade_legacy_sqlite_schema
     from .services.auth_service import AuthService
@@ -84,12 +85,19 @@ def create_app(test_config=None):
     app.register_blueprint(notifications_bp)
     app.register_blueprint(social_bp)
     app.register_blueprint(patron_bp)
+    app.register_blueprint(reservations_bp)
+
+    @app.template_filter("peso")
+    def format_peso(amount):
+        return f"₱{amount:,.2f}"
 
     @app.context_processor
     def library_navigation_context():
         from .routes.auth import _signed_in_user
+        from .repositories.book_repository import BookRepository
         from .repositories.loan_repository import LoanRepository
         from .repositories.notification_repository import NotificationRepository
+        from .repositories.reservation_repository import ReservationRepository
         from .services.notification_service import NotificationService
 
         current_user = _signed_in_user()
@@ -98,6 +106,8 @@ def create_app(test_config=None):
         basket_count = 0
         overdue_count = 0
         notification_count = 0
+        ready_reservation_count = 0
+        active_book_ids = set()
         if current_user is not None and current_user.is_patron():
             favorite_ids = set(
                 FavoriteRepository().book_ids_for_user(current_user.user_id)
@@ -105,18 +115,35 @@ def create_app(test_config=None):
             favorite_count = len(favorite_ids)
             basket_ids = session.get("basket_book_ids", [])
             basket_count = len(set(basket_ids)) if isinstance(basket_ids, list) else 0
+            loan_repository = LoanRepository()
+            active_book_ids = loan_repository.active_book_ids(current_user.user_id)
             notification_repository = NotificationRepository()
-            NotificationService(
+            notification_service = NotificationService(
                 notification_repository,
-                LoanRepository(),
-            ).sync_due_date_reminders(current_user.user_id)
+                loan_repository,
+                BookRepository(),
+            )
+            notification_service.sync_due_date_reminders(current_user.user_id)
+            ready_reservation_count = (
+                ReservationRepository().count_ready_for_patron(
+                    current_user.user_id
+                )
+            )
             notification_count = notification_repository.unread_count(
                 current_user.user_id
             )
         elif current_user is not None and current_user.is_librarian():
-            overdue_count = len(LoanRepository().find_overdue())
+            loan_repository = LoanRepository()
+            overdue = loan_repository.find_overdue()
+            overdue_count = len(overdue)
+            notification_repository = NotificationRepository()
+            NotificationService(
+                notification_repository,
+                loan_repository,
+                BookRepository(),
+            ).sync_overdue_notifications()
 
-            notification_count = NotificationRepository().unread_count(
+            notification_count = notification_repository.unread_count(
                 current_user.user_id
             )
         return {
@@ -126,6 +153,8 @@ def create_app(test_config=None):
             "basket_count": basket_count,
             "overdue_count": overdue_count,
             "notification_count": notification_count,
+            "ready_reservation_count": ready_reservation_count,
+            "active_book_ids": active_book_ids,
             "navigation_genres": GenreRepository().list_genres(),
             "cover_colors": COVER_COLORS,
             "site_year": date.today().year,

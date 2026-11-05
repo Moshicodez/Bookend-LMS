@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Librarian dashboard | Bookend Library{% endblock %}
+{% block page_styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/library-pages.css') }}">
+{% endblock %}
 {% block content %}
   <section class="page-heading dashboard-heading">
     <p class="eyebrow">LIBRARY OVERVIEW</p>
@@ -12,7 +15,8 @@
     <article class="admin-stat-card"><span>On loan</span><strong>{{ dashboard.stats.on_loan }}</strong></article>
     <article class="admin-stat-card"><span>Overdue</span><strong>{{ dashboard.stats.overdue }}</strong></article>
     <article class="admin-stat-card"><span>Patrons</span><strong>{{ dashboard.stats.patrons }}</strong></article>
-    <article class="admin-stat-card"><span>Fees collected</span><strong>${{ "%.2f"|format(dashboard.stats.fees_collected) }}</strong></article>
+    <article class="admin-stat-card"><span>Fees collected</span><strong>{{ dashboard.stats.fees_collected|peso }}</strong></article>
+    <a class="admin-stat-card admin-stat-link" href="{{ url_for('books.archived') }}"><span>Archived books</span><strong>{{ dashboard.stats.archived_books }}</strong><small>View archive →</small></a>
   </section>
 
   <div class="admin-dashboard-columns">
@@ -21,6 +25,7 @@
         <div><p class="eyebrow">LATEST ACTIVITY</p><h2 id="recent-loans-title">Recent loans</h2></div>
         <a href="{{ url_for('loans.index') }}">View all</a>
       </div>
+
       {% if dashboard.recent_loans %}
         <div class="table-scroll">
           <table class="admin-table">
@@ -66,8 +71,63 @@
     </section>
   </div>
 
+  <section class="admin-panel" aria-labelledby="dashboard-reservations-title">
+    <div class="admin-panel-heading">
+      <div><p class="eyebrow">PATRON QUEUES</p><h2 id="dashboard-reservations-title">Reservations</h2></div>
+      <a href="{{ url_for('reservations.manage') }}">View all</a>
+    </div>
+    <div class="reservation-dashboard-counts">
+      <span><strong>{{ dashboard.stats.reservations_waiting }}</strong> waiting</span>
+      <span><strong>{{ dashboard.stats.reservations_ready }}</strong> ready</span>
+    </div>
+    {% if dashboard.recent_reservations %}
+      <ul class="dashboard-reservation-list">
+        {% for item in dashboard.recent_reservations %}
+          <li>
+            <a href="{{ url_for('books.detail', book_id=item.book.book_id) }}">{{ item.book.title }}</a>
+            <span>for <a href="{{ url_for('members.detail', user_id=item.patron.user_id) }}">{{ item.patron.username }}</a></span>
+            <span class="reservation-status is-{{ item.reservation.status }}">{{ item.reservation.status|title }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">No open reservations right now.</p>
+    {% endif %}
+  </section>
+
+  <section class="admin-panel archived-dashboard-panel" aria-labelledby="archived-books-title">
+    <div class="admin-panel-heading">
+      <div><p class="eyebrow">CATALOG CARE</p><h2 id="archived-books-title">Archived books</h2></div>
+      <a href="{{ url_for('books.archived') }}">View all</a>
+    </div>
+    {% if dashboard.archived_books %}
+      <ul class="archived-dashboard-list">
+        {% for book in dashboard.archived_books %}
+          <li>
+            {% if book.cover %}
+              <img src="{{ url_for('static', filename='uploads/' ~ book.cover) }}" alt="Cover of {{ book.title }}">
+            {% else %}
+              <span class="mini-cover" aria-hidden="true">{{ book.title[:1] }}</span>
+            {% endif %}
+            <span class="archived-dashboard-book">
+              <strong>{{ book.title }}</strong>
+              <small>Archived {{ book.archived_at.strftime("%b %d, %Y") if book.archived_at else "Date not recorded" }}</small>
+            </span>
+            <form method="post" action="{{ url_for('books.restore', book_id=book.book_id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="button button-secondary" type="submit">Restore</button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">No books are archived.</p>
+    {% endif %}
+  </section>
+
   <section class="admin-quick-links" aria-label="Librarian tools">
     <a href="{{ url_for('books.manage') }}"><span aria-hidden="true">▤</span> Manage books</a>
+    <a href="{{ url_for('books.archived') }}"><span aria-hidden="true">▱</span> Archived books <b>{{ dashboard.stats.archived_books }}</b></a>
     <a href="{{ url_for('books.add') }}"><span aria-hidden="true">＋</span> Add a book</a>
     <a href="{{ url_for('loans.index') }}"><span aria-hidden="true">↗</span> Manage loans</a>
     <a href="{{ url_for('loans.overdue') }}"><span aria-hidden="true">◷</span> Overdue loans</a>

@@ -100,7 +100,7 @@
       <p>A new favorite is waiting somewhere on the shelves.</p>
     </div>
     {% if session.get('user_id') %}
-    <a class="landing-button landing-button-light" href="{{ url_for('dashboard.patron_dashboard' if session.get('role') == 'patron' else 'dashboard.librarian_dashboard') }}">Go to dashboard <span aria-hidden="true">→</span></a>
+    <a class="landing-button landing-button-light" href="{{ url_for('books.catalog' if session.get('role') == 'patron' else 'dashboard.librarian_dashboard') }}">{{ "Browse books" if session.get('role') == 'patron' else "Go to dashboard" }} <span aria-hidden="true">→</span></a>
     {% else %}
     <a class="landing-button landing-button-light" href="{{ url_for('auth.register') }}">Sign up <span aria-hidden="true">→</span></a>
     {% endif %}

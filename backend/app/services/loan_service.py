@@ -60,11 +60,6 @@ class LoanService:
         )
         if existing_reservation and existing_reservation.status != Reservation.READY:
             raise ValidationError("You already have a reservation in the queue.")
-        ready_reservation = self._reservations.find_ready_for_book(book_id)
-        if ready_reservation and ready_reservation.patron_id != patron.user_id:
-            raise ValidationError("This book is being held for another patron.")
-        if ready_reservation is not None and existing_reservation is None:
-            raise ValidationError("This book is being held for another patron.")
         if existing_reservation and existing_reservation.status == Reservation.READY:
             reservation = existing_reservation
 
@@ -88,13 +83,14 @@ class LoanService:
         if self._loan_repo.find_active_loan(patron.user_id, book_id):
             raise ValidationError("You are already borrowing this book.")
 
-        book.borrow()
+        previous_available = book.available_copies
+        book.borrow(reserved=reservation is not None)
         due_date = add_days(borrowed_at, book.loan_days)
-        return book, borrowed_at, due_date, reservation
+        return book, borrowed_at, due_date, reservation, previous_available
 
     def borrow_book(self, patron, book_id):
         loans = self._loan_repo.find_patron_loans(patron.user_id)
-        book, borrowed_at, due_date, reservation = self._prepare_borrow(
+        book, borrowed_at, due_date, reservation, previous_available = self._prepare_borrow(
             patron, book_id, loans
         )
         loan = self._loan_repo.create_loan(
@@ -112,6 +108,12 @@ class LoanService:
             f"{book.title} is due on {loan.due_date:%b %d, %Y}.",
             category="loan",
             link="/loans/",
+            dedupe_key=f"loan:{loan.loan_id}:borrowed",
+        )
+        self._notifications.notify_inventory_transition(
+            book,
+            previous_available,
+            f"book:{book.book_id}:loan:{loan.loan_id}",
         )
         return loan
 
@@ -124,6 +126,7 @@ class LoanService:
 
         loans = self._loan_repo.find_patron_loans(patron.user_id)
         entries = []
+        previous_availability = []
         pending_count = 0
         for book_id in book_ids:
             entry = self._prepare_borrow(
@@ -132,7 +135,7 @@ class LoanService:
                 loans,
                 pending_count=pending_count,
             )
-            book, borrowed_at, due_date, reservation = entry
+            book, borrowed_at, due_date, reservation, previous_available = entry
             entries.append(
                 (
                     book,
@@ -141,10 +144,11 @@ class LoanService:
                     reservation.reservation_id if reservation else None,
                 )
             )
+            previous_availability.append(previous_available)
             if reservation is None:
                 pending_count += 1
         loans = self._loan_repo.create_loans_atomic(patron.user_id, entries)
-        for loan in loans:
+        for loan, previous_available in zip(loans, previous_availability):
             book = self._book_repo.find_book(loan.book_id)
             self._notifications.notify(
                 patron.user_id,
@@ -152,7 +156,14 @@ class LoanService:
                 f"{book.title if book else 'Your book'} is due on {loan.due_date:%b %d, %Y}.",
                 category="loan",
                 link="/loans/",
+                dedupe_key=f"loan:{loan.loan_id}:borrowed",
             )
+            if book is not None:
+                self._notifications.notify_inventory_transition(
+                    book,
+                    previous_available,
+                    f"book:{book.book_id}:loan:{loan.loan_id}",
+                )
         return loans
 
     def reserve_book(self, patron, book_id):
@@ -162,7 +173,7 @@ class LoanService:
             raise ValidationError("This book is no longer in the catalog.")
         if book.kind == "reference":
             raise ValidationError("Reference books can only be read in the library.")
-        if book.available:
+        if book.available_copies > 0:
             raise ValidationError("This book is available to borrow now.")
         if self._loan_repo.find_active_loan(patron.user_id, book_id):
             raise ValidationError("You are already borrowing this book.")
@@ -187,6 +198,15 @@ class LoanService:
             f"You joined the queue for {book.title}.",
             category="loan",
             link=f"/books/{book.book_id}",
+            dedupe_key=f"reservation:{reservation.reservation_id}:placed",
+        )
+        self._notifications.notify_role(
+            "librarian",
+            "New reservation placed",
+            f"{patron.username} reserved {book.title}.",
+            category="reservation",
+            link="/librarian/reservations?status=waiting",
+            dedupe_key=f"reservation:{reservation.reservation_id}:placed",
         )
         return reservation
 
@@ -196,12 +216,21 @@ class LoanService:
             if patron is not None and patron.is_patron()
             else None
         )
-        ready_reservation = self._reservations.find_ready_for_book(book_id)
+        ready_reservation = (
+            self._reservations.find_ready_for_patron_book(
+                patron.user_id,
+                book_id,
+            )
+            if patron is not None and patron.is_patron()
+            else None
+        )
         return {
             "own_reservation": own_reservation,
             "held_for_other": (
-                ready_reservation is not None
-                and (patron is None or ready_reservation.patron_id != patron.user_id)
+                self._reservations.has_ready_for_other_patron(
+                    patron.user_id if patron is not None else -1,
+                    book_id,
+                )
             ),
             "ready_for_patron": (
                 ready_reservation is not None
@@ -216,13 +245,8 @@ class LoanService:
         return self._reservations.find_for_patron(patron.user_id)
 
     def reservation_cards(self, patron):
-        return [
-            {
-                "reservation": reservation,
-                "book": self._book_repo.find_book(reservation.book_id),
-            }
-            for reservation in self.reservations_for(patron)
-        ]
+        patron.require("view_loans")
+        return self._reservations.find_patron_cards(patron.user_id)
 
     def active_reservation_count(self, patron_id):
         return self._reservations.count_open_for_patron(patron_id)
@@ -241,6 +265,8 @@ class LoanService:
                     "status": status,
                     "outstanding": loan.outstanding(current_date),
                     "fees": loan.fee_breakdown(current_date),
+                    "days_left": max(0, (loan.due_date - current_date).days),
+                    "days_overdue": max(0, (current_date - loan.due_date).days),
                 }
             )
         return cards
@@ -306,6 +332,7 @@ class LoanService:
             f"{book.title} was successfully returned.",
             category="loan",
             link="/loans/",
+            dedupe_key=f"loan:{loan.loan_id}:returned",
         )
 
         return loan
@@ -342,6 +369,22 @@ class LoanService:
 
         amount = loan.pay_late_fee(today())
         self._loan_repo.update_loan(loan)
+        self._notifications.notify(
+            patron.user_id,
+            "Late fee paid",
+            f"Your late fee of ₱{amount:,.2f} was recorded as paid.",
+            category="fee",
+            link="/loans/",
+            dedupe_key=f"loan:{loan.loan_id}:late-fee:paid",
+        )
+        self._notifications.notify_role(
+            "librarian",
+            "Fee payment received",
+            f"A late fee of ₱{amount:,.2f} was paid for loan #{loan.loan_id}.",
+            category="fee",
+            link="/loans/",
+            dedupe_key=f"loan:{loan.loan_id}:late-fee:paid",
+        )
 
         return amount
 
@@ -351,17 +394,31 @@ class LoanService:
 
         amount = loan.pay_loss_fee()
         self._loan_repo.update_loan(loan)
+        self._notifications.notify(
+            patron.user_id,
+            "Loss fee paid",
+            f"Your loss fee of ₱{amount:,.2f} was recorded as paid.",
+            category="fee",
+            link="/loans/",
+            dedupe_key=f"loan:{loan.loan_id}:loss-fee:paid",
+        )
+        self._notifications.notify_role(
+            "librarian",
+            "Fee payment received",
+            f"A loss fee of ₱{amount:,.2f} was paid for loan #{loan.loan_id}.",
+            category="fee",
+            link="/loans/",
+            dedupe_key=f"loan:{loan.loan_id}:loss-fee:paid",
+        )
 
         return amount
 
-    def process_return(self, librarian, book_id, lost=False):
+    def process_return(self, librarian, loan_id, lost=False):
         librarian.require("update_return_status")
-        book = self._get_book(book_id)
-
-        loan = self._loan_repo.find_active_loan_by_book(book_id)
-
-        if loan is None:
-            raise NotFoundError("That book has no active loan.")
+        loan = self._loan_repo.find_loan(loan_id)
+        if loan is None or loan.is_returned():
+            raise NotFoundError("That loan is already closed.")
+        book = self._get_book(loan.book_id)
 
         if lost:
             loan.mark_lost(Config.LOSS_FEE)
@@ -382,6 +439,7 @@ class LoanService:
             ),
             category="loan",
             link="/loans/",
+            dedupe_key=f"loan:{loan.loan_id}:closed",
         )
 
         return loan

@@ -13,10 +13,13 @@ class BookRecord(db.Model):
     cover = db.Column(db.String(255), nullable=True)
     available = db.Column(db.Boolean, nullable=False, default=True)
     catalog = db.Column(db.Boolean, nullable=False, default=True)
+    archived_at = db.Column(db.DateTime, nullable=True)
+    total_copies = db.Column(db.Integer, nullable=False, default=1, server_default="1")
 
     __table_args__ = (
         db.CheckConstraint(
             "kind IN ('standard', 'new_release', 'reference')",
             name="valid_book_kind",
         ),
+        db.CheckConstraint("total_copies >= 0", name="nonnegative_book_copies"),
     )

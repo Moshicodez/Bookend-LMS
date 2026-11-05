@@ -1,29 +1,3 @@
-const menuToggle = document.querySelector("[data-menu-toggle]");
-const navigation = document.querySelector("[data-navigation]");
-
-if (menuToggle instanceof HTMLButtonElement && navigation instanceof HTMLElement) {
-  const setMenuOpen = (open) => {
-    menuToggle.setAttribute("aria-expanded", String(open));
-    menuToggle.setAttribute("aria-label", open ? "Close navigation menu" : "Open navigation menu");
-    navigation.classList.toggle("is-open", open);
-  };
-
-  menuToggle.addEventListener("click", () => {
-    setMenuOpen(menuToggle.getAttribute("aria-expanded") !== "true");
-  });
-
-  navigation.querySelectorAll("a").forEach((link) => {
-    link.addEventListener("click", () => setMenuOpen(false));
-  });
-
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && menuToggle.getAttribute("aria-expanded") === "true") {
-      setMenuOpen(false);
-      menuToggle.focus();
-    }
-  });
-}
-
 const carouselButtons = Array.from(document.querySelectorAll("[data-carousel-target]"));
 const updateCarouselButtons = (track) => {
   if (!(track instanceof HTMLElement)) return;

@@ -1,25 +1,54 @@
 {% extends "base.html" %}
 {% block title %}Add a book | Bookend Library{% endblock %}
+{% block body_class %}book-form-page{% endblock %}
+{% block page_styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/books.css') }}">
+{% endblock %}
 {% block content %}
-  <h1>Add a book</h1>
-  <form method="post" action="{{ url_for('books.add') }}" enctype="multipart/form-data">
+  <section class="page-heading book-form-heading">
+    <p class="eyebrow">LIBRARIAN TOOLS</p>
+    <h1>Add a book</h1>
+    <p>Add a title, choose its book type, and provide an optional cover.</p>
+  </section>
+  <form class="book-editor-form" method="post" action="{{ url_for('books.add') }}" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label for="title">Title</label>
-    <input id="title" name="title" maxlength="250" required>
-    <label for="author">Author</label>
-    <input id="author" name="author" maxlength="160" required>
-    <label for="genre">Genre</label>
-    <input id="genre" name="genre" maxlength="100">
-    <label for="description">Description</label>
-    <textarea id="description" name="description"></textarea>
-    <label for="cover">Book cover (JPG, PNG, or WebP; max 2 MB)</label>
-    <input id="cover" name="cover" type="file" accept=".jpg,.png,.webp,image/jpeg,image/png,image/webp">
-    <label for="kind">Book type</label>
-    <select id="kind" name="kind">
-      <option value="standard">Standard</option>
-      <option value="new_release">New release</option>
-      <option value="reference">Reference (in-library use)</option>
-    </select>
-    <button type="submit">Save book</button>
+    <div class="book-editor-fields">
+      <div class="book-editor-field">
+        <label for="title">Title</label>
+        <input id="title" name="title" value="{{ request.form.get('title', '') }}" maxlength="250" required>
+      </div>
+      <div class="book-editor-field">
+        <label for="author">Author</label>
+        <input id="author" name="author" value="{{ request.form.get('author', '') }}" maxlength="160" required>
+      </div>
+      <div class="book-editor-field">
+        <label for="genre">Genre</label>
+        <input id="genre" name="genre" value="{{ request.form.get('genre', '') }}" maxlength="100">
+      </div>
+      <div class="book-editor-field">
+        <label for="kind">Book type</label>
+        <select id="kind" name="kind">
+          <option value="standard" {% if request.form.get('kind', 'standard') == 'standard' %}selected{% endif %}>Standard</option>
+          <option value="new_release" {% if request.form.get('kind') == 'new_release' %}selected{% endif %}>New release</option>
+          <option value="reference" {% if request.form.get('kind') == 'reference' %}selected{% endif %}>Reference (in-library use)</option>
+        </select>
+      </div>
+      <div class="book-editor-field">
+        <label for="total_copies">Total copies</label>
+        <input id="total_copies" name="total_copies" type="number" min="0" step="1" value="{{ request.form.get('total_copies', '1') }}" required>
+      </div>
+      <div class="book-editor-field book-editor-field--wide">
+        <label for="description">Description</label>
+        <textarea id="description" name="description" rows="5">{{ request.form.get('description', '') }}</textarea>
+      </div>
+      <div class="book-editor-field book-editor-field--wide">
+        <label for="cover">Book cover <span class="book-editor-hint-inline">JPG, PNG, or WebP · max 2 MB</span></label>
+        <input class="book-editor-file" id="cover" name="cover" type="file" accept=".jpg,.png,.webp,image/jpeg,image/png,image/webp">
+      </div>
+    </div>
+    <div class="book-editor-actions">
+      <a class="button button-secondary" href="{{ url_for('books.manage') }}">Cancel</a>
+      <button class="button" type="submit">Save book</button>
+    </div>
   </form>
 {% endblock %}

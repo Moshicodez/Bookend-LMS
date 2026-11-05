@@ -2,6 +2,7 @@
 {% block title %}{{ book.title }} | Bookend Library{% endblock %}
 {% block page_styles %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/books.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/library-pages.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='dist/books.css') }}">
 {% endblock %}
 {% block page_scripts %}
@@ -12,65 +13,122 @@
     <a href="{{ url_for('books.catalog') }}">Books</a>
     <span aria-hidden="true">/</span>
     {% if book.genre %}<a href="{{ url_for('books.catalog', genre=book.genre) }}">{{ book.genre }}</a><span aria-hidden="true">/</span>{% endif %}
-    <span>{{ book.title }}</span>
+    <span aria-current="page">{{ book.title }}</span>
   </nav>
+
   <article class="book-detail-layout">
-    {% if book.cover %}
-      <img class="detail-cover" src="{{ url_for('static', filename='uploads/' ~ book.cover) }}" alt="Cover of {{ book.title }}">
-    {% endif %}
-    <h1>{{ book.title }}</h1>
-    <p>By {{ book.author }}</p>
-    {% if book.genre %}<p>Genre: {{ book.genre }}</p>{% endif %}
-    <p class="book-rating" aria-label="{{ '%.1f'|format(rating.average) }} out of 5 stars from {{ rating.count }} reviews">
-      <span aria-hidden="true">{{ "★" if rating.count else "☆" }} {{ "%.1f"|format(rating.average) }}</span>
-      <span>({{ rating.count }} reviews)</span>
-    </p>
-    {% if book.description %}<p>{{ book.description }}</p>{% endif %}
-    <p>Status:
-      {% if not book.catalog %}Archived
-      {% elif reservation_info.held_for_other %}Reserved for another patron
-      {% elif reservation_info.ready_for_patron %}Ready for you
-      {% elif book.can_borrow() %}Available
-      {% elif book.available %}In-library use
-      {% else %}On loan
+    <div class="book-detail-cover-wrap">
+      {% if book.cover %}
+        <img class="detail-cover" src="{{ url_for('static', filename='uploads/' ~ book.cover) }}" alt="Cover of {{ book.title }}">
+      {% else %}
+        <div class="detail-cover detail-cover-placeholder" aria-label="No cover available for {{ book.title }}">
+          <span>{{ book.title }}</span>
+          <small>{{ book.author }}</small>
+        </div>
       {% endif %}
-    </p>
-    {% if book.can_borrow() %}<p>Loan period: {{ book.loan_days }} days</p>{% endif %}
+    </div>
+    <div class="book-detail-copy">
+      <p class="eyebrow">BOOK DETAILS</p>
+      {% if book.genre %}<a class="detail-genre-chip" href="{{ url_for('books.catalog', genre=book.genre) }}">{{ book.genre }}</a>{% endif %}
+      <h1>{{ book.title }}</h1>
+      <p class="detail-author">By {{ book.author }}</p>
+      <p class="book-rating detail-rating" aria-label="{{ '%.1f'|format(rating.average) }} out of 5 stars from {{ rating.count }} reviews">
+        <span aria-hidden="true">{{ "★" if rating.count else "☆" }} {{ "%.1f"|format(rating.average) }}</span>
+        <span>{{ rating.count }} review{{ "" if rating.count == 1 else "s" }}</span>
+      </p>
+      <span class="detail-availability
+        {% if not book.catalog %}is-archived
+        {% elif reservation_info.ready_for_patron %}is-ready
+        {% elif reservation_info.held_for_other and not book.can_borrow() %}is-reserved
+        {% elif book.can_borrow() %}is-available
+        {% elif book.availability_status == "In-library use" %}is-reference
+        {% else %}is-on-loan{% endif %}">
+        {% if not book.catalog %}Archived
+        {% elif reservation_info.ready_for_patron %}Ready for you
+        {% elif reservation_info.held_for_other and not book.can_borrow() %}Reserved for another patron
+        {% elif book.can_borrow() %}Available
+        {% else %}{{ book.availability_status }}{% endif %}
+      </span>
+      {% if book.description %}<p class="book-detail-description">{{ book.description }}</p>{% endif %}
+
+      <div class="book-detail-actions">
+        {% if user and user.is_patron() and reservation_info.ready_for_patron %}
+          <form method="post" action="{{ url_for('loans.borrow', book_id=book.book_id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="button" type="submit">Borrow reserved book</button>
+          </form>
+        {% elif user and user.is_patron() and book.can_borrow() and not active_loan %}
+          <form method="post" action="{{ url_for('patron.basket_add', book_id=book.book_id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="next" value="{{ url_for('books.detail', book_id=book.book_id) }}">
+            <button class="button" type="submit">Add to basket</button>
+          </form>
+        {% elif user and user.is_patron() and not book.can_borrow() and active_loan_count and not active_loan and not reservation_info.own_reservation %}
+          <form method="post" action="{{ url_for('loans.reserve', book_id=book.book_id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="button" type="submit">Join reservation queue</button>
+          </form>
+        {% elif not user and book.can_borrow() %}
+          <a class="button" href="{{ url_for('auth.login') }}">Sign in to borrow</a>
+        {% endif %}
+
+        {% if user and user.is_patron() %}
+          <form method="post" action="{{ url_for('social.toggle_favorite', book_id=book.book_id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="next" value="{{ url_for('books.detail', book_id=book.book_id) }}">
+            <button class="button button-secondary" type="submit" aria-pressed="{{ 'true' if is_favorite else 'false' }}">{{ "♥ Saved" if is_favorite else "♡ Save book" }}</button>
+          </form>
+        {% elif not user %}
+          <a class="button button-secondary" href="{{ url_for('auth.login') }}">♡ Save book</a>
+        {% endif %}
+
+        {% if user and user.is_librarian() %}
+          <a class="button button-secondary" href="{{ url_for('books.edit', book_id=book.book_id) }}">Edit details</a>
+          {% if book.on_loan_copies == 0 and book.reserved_copies == 0 and book.catalog %}
+            <form method="post" action="{{ url_for('books.archive', book_id=book.book_id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="button button-secondary" type="submit">Archive book</button>
+            </form>
+          {% endif %}
+        {% endif %}
+      </div>
+
+      {% if reservation_info.own_reservation %}
+        <p class="reservation-detail-note">Your reservation is {{ reservation_info.own_reservation.status }}.</p>
+        {% if reservation_info.own_reservation.status == "ready" %}
+          <p class="reservation-detail-note">Borrow this book before another patron can check it out.</p>
+        {% elif reservation_info.waiting_count %}
+          <p class="reservation-detail-note">{{ reservation_info.waiting_count }} patron{{ "" if reservation_info.waiting_count == 1 else "s" }} waiting.</p>
+        {% endif %}
+      {% endif %}
+      {% if user and user.is_patron() and active_loan and active_loan.patron_id == user.user_id %}
+        <form class="detail-return-form" method="post" action="{{ url_for('loans.return_book', book_id=book.book_id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="button button-secondary" type="submit">Return this book</button>
+        </form>
+      {% endif %}
+
+      <section class="about-book" aria-labelledby="about-book-title">
+        <h2 id="about-book-title">About this book</h2>
+        <dl>
+          <div><dt>Author</dt><dd>{{ book.author }}</dd></div>
+          {% if book.genre %}<div><dt>Genre</dt><dd>{{ book.genre }}</dd></div>{% endif %}
+          <div><dt>Availability</dt><dd>{{ "In the catalog" if book.catalog else "Archived" }}</dd></div>
+          <div><dt>Copies</dt><dd>{{ book.available_copies }} available of {{ book.total_copies }} total{% if book.on_loan_copies %} · {{ book.on_loan_copies }} on loan{% endif %}{% if book.reserved_copies %} · {{ book.reserved_copies }} reserved{% endif %}</dd></div>
+          {% if book.can_borrow() %}<div><dt>Loan period</dt><dd>{{ book.loan_days }} days</dd></div>{% endif %}
+          <div><dt>Reader rating</dt><dd>{{ "%.1f"|format(rating.average) }} / 5 · {{ rating.count }} reviews</dd></div>
+        </dl>
+      </section>
+    </div>
   </article>
-  {% if user and user.is_patron() %}
-    <form method="post" action="{{ url_for('social.toggle_favorite', book_id=book.book_id) }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <input type="hidden" name="next" value="{{ url_for('books.detail', book_id=book.book_id) }}">
-      <button type="submit" aria-pressed="{{ 'true' if is_favorite else 'false' }}">{{ "♥ Saved" if is_favorite else "♡ Save book" }}</button>
-    </form>
-  {% elif not user %}
-    <a class="button" href="{{ url_for('auth.login') }}">♡ Save book</a>
-  {% endif %}
-  {% if user and user.is_patron() and reservation_info.ready_for_patron %}
-    <p>Your reservation is ready. Borrow it before someone else can check it out.</p>
-    <form method="post" action="{{ url_for('loans.borrow', book_id=book.book_id) }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit">Borrow your reserved book</button>
-    </form>
-  {% elif user and user.is_patron() and book.can_borrow() and not reservation_info.held_for_other %}
-    <form method="post" action="{{ url_for('patron.basket_add', book_id=book.book_id) }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <input type="hidden" name="next" value="{{ url_for('books.detail', book_id=book.book_id) }}">
-      <button type="submit">Add to basket</button>
-    </form>
-  {% elif user and user.is_patron() and active_loan and not reservation_info.own_reservation %}
-    <p>{{ reservation_info.waiting_count }} patron{{ "" if reservation_info.waiting_count == 1 else "s" }} waiting</p>
-    <form method="post" action="{{ url_for('loans.reserve', book_id=book.book_id) }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit">Join reservation queue</button>
-    </form>
-  {% elif reservation_info.own_reservation %}
-    <p>Your reservation is {{ reservation_info.own_reservation.status }}.</p>
-  {% endif %}
-  <section class="reviews-section" aria-labelledby="reviews-title">
-    <h2 id="reviews-title">Book reviews</h2>
+
+  <section class="reviews-section detail-reviews" aria-labelledby="reviews-title">
+    <div class="library-section-heading">
+      <div><p class="eyebrow">FROM THE COMMUNITY</p><h2 id="reviews-title">Ratings &amp; reviews</h2></div>
+      <span class="detail-review-summary">★ {{ "%.1f"|format(rating.average) }} · {{ rating.count }} review{{ "" if rating.count == 1 else "s" }}</span>
+    </div>
     {% if user and user.is_patron() and own_review %}
-      <form method="post" action="{{ url_for('social.update_review', review_id=own_review.review_id) }}">
+      <form class="review-form" method="post" action="{{ url_for('social.update_review', review_id=own_review.review_id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label for="edit-rating">Your rating</label>
         <select id="edit-rating" name="rating" required>
@@ -80,14 +138,14 @@
         </select>
         <label for="edit-comment">Your review</label>
         <textarea id="edit-comment" name="comment" maxlength="2000">{{ own_review.comment }}</textarea>
-        <button type="submit">Update review</button>
+        <button class="button" type="submit">Update review</button>
       </form>
-      <form method="post" action="{{ url_for('social.delete_review', review_id=own_review.review_id) }}">
+      <form class="review-delete-form" method="post" action="{{ url_for('social.delete_review', review_id=own_review.review_id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit">Delete your review</button>
+        <button class="button button-secondary" type="submit">Delete your review</button>
       </form>
     {% elif user and user.is_patron() %}
-      <form method="post" action="{{ url_for('social.create_review', book_id=book.book_id) }}">
+      <form class="review-form" method="post" action="{{ url_for('social.create_review', book_id=book.book_id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label for="review-rating">Your rating</label>
         <select id="review-rating" name="rating" required>
@@ -96,9 +154,10 @@
         </select>
         <label for="review-comment">Your review</label>
         <textarea id="review-comment" name="comment" maxlength="2000"></textarea>
-        <button type="submit">Write review</button>
+        <button class="button" type="submit">Write review</button>
       </form>
     {% endif %}
+
     {% if reviews %}
       <div class="review-list">
         {% for entry in reviews %}
@@ -110,28 +169,13 @@
         {% endfor %}
       </div>
     {% else %}
-      <p>No reviews yet. Be the first to share your thoughts.</p>
+      <section class="empty-state"><h3>No reviews yet</h3><p>Be the first to share your thoughts about this book.</p></section>
     {% endif %}
   </section>
-  {% if user and user.is_patron() and active_loan and active_loan.patron_id == user.user_id %}
-    <form method="post" action="{{ url_for('loans.return_book', book_id=book.book_id) }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit">Return this book</button>
-    </form>
-  {% endif %}
-  {% if user and user.is_librarian() %}
-    <p><a href="{{ url_for('books.edit', book_id=book.book_id) }}">Edit details</a></p>
-    <p><a href="{{ url_for('books.manage') }}">Back to books</a></p>
-    {% if book.available and book.catalog %}
-      <form method="post" action="{{ url_for('books.archive', book_id=book.book_id) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit">Archive book</button>
-      </form>
-    {% endif %}
-  {% endif %}
+
   {% if more_books %}
     <section class="more-books-section" aria-labelledby="more-books-title">
-      <h2 id="more-books-title">More in {{ book.genre }}</h2>
+      <div class="library-section-heading"><h2 id="more-books-title">More in {{ book.genre }}</h2><a href="{{ url_for('books.catalog', genre=book.genre) }}">Explore genre</a></div>
       <div class="book-grid">
         {% for book in more_books %}
           {% set cover_color = cover_colors[loop.index0 % cover_colors|length] %}

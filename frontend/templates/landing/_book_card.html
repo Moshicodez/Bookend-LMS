@@ -1,11 +1,12 @@
 {% set book_url = url_for('books.detail', book_id=book.book_id) %}
 {% set can_borrow = book.can_borrow() %}
 {% set cover_url = url_for('static', filename='uploads/' ~ book.cover) if book.cover else '' %}
-{% set availability_label = "Available" if can_borrow else ("In-library use" if book.available else "On loan") %}
+{% set availability_label = book.availability_status %}
 {% set is_patron = current_user and current_user.is_patron() %}
 {% set is_librarian = current_user and current_user.is_librarian() %}
 {% set role = "patron" if is_patron else ("librarian" if is_librarian else "") %}
 {% set is_favorite = book.book_id in favorite_ids if is_patron else False %}
+{% set already_borrowing = book.book_id in active_book_ids if is_patron else False %}
 
 <div
   class="landing-book-card"
@@ -36,6 +37,7 @@
     <span class="availability-badge{% if not can_borrow %} is-borrowed{% endif %}">
       {{ availability_label }}
     </span>
+    <span class="book-stock-count">{{ book.available_copies }} available of {{ book.total_copies }}</span>
     <h3><a href="{{ book_url }}">{{ book.title }}</a></h3>
     <p>{{ book.author }}</p>
     {% if book.genre %}<span class="book-genre-label">{{ book.genre }}</span>{% endif %}
@@ -54,7 +56,7 @@
       {% elif not current_user %}
         <a class="icon-button heart-button" href="{{ url_for('auth.login') }}" aria-label="Sign in to save this book">♡</a>
       {% endif %}
-      {% if can_borrow and is_patron %}
+      {% if can_borrow and is_patron and not already_borrowing %}
         <form method="post" action="{{ url_for('patron.basket_add', book_id=book.book_id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
@@ -65,7 +67,7 @@
       {% endif %}
       {% if is_librarian %}
         <a class="button button-secondary" href="{{ url_for('books.edit', book_id=book.book_id) }}">Edit</a>
-        {% if book.available and book.catalog %}
+        {% if book.on_loan_copies == 0 and book.reserved_copies == 0 and book.catalog %}
           <form method="post" action="{{ url_for('books.archive', book_id=book.book_id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">

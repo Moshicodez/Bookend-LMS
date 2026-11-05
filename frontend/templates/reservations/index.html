@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Your reservations | Bookend Library{% endblock %}
+{% block page_styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/library-pages.css') }}">
+{% endblock %}
+{% block content %}
+  <section class="page-heading library-page-heading">
+    <p class="eyebrow">YOUR ACCOUNT</p>
+    <h1>Your reservations</h1>
+    <p>Keep track of books you’ve joined the queue for.</p>
+  </section>
+
+  {% if reservation_cards %}
+    <section class="reservation-grid" aria-label="Your active reservations">
+      {% for card in reservation_cards %}
+        <article class="reservation-card">
+          <a class="reservation-cover" href="{{ url_for('books.detail', book_id=card.book.book_id) }}">
+            {% if card.book.cover %}
+              <img src="{{ url_for('static', filename='uploads/' ~ card.book.cover) }}" alt="Cover of {{ card.book.title }}">
+            {% else %}
+              <span aria-hidden="true">{{ card.book.title[:1]|upper }}</span>
+            {% endif %}
+          </a>
+          <div class="reservation-card-copy">
+            <span class="reservation-status is-{{ card.reservation.status }}">{{ card.reservation.status|title }}</span>
+            <h2><a href="{{ url_for('books.detail', book_id=card.book.book_id) }}">{{ card.book.title }}</a></h2>
+            <p class="muted">By {{ card.book.author }}</p>
+            <p class="reservation-position">
+              {% if card.reservation.status == "ready" %}
+                Ready to borrow
+              {% elif card.queue_position %}
+                Queue position {{ card.queue_position }}
+              {% else %}
+                Waiting in the queue
+              {% endif %}
+            </p>
+            <p class="muted">Reserved {{ card.reservation.created_at.strftime("%b %d, %Y") }}</p>
+            {% if card.reservation.status == "ready" %}
+              <form method="post" action="{{ url_for('loans.borrow', book_id=card.book.book_id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="button" type="submit">Borrow reserved book</button>
+              </form>
+            {% endif %}
+          </div>
+        </article>
+      {% endfor %}
+    </section>
+  {% else %}
+    <section class="empty-state reservations-empty">
+      <span class="reservations-empty-icon" aria-hidden="true">▤</span>
+      <h2>No reservations yet</h2>
+      <p>When a book is on loan, you can reserve it and we’ll let you know when it’s ready.</p>
+      <a class="button" href="{{ url_for('books.catalog') }}">Explore the catalog</a>
+    </section>
+  {% endif %}
+{% endblock %}

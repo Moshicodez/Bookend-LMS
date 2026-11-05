@@ -112,7 +112,7 @@ class SocialFeatureRouteTests(unittest.TestCase):
 
         detail = self.client.get(detail_url)
         self.assertIn(b"4.0", detail.data)
-        self.assertIn(b"(1 reviews)", detail.data)
+        self.assertIn(b"1 review", detail.data)
         self.assertIn(b"A thoughtful read.", detail.data)
         catalog = self.client.get("/books/")
         self.assertIn(b"4.0", catalog.data)
@@ -129,7 +129,7 @@ class SocialFeatureRouteTests(unittest.TestCase):
         deleted = self._post(f"/reviews/{review.review_id}/delete", token)
         self.assertEqual(deleted.status_code, 302)
         self.assertEqual(db.session.query(ReviewRecord).count(), 0)
-        self.assertIn(b"(0 reviews)", self.client.get(detail_url).data)
+        self.assertIn(b"0 reviews", self.client.get(detail_url).data)
 
     def test_review_constraints_and_review_ownership(self):
         token = self._sign_in(self.patron)

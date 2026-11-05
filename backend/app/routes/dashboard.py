@@ -33,15 +33,10 @@ def dashboard():
     user = _signed_in_user()
     if user is None:
         return redirect(url_for("auth.login"))
-    return redirect(url_for(f"dashboard.{user.home_endpoint()}"))
-
-
-@dashboard_bp.route("/patron")
-def patron_dashboard():
-    user = _signed_in_user("patron")
-    if user is None:
-        return redirect(url_for("auth.login"))
-    return render_template("dashboard/patron_dashboard.html", username=user.username)
+    endpoint = user.home_endpoint()
+    if user.is_librarian():
+        endpoint = f"dashboard.{endpoint}"
+    return redirect(url_for(endpoint))
 
 
 @dashboard_bp.route("/librarian")

@@ -78,6 +78,40 @@ class BackendRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"A Book", response.data)
 
+    def test_patron_loans_are_grouped_as_current_and_history(self):
+        self.register_patron()
+        book = BookRepository().create(
+            Book(None, "Loan design book", "Writer", "History", "")
+        )
+        self.post(f"/loans/borrow/{book.book_id}")
+
+        current_page = self.client.get("/loans/")
+        self.assertIn(b"Currently borrowed", current_page.data)
+        self.assertIn(b"Loan design book", current_page.data)
+        self.assertIn(b"Return book", current_page.data)
+        self.assertIn(b"Fees due", current_page.data)
+
+        self.post(f"/loans/return/{book.book_id}")
+        history_page = self.client.get("/loans/")
+        self.assertIn(b"History", history_page.data)
+        self.assertIn(b"Returned", history_page.data)
+
+    def test_patron_dashboard_redirects_to_home_and_is_removed(self):
+        self.register_patron()
+
+        dashboard = self.client.get("/dashboard")
+        self.assertEqual(dashboard.status_code, 302)
+        self.assertEqual(dashboard.location, "/")
+        self.assertEqual(self.client.get("/patron").status_code, 404)
+
+        home = self.client.get("/")
+        self.assertNotIn(b">Dashboard</a>", home.data)
+
+    def test_peso_filter_formats_money_with_two_decimals(self):
+        format_peso = self.app.jinja_env.filters["peso"]
+        self.assertEqual(format_peso(1234.5), "₱1,234.50")
+        self.assertEqual(format_peso(0), "₱0.00")
+
     def test_patron_can_borrow_and_return_a_book(self):
         self.register_patron()
         book = BookRepository().create(Book(None, "Available", "Writer", "", ""))
@@ -117,6 +151,11 @@ class BackendRouteTests(unittest.TestCase):
             b"Your reservation is waiting",
             self.client.get(f"/books/{book.book_id}").data,
         )
+        reservations_page = self.client.get("/reservations")
+        self.assertEqual(reservations_page.status_code, 200)
+        self.assertIn(b"Queue position 1", reservations_page.data)
+        self.assertIn(b"Popular book", reservations_page.data)
+        self.assertNotIn(b"Your reservations", self.client.get("/loans/").data)
 
     def test_librarian_can_add_book_and_manage_members(self):
         self.register_patron()
@@ -130,6 +169,12 @@ class BackendRouteTests(unittest.TestCase):
             data={"username": "staff", "password": "StrongPass1!"},
         )
 
+        add_page = self.client.get("/books/new")
+        self.assertEqual(add_page.status_code, 200)
+        self.assertIn(b'class="book-editor-form"', add_page.data)
+        self.assertIn(b'name="kind"', add_page.data)
+        self.assertIn(b'name="csrf_token"', add_page.data)
+
         created = self.post(
             "/books/new",
             data={
@@ -141,11 +186,45 @@ class BackendRouteTests(unittest.TestCase):
             },
         )
         self.assertEqual(created.status_code, 302)
+        self.assertIsNotNone(
+            BookRepository().find_by_title_author("New catalog book", "Writer")
+        )
         self.assertEqual(self.client.get("/members/").status_code, 200)
 
         self.post(f"/members/{patron.user_id}/toggle")
         updated = db.session.get(UserRecord, patron.user_id)
         self.assertFalse(updated.active)
+
+    def test_librarian_can_view_and_update_book_type(self):
+        self.create_librarian()
+        self.post(
+            "/login",
+            data={"username": "staff", "password": "StrongPass1!"},
+        )
+        book = BookRepository().create(
+            Book(None, "Type change", "Writer", "Fiction", "")
+        )
+
+        edit_page = self.client.get(f"/books/{book.book_id}/edit")
+        self.assertEqual(edit_page.status_code, 200)
+        self.assertIn(b'<option value="standard" selected>Standard</option>', edit_page.data)
+
+        response = self.post(
+            f"/books/{book.book_id}/edit",
+            data={
+                "title": book.title,
+                "author": book.author,
+                "genre": book.genre,
+                "description": book.description,
+                "kind": "reference",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            db.session.get(BookRecord, book.book_id).kind,
+            "reference",
+        )
 
     def test_librarian_can_upload_jpg_cover_for_book(self):
         upload_directory = tempfile.TemporaryDirectory()
@@ -282,6 +361,8 @@ class BackendRouteTests(unittest.TestCase):
         by_email = self.client.get("/members/?q=search@example")
         self.assertIn(b"searchreader", by_username.data)
         self.assertIn(b"searchreader", by_email.data)
+        self.assertIn(b"Role", by_username.data)
+        self.assertIn(b"Active loans", by_username.data)
         self.assertNotIn(b">reader</a>", by_username.data)
 
         record = db.session.execute(
@@ -289,6 +370,11 @@ class BackendRouteTests(unittest.TestCase):
         ).scalar_one()
         self.assertEqual(record.role, "patron")
         self.assertTrue(check_password_hash(record.password_hash, "StrongPass1!"))
+        self.post(f"/members/{record.user_id}/toggle")
+        inactive = self.client.get("/members/?status=inactive")
+        active = self.client.get("/members/?status=active")
+        self.assertIn(b"searchreader", inactive.data)
+        self.assertNotIn(b"searchreader", active.data)
 
     def test_member_detail_shows_loan_history_and_fees(self):
         self.register_patron()
@@ -315,7 +401,9 @@ class BackendRouteTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Loan history title", response.data)
-        self.assertIn(b"Outstanding:", response.data)
+        self.assertIn(b"Outstanding", response.data)
+        self.assertIn(b"Active loans", response.data)
+        self.assertIn(b"Overdue", response.data)
         self.assertIn(b"Unpaid", response.data)
 
     def test_route_rejects_reference_book_checkout(self):

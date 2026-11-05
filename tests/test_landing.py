@@ -49,7 +49,9 @@ class LandingRouteTests(unittest.TestCase):
             b'aria-label="Sign in to view your profile"',
         ):
             self.assertIn(label, response.data)
-        self.assertNotIn(b"nav-icon-label", response.data)
+        self.assertIn(b'>Home</span>', response.data)
+        self.assertIn(b'>Books</span>', response.data)
+        self.assertNotIn(b'aria-label="Reservations"', response.data)
         self.assertIn(b"No books to show here just yet", response.data)
         self.assertIn(b"No genres yet. Ask your librarian to add some.", response.data)
         self.assertIn(b"dist/genre-carousel.css", response.data)
@@ -264,7 +266,7 @@ class LandingRouteTests(unittest.TestCase):
         self.assertIn(b"The Quiet Room", results_html)
         self.assertNotIn(b"The Harbor Archive", results_html)
 
-    def test_signed_in_user_can_view_landing_page_and_dashboard_link(self):
+    def test_signed_in_patron_landing_page_has_no_dashboard_link(self):
         patron = UserRecord(
             email="reader@example.com",
             username="reader",
@@ -283,10 +285,11 @@ class LandingRouteTests(unittest.TestCase):
         response = self.client.get("/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Hi, reader", response.data)
-        self.assertIn(b'href="/patron">Dashboard</a>', response.data)
-        self.assertIn(b"Log out", response.data)
-        self.assertIn(b'class="account-dropdown"', response.data)
+        self.assertIn(b"@reader", response.data)
+        self.assertIn(b'aria-label="My loans"', response.data)
+        self.assertNotIn(b">Dashboard</a>", response.data)
+        self.assertIn(b"Logout", response.data)
+        self.assertIn(b'aria-label="Open account menu for reader"', response.data)
         self.assertIn(
             f'data-basket-action="/basket/add/{book.book_id}"'.encode(),
             response.data,

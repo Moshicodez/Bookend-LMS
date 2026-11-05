@@ -26,11 +26,13 @@ def index():
         return redirect(url_for("auth.login"))
     librarian.require("manage_mem")
     search_term = request.args.get("q", "")
-    members = librarian_service.find_members(librarian, search_term)
+    status = request.args.get("status", "")
+    members = librarian_service.member_rows(librarian, search_term, status)
     return render_template(
         "members/members.html",
         members=members,
         search_term=search_term,
+        status=status,
     )
 
 
@@ -50,11 +52,13 @@ def create():
     except ValidationError as error:
         return render_template(
             "members/members.html",
-            members=librarian_service.find_members(
+            members=librarian_service.member_rows(
                 librarian,
                 request.form.get("q", ""),
+                request.form.get("status", ""),
             ),
             search_term=request.form.get("q", ""),
+            status=request.form.get("status", ""),
             error_message=str(error),
             form_data={
                 "email": request.form.get("email", ""),
@@ -69,7 +73,7 @@ def detail(user_id):
     librarian = _signed_in_user("librarian")
     if librarian is None:
         return redirect(url_for("auth.login"))
-    member, history = librarian_service.member_loan_history(
+    member, history, stats = librarian_service.member_detail_data(
         librarian,
         user_id,
     )
@@ -77,6 +81,7 @@ def detail(user_id):
         "members/member_detail.html",
         member=member,
         history=history,
+        stats=stats,
     )
 
 
@@ -95,10 +100,15 @@ def reset_password(user_id):
     if librarian is None:
         return redirect(url_for("auth.login"))
     temporary_password = librarian_service.reset_member_password(librarian, user_id)
-    members = librarian_service.find_members(librarian, request.form.get("q", ""))
+    members = librarian_service.member_rows(
+        librarian,
+        request.form.get("q", ""),
+        request.form.get("status", ""),
+    )
     return render_template(
         "members/members.html",
         members=members,
         search_term=request.form.get("q", ""),
+        status=request.form.get("status", ""),
         temporary_password=temporary_password,
     )

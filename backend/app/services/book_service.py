@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from ..exceptions import NotFoundError, ValidationError
 from ..models.book import Book
 from ..repositories.notification_repository import NotificationRepository
@@ -43,7 +45,13 @@ class BookService:
 
     def management_search(self, librarian, term="", status="all"):
         librarian.require("edit_book")
-        if status not in {"all", "available", "on_loan", "archived"}:
+        if status not in {
+            "all",
+            "available",
+            "on_loan",
+            "out_of_stock",
+            "archived",
+        }:
             status = "all"
         books, _ = self._book_repo.search(term, "", status, "title", 1, 500)
         return books
@@ -88,10 +96,19 @@ class BookService:
         description,
         kind="standard",
         cover_file=None,
+        total_copies=1,
     ):
         librarian.require("add_book")
 
-        book = Book.create(kind, None, title, author, genre, description)
+        book = Book.create(
+            kind,
+            None,
+            title,
+            author,
+            genre,
+            description,
+            total_copies=self._copy_count(total_copies),
+        )
         filename = self._covers.save(cover_file)
         book.set_cover(filename)
         saved = False
@@ -104,6 +121,12 @@ class BookService:
                 f"{result.title} is now in the catalog.",
                 category="book",
                 link=f"/books/{result.book_id}",
+                dedupe_key=f"book:{result.book_id}:added",
+            )
+            self._notifications.notify_inventory_transition(
+                result,
+                None,
+                f"book:{result.book_id}:initial-inventory",
             )
             return result
         finally:
@@ -119,11 +142,32 @@ class BookService:
         genre,
         description,
         cover_file=None,
+        kind=None,
+        total_copies=None,
     ):
         librarian.require("edit_book")
-        book = self._get_book(book_id)
+        current_book = self._get_book(book_id)
+        previous_available = current_book.available_copies
+        book = Book.create(
+            current_book.kind if kind is None else kind,
+            current_book.book_id,
+            current_book.title,
+            current_book.author,
+            current_book.genre,
+            current_book.description,
+            available=current_book.available,
+            catalog=current_book.catalog,
+            cover=current_book.cover,
+            archived_at=current_book.archived_at,
+            total_copies=current_book.total_copies,
+            available_copies=current_book.available_copies,
+            on_loan_copies=current_book.on_loan_copies,
+            reserved_copies=current_book.reserved_copies,
+        )
 
         book.update_details(title, author, genre, description)
+        if total_copies is not None:
+            book.set_total_copies(self._copy_count(total_copies))
         previous_cover = book.cover
         filename = self._covers.save(cover_file)
         if filename:
@@ -137,6 +181,8 @@ class BookService:
                 self._covers.delete(filename)
         if filename:
             self._covers.delete(previous_cover)
+        if total_copies is not None:
+            self._reservations.promote_waiting(book_id)
 
         self._notifications.notify_role(
             "librarian",
@@ -145,6 +191,15 @@ class BookService:
             category="book",
             link=f"/books/{book.book_id}",
         )
+        if total_copies is not None:
+            self._notifications.notify_inventory_transition(
+                book,
+                previous_available,
+                (
+                    f"book:{book.book_id}:inventory:"
+                    f"{datetime.now().isoformat(timespec='microseconds')}"
+                ),
+            )
         return book
 
     def archive_book(self, librarian, book_id):
@@ -182,6 +237,21 @@ class BookService:
             link=f"/books/{book.book_id}",
         )
         return book
+
+    @staticmethod
+    def _copy_count(value):
+        try:
+            count = int(value)
+        except (TypeError, ValueError) as error:
+            raise ValidationError("Total copies must be a whole number.") from error
+        if (
+            isinstance(value, bool)
+            or str(value).strip() != str(count)
+            or count < 0
+            or count > Book.MAX_COPIES
+        ):
+            raise ValidationError("Total copies must be zero or more.")
+        return count
 
     def mark_book_lost(self, librarian, book_id):
         librarian.require("update_return_status")

@@ -1,0 +1,1064 @@
+.library-page-heading {
+  margin: 40px auto 24px;
+}
+
+.library-page-heading h1 {
+  margin: 6px 0 9px;
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: clamp(38px, 5vw, 58px);
+  font-weight: 400;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.library-page-heading > p:last-child {
+  max-width: 650px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.library-filter-form {
+  display: flex;
+  max-width: 820px;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 24px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--white);
+}
+
+.library-filter-form input,
+.library-filter-form select {
+  min-width: 0;
+  min-height: 40px !important;
+  flex: 1;
+  padding: 8px 12px !important;
+  border-radius: 8px !important;
+  background: var(--paper) !important;
+  font: 500 12px var(--sans) !important;
+}
+
+.library-filter-form .button,
+.reservation-card .button,
+.loan-card-actions .button,
+.member-actions .button,
+.member-profile-card .button,
+.member-create-form .button,
+.archived-dashboard-list .button {
+  min-height: 38px;
+  padding: 8px 13px;
+  border-radius: 8px;
+  font: 600 12px/1.2 var(--sans);
+}
+
+.library-table-wrap {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--white);
+  box-shadow: 0 5px 20px rgb(50 54 43 / 6%);
+}
+
+.library-table-wrap .admin-table th:first-child,
+.library-table-wrap .admin-table td:first-child {
+  padding-left: 18px;
+}
+
+.library-table-wrap .admin-table th:last-child,
+.library-table-wrap .admin-table td:last-child {
+  padding-right: 18px;
+}
+
+.reservation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
+  gap: 16px;
+  margin: 0 0 48px;
+}
+
+.reservation-card {
+  display: flex;
+  min-width: 0;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--white);
+  box-shadow: 0 5px 18px rgb(50 54 43 / 6%);
+}
+
+.reservation-cover {
+  display: grid;
+  width: 82px;
+  height: 122px;
+  flex: 0 0 auto;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--paper-deep);
+  box-shadow: 3px 5px 11px rgb(37 42 37 / 14%);
+  color: var(--green);
+  font-family: var(--serif);
+  font-size: 30px;
+  text-decoration: none;
+}
+
+.reservation-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.reservation-card-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.reservation-card-copy h2 {
+  margin: 10px 0 3px;
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.reservation-card-copy h2 a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.reservation-card-copy p {
+  margin: 6px 0;
+  font-size: 12px;
+}
+
+.reservation-card-copy form {
+  margin-top: 12px;
+}
+
+.reservation-status,
+.member-status-pill {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #f7eedc;
+  color: #80612b;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.reservation-status.is-ready {
+  background: #e8f0e5;
+  color: #345b37;
+}
+
+.reservation-position {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.reservations-empty {
+  max-width: 680px;
+  margin: 16px auto 48px;
+}
+
+.reservations-empty-icon {
+  display: inline-grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 50%;
+  background: #e8eee5;
+  color: var(--green);
+  font-size: 22px;
+}
+
+.reservations-empty p {
+  max-width: 420px;
+  margin: 8px auto 20px;
+  color: var(--muted);
+}
+
+.loan-summary-grid,
+.member-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.loan-summary-card,
+.member-stats-grid article {
+  display: grid;
+  min-height: 98px;
+  align-content: space-between;
+  gap: 8px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--white);
+  box-shadow: 0 4px 16px rgb(50 54 43 / 5%);
+}
+
+.loan-summary-card span,
+.member-stats-grid article span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.loan-summary-card strong,
+.member-stats-grid article strong {
+  color: var(--green);
+  font-family: var(--serif);
+  font-size: 28px;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+.loan-page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin: 0 0 30px;
+}
+
+.loan-page-actions .button {
+  min-height: 38px;
+  padding: 8px 15px;
+  border-radius: 8px;
+  font: 600 12px/1.2 var(--sans);
+}
+
+.loan-section {
+  margin: 28px 0;
+}
+
+.library-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 0 14px;
+}
+
+.library-section-heading h2 {
+  margin: 3px 0 0;
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+.library-section-heading > span,
+.library-section-heading > a {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.loan-card-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
+  gap: 14px;
+}
+
+.loan-card {
+  min-width: 0;
+  align-items: flex-start;
+  gap: 15px;
+  padding: 16px;
+  border-radius: 12px;
+}
+
+.loan-card-cover {
+  display: grid;
+  width: 76px;
+  height: 114px;
+  flex: 0 0 auto;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--paper-deep);
+  box-shadow: 3px 5px 11px rgb(37 42 37 / 14%);
+  color: var(--green);
+  font-family: var(--serif);
+  font-size: 27px;
+  text-decoration: none;
+}
+
+.loan-card-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.loan-card-content {
+  display: flex;
+  min-height: 114px;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.loan-card-content h3 {
+  margin: 8px 0 1px;
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.loan-card-content > p {
+  font-size: 12px;
+}
+
+.loan-card-dates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+  margin: 8px 0;
+}
+
+.loan-card-dates dt {
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.loan-card-dates dd {
+  margin: 3px 0 0;
+  color: var(--ink);
+  font-size: 11px;
+}
+
+.loan-due-pill {
+  display: inline-flex;
+  margin: 2px 0 5px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #e8f0e5;
+  color: #345b37;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.loan-due-pill.is-due-today {
+  background: #f7eedc;
+  color: #80612b;
+}
+
+.loan-due-pill.is-overdue {
+  background: #f8e9e5;
+  color: #9c3e32;
+}
+
+.loan-card-content .loan-fee-due {
+  color: #8d4636;
+  font-weight: 600;
+}
+
+.loan-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.loan-card-actions form {
+  margin: 0;
+}
+
+.loan-section-empty {
+  margin: 0;
+  padding: 22px 18px;
+  color: var(--muted);
+  text-align: left;
+}
+
+.reservation-dashboard-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: -4px 0 14px;
+}
+
+.reservation-dashboard-counts span {
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.reservation-dashboard-counts strong {
+  margin-right: 4px;
+  color: var(--green);
+  font-size: 14px;
+}
+
+.dashboard-reservation-list,
+.archived-dashboard-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dashboard-reservation-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.dashboard-reservation-list a,
+.admin-table a {
+  color: var(--green);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.admin-stat-link {
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 140ms ease, transform 140ms ease;
+}
+
+.admin-stat-link:hover {
+  transform: translateY(-2px);
+  border-color: var(--green);
+}
+
+.admin-stat-link small {
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.archived-dashboard-panel {
+  margin-top: 20px;
+}
+
+.archived-dashboard-list li {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+}
+
+.archived-dashboard-list img {
+  width: 42px;
+  height: 60px;
+  flex: 0 0 auto;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.archived-dashboard-book {
+  min-width: 0;
+  flex: 1;
+}
+
+.archived-dashboard-book strong {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.archived-dashboard-book small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.member-identity {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 230px;
+}
+
+.member-identity strong {
+  display: block;
+  font-size: 13px;
+}
+
+.member-identity small {
+  overflow-wrap: anywhere;
+}
+
+.member-avatar,
+.member-profile-avatar {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: #e8eee5;
+  color: var(--green);
+  font-family: var(--serif);
+}
+
+.member-avatar {
+  width: 38px;
+  height: 38px;
+  font-size: 16px;
+}
+
+.member-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 250px;
+}
+
+.member-actions form {
+  margin: 0;
+}
+
+.member-status-pill.is-active {
+  background: #e8f0e5;
+  color: #345b37;
+}
+
+.member-status-pill.is-inactive {
+  background: #f1eee8;
+  color: #6f6b61;
+}
+
+.create-member-panel {
+  margin: 0 0 22px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--white);
+  box-shadow: 0 4px 16px rgb(50 54 43 / 5%);
+}
+
+.create-member-panel summary {
+  padding: 14px 17px;
+  color: var(--green);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.create-member-content {
+  padding: 0 17px 18px;
+  border-top: 1px solid var(--line);
+}
+
+.member-create-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.member-create-form > div {
+  min-width: 0;
+}
+
+.member-create-form input {
+  min-height: 40px !important;
+  border-radius: 8px !important;
+}
+
+.member-create-form > .button {
+  align-self: end;
+}
+
+.form-error {
+  color: #9c3e32;
+  font-size: 12px;
+}
+
+.temporary-password {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0 0 20px;
+  padding: 17px;
+  border: 1px solid #cdddcf;
+  border-radius: 12px;
+  background: #edf3eb;
+}
+
+.temporary-password h2 {
+  margin: 4px 0;
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 400;
+}
+
+.temporary-password p:last-child {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.temporary-password code {
+  padding: 10px 12px;
+  border: 1px solid #cdddcf;
+  border-radius: 7px;
+  background: var(--white);
+  font-size: 13px;
+}
+
+.member-profile-card {
+  gap: 16px;
+  border-radius: 12px;
+}
+
+.member-profile-avatar {
+  width: 66px;
+  height: 66px;
+  font-size: 25px;
+}
+
+.member-profile-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.member-profile-copy h1 {
+  overflow-wrap: anywhere;
+}
+
+.member-profile-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.member-profile-meta > span:first-child {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.member-stats-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 18px 0 30px;
+}
+
+.member-history-section {
+  margin-top: 28px;
+}
+
+.member-fee-list {
+  min-width: 170px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 11px;
+}
+
+.member-fee-list li + li {
+  margin-top: 5px;
+}
+
+.member-fee-list span {
+  display: inline-block;
+  margin-left: 3px;
+  color: var(--muted);
+}
+
+.book-detail-layout {
+  grid-template-columns: minmax(220px, 340px) minmax(0, 1fr);
+  gap: clamp(24px, 5vw, 54px);
+  padding: clamp(18px, 4vw, 38px);
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgb(50 54 43 / 7%);
+}
+
+.book-detail-cover-wrap {
+  position: sticky;
+  top: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.book-detail-cover-wrap::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: max(0px, calc(50% - 150px));
+  width: 9px;
+  border-radius: 6px 0 0 6px;
+  background: linear-gradient(90deg, rgb(0 0 0 / 19%), rgb(255 255 255 / 14%));
+  content: "";
+  pointer-events: none;
+  z-index: 1;
+}
+
+.book-detail-cover-wrap .detail-cover {
+  display: grid;
+  width: min(100%, 300px);
+  aspect-ratio: 2 / 3;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--paper-deep);
+  box-shadow: 8px 12px 24px rgb(37 42 37 / 20%);
+  object-fit: contain;
+}
+
+.detail-cover-placeholder {
+  padding: 26px;
+  background: linear-gradient(135deg, #435b43, #263d2a);
+  color: var(--white);
+  font-family: var(--serif);
+  font-size: 26px;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.detail-cover-placeholder small {
+  align-self: end;
+  color: rgb(255 254 250 / 80%);
+  font: 500 11px var(--sans);
+}
+
+.book-detail-copy {
+  min-width: 0;
+}
+
+.book-detail-copy > .eyebrow {
+  margin-bottom: 10px;
+}
+
+.detail-genre-chip {
+  display: inline-flex;
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  border: 1px solid #d5dfd0;
+  border-radius: 999px;
+  background: #edf3eb;
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.book-detail-copy > h1 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: clamp(36px, 5vw, 58px);
+  font-weight: 400;
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.detail-author {
+  margin: 10px 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.detail-rating {
+  margin: 10px 0;
+}
+
+.detail-availability {
+  display: inline-flex;
+  margin: 5px 0 12px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: #e8f0e5;
+  color: #345b37;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.detail-availability.is-on-loan,
+.detail-availability.is-reserved {
+  background: #f7eedc;
+  color: #80612b;
+}
+
+.detail-availability.is-archived,
+.detail-availability.is-reference {
+  background: #f1eee8;
+  color: #6f6b61;
+}
+
+.detail-availability.is-ready {
+  background: #e8f0e5;
+  color: #345b37;
+}
+
+.book-detail-description {
+  margin: 12px 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.8;
+  white-space: pre-line;
+}
+
+.book-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 17px 0;
+}
+
+.book-detail-actions form,
+.detail-return-form {
+  margin: 0;
+}
+
+.book-detail-actions .button,
+.detail-return-form .button,
+.review-form .button,
+.review-delete-form .button {
+  min-height: 38px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font: 600 12px/1.2 var(--sans);
+}
+
+.reservation-detail-note {
+  margin: 7px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.about-book {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.about-book h2 {
+  margin: 0 0 11px;
+  font-family: var(--serif);
+  font-size: 25px;
+  font-weight: 400;
+}
+
+.about-book dl {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.about-book dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.about-book dt {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.about-book dd {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.detail-reviews {
+  margin-top: 42px;
+}
+
+.detail-review-summary {
+  color: #9b712d !important;
+}
+
+.review-form {
+  display: grid;
+  max-width: 600px;
+  gap: 8px;
+  margin: 15px 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--white);
+}
+
+.review-form label {
+  margin-top: 5px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.review-form select,
+.review-form textarea {
+  min-height: 40px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 12px var(--sans);
+}
+
+.review-form textarea {
+  min-height: 105px;
+  resize: vertical;
+}
+
+.review-delete-form {
+  margin: 0 0 18px;
+}
+
+.review-list .review-card {
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgb(50 54 43 / 5%);
+}
+
+.more-books-section {
+  margin-top: 42px;
+}
+
+.more-books-section .library-section-heading > a {
+  color: var(--green);
+}
+
+@media (max-width: 760px) {
+  .library-filter-form {
+    flex-wrap: wrap;
+  }
+
+  .library-filter-form input {
+    flex-basis: 100%;
+  }
+
+  .library-filter-form select,
+  .library-filter-form .button {
+    flex: 1 1 130px;
+  }
+
+  .admin-dashboard-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .book-detail-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .book-detail-cover-wrap {
+    position: relative;
+    top: auto;
+  }
+
+  .book-detail-cover-wrap::before {
+    left: max(0px, calc(50% - 150px));
+  }
+
+  .book-detail-cover-wrap .detail-cover {
+    width: min(72%, 280px);
+  }
+
+  .member-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .library-page-heading {
+    margin-top: 26px;
+  }
+
+  .library-page-heading h1 {
+    font-size: clamp(34px, 12vw, 48px);
+  }
+
+  .loan-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .loan-summary-card {
+    min-height: 78px;
+  }
+
+  .reservation-card,
+  .loan-card {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .reservation-cover {
+    width: 64px;
+    height: 96px;
+  }
+
+  .loan-card-cover {
+    width: 62px;
+    height: 93px;
+  }
+
+  .loan-card-content {
+    min-height: 93px;
+  }
+
+  .loan-card-dates {
+    grid-template-columns: 1fr;
+  }
+
+  .member-identity {
+    min-width: 190px;
+  }
+
+  .member-actions {
+    min-width: 0;
+  }
+
+  .member-profile-card {
+    flex-wrap: wrap;
+    padding: 17px;
+  }
+
+  .member-profile-card > .button {
+    width: 100%;
+  }
+
+  .member-create-form {
+    grid-template-columns: 1fr;
+  }
+
+  .temporary-password {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .archived-dashboard-list li {
+    align-items: flex-start;
+  }
+
+  .archived-dashboard-list .button {
+    padding: 7px 9px;
+  }
+}

@@ -166,15 +166,17 @@ class AuthRouteTests(unittest.TestCase):
         self.assertEqual(response.location, "/")
         landing = self.client.get("/")
         self.assertEqual(landing.status_code, 200)
-        self.assertIn(b"Hi, reader", landing.data)
-        self.assertIn(b"Log out", landing.data)
-        self.assertIn(b'class="account-dropdown"', landing.data)
+        self.assertIn(b"@reader", landing.data)
+        self.assertIn(b"Logout", landing.data)
+        self.assertIn(b'aria-label="Open account menu for reader"', landing.data)
 
     def test_login_rejects_wrong_password_and_deactivated_user(self):
         record = self.register_account()
         wrong_password = self.login(password="wrong-password")
         self.assertEqual(wrong_password.status_code, 401)
         self.assertIn(b"Invalid username or password", wrong_password.data)
+        self.assertIn(b'class="preview-message" role="alert"', wrong_password.data)
+        self.assertIn(b'value="reader"', wrong_password.data)
 
         record.active = False
         db.session.commit()
@@ -296,10 +298,11 @@ class AuthRouteTests(unittest.TestCase):
         self.assertIn(b"css/style.css", response.data)
 
     def test_dashboard_authentication_and_logout(self):
-        self.assertEqual(self.client.get("/patron").status_code, 302)
+        self.assertEqual(self.client.get("/patron").status_code, 404)
         self.register_account()
         self.assertEqual(self.login().status_code, 302)
-        self.assertEqual(self.client.get("/patron").status_code, 200)
+        self.assertEqual(self.client.get("/patron").status_code, 404)
+        self.assertEqual(self.client.get("/dashboard").location, "/")
 
         response = self.post("/logout")
 

@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from ..config import Config
 from ..exceptions import ValidationError
 
@@ -5,6 +7,7 @@ from ..exceptions import ValidationError
 class Book:
     KIND = "standard"
     LOAN_DAYS = Config.LOAN_DAYS
+    MAX_COPIES = 2**63 - 1
     _registry = {}
 
     def __init_subclass__(cls, **kwargs):
@@ -21,11 +24,28 @@ class Book:
         available=True,
         catalog=True,
         cover=None,
+        archived_at=None,
+        total_copies=1,
+        available_copies=None,
+        on_loan_copies=None,
+        reserved_copies=0,
     ):
         self._book_id = book_id
-        self._available = bool(available)
+        self._total_copies = self._normalize_copy_count(total_copies)
+        if on_loan_copies is None:
+            self._on_loan_copies = 0 if available else self._total_copies
+        else:
+            self._on_loan_copies = self._normalize_copy_count(on_loan_copies)
+        self._reserved_copies = self._normalize_copy_count(reserved_copies)
+        if available_copies is None:
+            available_copies = max(
+                self._total_copies - self._on_loan_copies - self._reserved_copies,
+                0,
+            )
+        self._available_copies = self._normalize_copy_count(available_copies)
         self._catalog = bool(catalog)
         self._cover = cover
+        self._archived_at = archived_at
         self._set_details(title, author, genre, description)
 
     @classmethod
@@ -72,15 +92,49 @@ class Book:
 
     @property
     def available(self):
-        return self._available
+        return self._total_copies > self._on_loan_copies
 
     @property
     def catalog(self):
         return self._catalog
 
     @property
+    def total_copies(self):
+        return self._total_copies
+
+    @property
+    def available_copies(self):
+        return self._available_copies
+
+    @property
+    def on_loan_copies(self):
+        return self._on_loan_copies
+
+    @property
+    def reserved_copies(self):
+        return self._reserved_copies
+
+    @property
+    def availability_status(self):
+        if not self._catalog:
+            return "Archived"
+        if self.KIND == "reference":
+            return "In-library use" if self.available else "Out of stock"
+        if self._available_copies:
+            return "Available"
+        if self._reserved_copies:
+            return "Reserved"
+        if self._on_loan_copies:
+            return "On loan"
+        return "Out of stock"
+
+    @property
     def cover(self):
         return self._cover
+
+    @property
+    def archived_at(self):
+        return self._archived_at
 
     def set_cover(self, filename):
         self._cover = filename
@@ -105,15 +159,6 @@ class Book:
         return all(word in haystack for word in term.split())
 
     def display_book_info(self):
-        if not self._catalog:
-            status = "Archived"
-        elif self.can_borrow():
-            status = "Available"
-        elif self._available:
-            status = "In-library use"
-        else:
-            status = "On loan"
-
         return {
             "book_id": self._book_id,
             "title": self._title,
@@ -123,35 +168,81 @@ class Book:
             "cover": self._cover,
             "kind": self.KIND,
             "loan_days": self.loan_days,
-            "status": status
+            "status": self.availability_status,
+            "total_copies": self._total_copies,
+            "available_copies": self._available_copies,
+            "on_loan_copies": self._on_loan_copies,
+            "reserved_copies": self._reserved_copies,
         }
 
     def can_borrow(self):
-        return self._catalog and self._available
+        return self._catalog and self._available_copies > 0
 
-    def borrow(self):
+    def borrow(self, reserved=False):
         if not self._catalog:
             raise ValidationError("This book is no longer in the catalog.")
-        if not self._available:
+        if not reserved and not self._available_copies:
             raise ValidationError("This book is already on loan.")
-        self._available = False
+        if self.KIND == "reference":
+            raise ValidationError("Reference books can only be read in the library.")
+        if reserved:
+            self._reserved_copies = max(0, self._reserved_copies - 1)
+        else:
+            self._available_copies -= 1
+        self._on_loan_copies += 1
 
     def return_book(self):
-        self._available = True
+        self._on_loan_copies = max(0, self._on_loan_copies - 1)
+        if self._total_copies > self._on_loan_copies + self._reserved_copies:
+            self._available_copies += 1
 
     def archive(self):
-        if not self._available:
+        if self._on_loan_copies:
             raise ValidationError("This book is on loan. Process its return before archiving.")
+        if self._reserved_copies:
+            raise ValidationError("This book is reserved for a patron and cannot be archived.")
         self._catalog = False
+        self._archived_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     def restore(self):
-        if not self._available:
+        if not self.available:
             raise ValidationError("An unavailable book cannot be restored to the catalog.")
         self._catalog = True
+        self._archived_at = None
 
     def mark_lost(self):
-        self._available = False
-        self._catalog = False
+        if self._total_copies == 0:
+            raise ValidationError("There are no copies left to mark as lost.")
+        self._total_copies = max(0, self._total_copies - 1)
+        self._on_loan_copies = max(0, self._on_loan_copies - 1)
+        if self._total_copies == 0:
+            self._catalog = False
+        self._available_copies = max(
+            self._total_copies - self._on_loan_copies - self._reserved_copies,
+            0,
+        )
+
+    def set_total_copies(self, total_copies):
+        self._total_copies = self._normalize_copy_count(total_copies)
+        self._available_copies = max(
+            self._total_copies - self._on_loan_copies - self._reserved_copies,
+            0,
+        )
+
+    @staticmethod
+    def _normalize_copy_count(value):
+        try:
+            count = int(value)
+        except (TypeError, ValueError) as error:
+            raise ValidationError("Copy counts must be whole numbers.") from error
+        if (
+            isinstance(value, bool)
+            or count != value
+            or count < 0
+            or count > Book.MAX_COPIES
+        ):
+            raise ValidationError("Copy counts must be whole numbers of at least zero.")
+        return count
 
     def to_record(self):
         return {
@@ -162,8 +253,12 @@ class Book:
             "genre": self._genre,
             "description": self._description,
             "cover": self._cover,
-            "available": self._available,
-            "catalog": self._catalog
+            "available": self.available,
+            "catalog": self._catalog,
+            "archived_at": (
+                self._archived_at.isoformat() if self._archived_at else None
+            ),
+            "total_copies": self._total_copies,
         }
 
 
@@ -178,5 +273,5 @@ class ReferenceBook(Book):
     def can_borrow(self):
         return False
 
-    def borrow(self):
+    def borrow(self, reserved=False):
         raise ValidationError("Reference books can only be read in the library.")

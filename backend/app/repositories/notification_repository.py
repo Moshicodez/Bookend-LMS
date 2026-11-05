@@ -57,6 +57,9 @@ class NotificationRepository:
             ).scalars()
         )
 
+    def recent_for_user(self, user_id, limit=6):
+        return self.for_user(user_id, limit=limit)
+
     def unread_count(self, user_id):
         return db.session.scalar(
             db.select(db.func.count(NotificationRecord.notification_id)).where(

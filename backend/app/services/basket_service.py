@@ -24,10 +24,13 @@ class BasketService:
             raise NotFoundError("Book not found.")
         if not book.can_borrow():
             raise ValidationError("This book is not currently available to borrow.")
-        if self._loan_service.reservation_status(patron, book_id)["held_for_other"]:
-            raise ValidationError("This book is being held for another patron.")
 
         loans = self._loans.find_patron_loans(patron.user_id)
+        if any(
+            loan.book_id == book_id and not loan.is_returned()
+            for loan in loans
+        ):
+            raise ValidationError("You already have an active loan for this book.")
         active_count = sum(not loan.is_returned() for loan in loans)
         remaining = (
             patron.loan_limit

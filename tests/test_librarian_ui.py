@@ -11,6 +11,7 @@ from backend.app.extensions import db
 from backend.app.models.book import Book
 from backend.app.models.loan_record import LoanRecord
 from backend.app.models.review_record import ReviewRecord
+from backend.app.models.reservation_record import ReservationRecord
 from backend.app.repositories.book_repository import BookRepository
 from backend.app.repositories.genre_repository import GenreRepository
 from backend.app.repositories.user_repository import UserRepository
@@ -99,6 +100,10 @@ class LibrarianUiTests(unittest.TestCase):
         db.session.commit()
         token = self._sign_in(self.librarian)
 
+        dashboard_redirect = self.client.get("/dashboard")
+        self.assertEqual(dashboard_redirect.status_code, 302)
+        self.assertEqual(dashboard_redirect.location, "/librarian")
+
         response = self.client.get("/librarian")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Books", response.data)
@@ -106,7 +111,7 @@ class LibrarianUiTests(unittest.TestCase):
         self.assertIn(b"On loan", response.data)
         self.assertIn(b"Overdue", response.data)
         self.assertIn(b"Patrons", response.data)
-        self.assertIn(b"$26.00", response.data)
+        self.assertIn("₱26.00".encode(), response.data)
         self.assertIn(b"The Old Library", response.data)
         self.assertIn(b"reader", response.data)
         self.assertIn(b"Most borrowed books", response.data)
@@ -134,6 +139,49 @@ class LibrarianUiTests(unittest.TestCase):
         self.assertEqual(deleted.status_code, 302)
         self.assertFalse(self.books.find_book(self.history.book_id).catalog)
         self.assertIn(b"Archived", self.client.get("/books/manage").data)
+        dashboard = self.client.get("/librarian")
+        self.assertIn(b"Archived books", dashboard.data)
+        self.assertIn(b"The Old Library", dashboard.data)
+        self.assertIn(date.today().strftime("%b %d, %Y").encode(), dashboard.data)
+
+    def test_librarian_can_search_and_filter_reservations(self):
+        db.session.add_all(
+            [
+                ReservationRecord(
+                    patron_id=self.patron.user_id,
+                    book_id=self.history.book_id,
+                    status="waiting",
+                ),
+                ReservationRecord(
+                    patron_id=self.patron.user_id,
+                    book_id=self.mystery.book_id,
+                    status="ready",
+                ),
+            ]
+        )
+        db.session.commit()
+        self._sign_in(self.librarian)
+
+        page = self.client.get("/librarian/reservations")
+        self.assertEqual(page.status_code, 200)
+        self.assertIn(b"Reservations", page.data)
+        self.assertIn(b"The Old Library", page.data)
+        self.assertIn(b"Mystery at Noon", page.data)
+        self.assertIn(b"reader", page.data)
+
+        filtered = self.client.get(
+            "/librarian/reservations?status=waiting&q=Old"
+        )
+        self.assertIn(b"The Old Library", filtered.data)
+        self.assertNotIn(b"Mystery at Noon", filtered.data)
+
+        dashboard = self.client.get("/librarian")
+        self.assertIn(b"Reservations", dashboard.data)
+        self.assertIn(b"1</strong> waiting", dashboard.data)
+        self.assertIn(b"1</strong> ready", dashboard.data)
+
+        self._sign_in(self.patron)
+        self.assertEqual(self.client.get("/librarian/reservations").status_code, 403)
 
     def test_patron_cannot_access_librarian_dashboard_books_or_reviews(self):
         token = self._sign_in(self.patron)
@@ -225,7 +273,7 @@ class LibrarianUiTests(unittest.TestCase):
         detail = self.client.get(f"/members/{self.patron.user_id}")
         self.assertEqual(detail.status_code, 200)
         self.assertIn(b"reader@example.com", detail.data)
-        self.assertIn(b"Full loan history", detail.data)
+        self.assertIn(b"Loan history", detail.data)
 
         moderation = self.client.get("/librarian/reviews")
         self.assertEqual(moderation.status_code, 200)

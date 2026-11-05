@@ -21,7 +21,7 @@ loan_service = LoanService(BookRepository(), loan_repository)
 review_service = ReviewService(ReviewRepository(), BookRepository())
 favorite_repository = FavoriteRepository()
 
-PER_PAGE = 12
+PER_PAGE = 24
 
 
 def _require_user():
@@ -49,6 +49,17 @@ def catalog():
         PER_PAGE,
     )
     pages = max(1, -(-total // PER_PAGE))
+    if page > pages:
+        page = pages
+        books, total = book_service.search_page(
+            search_term,
+            genre,
+            "available" if available_only else "",
+            sort,
+            page,
+            PER_PAGE,
+        )
+    page_numbers = range(max(1, page - 2), min(pages, page + 2) + 1)
     ratings = review_service.summaries([book.book_id for book in books])
     favorite_ids = (
         set(favorite_repository.book_ids_for_user(user.user_id))
@@ -61,6 +72,8 @@ def catalog():
         total=total,
         page=page,
         pages=pages,
+        page_numbers=page_numbers,
+        per_page=PER_PAGE,
         available_only=available_only,
         sort=sort,
         search_term=search_term,
@@ -79,7 +92,15 @@ def catalog():
 def detail(book_id):
     user = _signed_in_user()
     book = book_service.get_book(book_id)
-    active_loan = loan_repository.find_active_loan_by_book(book_id)
+    active_loans = loan_repository.find_active_loans_by_book(book_id)
+    active_loan = next(
+        (
+            loan
+            for loan in active_loans
+            if user is not None and loan.patron_id == user.user_id
+        ),
+        None,
+    )
     reservation_info = loan_service.reservation_status(user, book_id)
     reviews = review_service.for_book(book_id)
     rating = review_service.summary(book_id)
@@ -96,6 +117,7 @@ def detail(book_id):
         "books/book_detail.html",
         book=book,
         active_loan=active_loan,
+        active_loan_count=len(active_loans),
         reservation_info=reservation_info,
         reviews=reviews,
         rating=rating,
@@ -128,6 +150,7 @@ def add():
         request.form.get("description"),
         request.form.get("kind", Book.KIND),
         request.files.get("cover"),
+        total_copies=request.form.get("total_copies", "1"),
     )
     return redirect(url_for("books.detail", book_id=book.book_id))
 
@@ -167,6 +190,8 @@ def edit(book_id):
         request.form.get("genre"),
         request.form.get("description"),
         request.files.get("cover"),
+        request.form.get("kind", book.kind),
+        total_copies=request.form.get("total_copies"),
     )
     return redirect(url_for("books.detail", book_id=book.book_id))
 

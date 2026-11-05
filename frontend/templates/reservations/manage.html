@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Reservations | Librarian | Bookend Library{% endblock %}
+{% block page_styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/library-pages.css') }}">
+{% endblock %}
+{% block content %}
+  <section class="page-heading library-page-heading">
+    <p class="eyebrow">LIBRARIAN TOOLS</p>
+    <h1>Reservations</h1>
+    <p>Review waiting queues and books ready for patrons.</p>
+  </section>
+  <form class="library-filter-form" method="get" action="{{ url_for('reservations.manage') }}" role="search">
+    <label class="visually-hidden" for="reservation-search">Search books or patrons</label>
+    <input id="reservation-search" name="q" type="search" value="{{ search }}" placeholder="Book title or patron">
+    <label class="visually-hidden" for="reservation-status">Filter by reservation status</label>
+    <select id="reservation-status" name="status">
+      <option value="" {% if not status %}selected{% endif %}>All open reservations</option>
+      <option value="waiting" {% if status == "waiting" %}selected{% endif %}>Waiting</option>
+      <option value="ready" {% if status == "ready" %}selected{% endif %}>Ready</option>
+    </select>
+    <button class="button" type="submit">Filter</button>
+  </form>
+
+  {% if reservations %}
+    <div class="table-scroll library-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr><th>Book</th><th>Patron</th><th>Status</th><th>Queue position</th><th>Date reserved</th></tr>
+        </thead>
+        <tbody>
+          {% for item in reservations %}
+            <tr>
+              <td><a href="{{ url_for('books.detail', book_id=item.book.book_id) }}">{{ item.book.title }}</a></td>
+              <td><a href="{{ url_for('members.detail', user_id=item.patron.user_id) }}">{{ item.patron.username }}</a></td>
+              <td><span class="reservation-status is-{{ item.reservation.status }}">{{ item.reservation.status|title }}</span></td>
+              <td>{{ item.queue_position if item.queue_position else "Ready" }}</td>
+              <td>{{ item.reservation.created_at.strftime("%b %d, %Y") }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <section class="empty-state"><h2>No matching reservations</h2><p>Open reservations will appear here.</p></section>
+  {% endif %}
+{% endblock %}

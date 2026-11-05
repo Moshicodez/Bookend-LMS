@@ -39,7 +39,6 @@ def login():
         return render_template(
             "auth/login.html",
             error_message=str(error),
-            suppress_inline_message=True,
             username=request.form.get("username", ""),
             page="login",
         ), status_code

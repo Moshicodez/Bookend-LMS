@@ -28,6 +28,7 @@ def upgrade():
     sa.Column('cover', sa.String(length=255), nullable=True),
     sa.Column('available', sa.Boolean(), nullable=False),
     sa.Column('catalog', sa.Boolean(), nullable=False),
+    sa.Column('archived_at', sa.DateTime(), nullable=True),
     sa.CheckConstraint("kind IN ('standard', 'new_release', 'reference')", name='valid_book_kind'),
     sa.PrimaryKeyConstraint('book_id')
     )

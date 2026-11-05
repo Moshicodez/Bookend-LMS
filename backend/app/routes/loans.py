@@ -32,14 +32,10 @@ def index():
     else:
         loans = []
         loan_cards = loan_service.loan_cards(user)
-    reservation_cards = (
-        loan_service.reservation_cards(user) if user.is_patron() else []
-    )
     return render_template(
         "loans/loans.html",
         loans=loans,
         loan_cards=loan_cards,
-        reservation_cards=reservation_cards,
         user=user,
         q=q,
         status=status,
@@ -83,21 +79,21 @@ def return_book(book_id):
     return redirect(url_for("loans.index"))
 
 
-@loans_bp.route("/manage/<int:book_id>/return", methods=["POST"])
-def librarian_return_book(book_id):
+@loans_bp.route("/manage/<int:loan_id>/return", methods=["POST"])
+def librarian_return_book(loan_id):
     user, response = _require_user()
     if response:
         return response
-    loan_service.process_return(user, book_id)
+    loan_service.process_return(user, loan_id)
     return redirect(url_for("loans.index"))
 
 
-@loans_bp.route("/manage/<int:book_id>/lost", methods=["POST"])
-def librarian_mark_lost(book_id):
+@loans_bp.route("/manage/<int:loan_id>/lost", methods=["POST"])
+def librarian_mark_lost(loan_id):
     user, response = _require_user()
     if response:
         return response
-    loan_service.process_return(user, book_id, lost=True)
+    loan_service.process_return(user, loan_id, lost=True)
     return redirect(url_for("loans.index"))
 
 

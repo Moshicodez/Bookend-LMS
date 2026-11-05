@@ -61,7 +61,9 @@ class BrowseUiTests(unittest.TestCase):
         self.assertEqual(catalog.status_code, 200)
         self.assertIn(b"History of Libraries", catalog.data)
         self.assertIn(b"Books to borrow", catalog.data)
-        self.assertIn(b'class="is-current" aria-current="page" href="/books/"', catalog.data)
+        self.assertIn(b'aria-label="Books"', catalog.data)
+        self.assertIn(b'href="/books/"', catalog.data)
+        self.assertIn(b'aria-current="page"', catalog.data)
         self.assertIn(b'class="book-grid catalog-book-grid"', catalog.data)
         self.assertIn(b"Search books or authors...", catalog.data)
         self.assertIn(b"History (2)", catalog.data)
@@ -79,6 +81,10 @@ class BrowseUiTests(unittest.TestCase):
         self.assertIn(b"History of Libraries", detail.data)
         self.assertIn(b"History", detail.data)
         self.assertIn(b"More in History", detail.data)
+        self.assertIn(b'class="book-detail-layout"', detail.data)
+        self.assertIn(b"About this book", detail.data)
+        self.assertIn(b"Ratings &amp; reviews", detail.data)
+        self.assertIn(b"Sign in to borrow", detail.data)
 
     def test_genre_filter_and_search_cover_title_author_and_genre(self):
         filtered = self.client.get("/books/?genre=history")
@@ -121,11 +127,11 @@ class BrowseUiTests(unittest.TestCase):
         self.assertIn(b">Edit</a>", page.data)
         self.assertNotIn(b">Borrow</button>", page.data)
         self.assertNotIn(b"Manage books", page.data)
-        self.assertIn(b'<span class="nav-username">staff</span>', page.data)
+        self.assertIn(b'aria-label="Open account menu for staff"', page.data)
         navigation = page.data.split(b'class="landing-navigation"', 1)[1].split(b"</nav>", 1)[0]
         self.assertNotIn(b"About", navigation)
-        self.assertNotIn(b"class=\"genre-dropdown\"", page.data)
-        self.assertNotIn(b"Notifications, ", page.data)
+        self.assertEqual(navigation.count(b'aria-label="Genres"'), 1)
+        self.assertIn(b'data-notification-toggle', page.data)
 
     def test_catalog_most_borrowed_sort_orders_by_loan_count(self):
         today = date.today()
@@ -157,6 +163,43 @@ class BrowseUiTests(unittest.TestCase):
             page.data.index(b"Mystery in the Stacks"),
             page.data.index(b"History of Libraries"),
         )
+
+    def test_catalog_paginates_all_books_and_keeps_filters(self):
+        for index in range(25):
+            self.books.create(
+                Book(
+                    None,
+                    f"History entry {index:02d}",
+                    "Catalog Writer",
+                    "History",
+                    "",
+                )
+            )
+
+        first_page = self.client.get("/books/?genre=History&sort=newest")
+        self.assertIn(b"27 books found", first_page.data)
+        self.assertIn(b"Page 1 of 2", first_page.data)
+        self.assertEqual(first_page.data.count(b'class="catalog-book-card"'), 24)
+        self.assertIn(b">Next</a>", first_page.data)
+
+        second_page = self.client.get("/books/?genre=History&sort=newest&page=2")
+        self.assertIn(b"Page 2 of 2", second_page.data)
+        self.assertEqual(second_page.data.count(b'class="catalog-book-card"'), 3)
+        self.assertIn(b">Previous</a>", second_page.data)
+        self.assertIn(b"History of Libraries", second_page.data)
+
+        available_page = self.client.get(
+            "/books/?genre=History&sort=newest&available=1&page=2"
+        )
+        self.assertIn(
+            b'id="catalog-available" name="available" type="checkbox" value="1" checked',
+            available_page.data,
+        )
+        self.assertIn(b"genre=History", available_page.data)
+        self.assertIn(b"available=1", available_page.data)
+
+        landing = self.client.get("/")
+        self.assertIn(b"History entry 24", landing.data)
 
     def test_patron_add_to_basket_and_guest_basket_redirect(self):
         self.assertEqual(self.client.get("/basket").location, "/login")

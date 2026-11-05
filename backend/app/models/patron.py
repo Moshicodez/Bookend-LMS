@@ -18,7 +18,7 @@ class Patron(User):
     })
 
     def home_endpoint(self):
-        return "patron_dashboard"
+        return "landing.index"
 
     @property
     def loan_limit(self):
