@@ -14,6 +14,7 @@ class Librarian(User):
         "manage_loans",
         "manage_reviews",
         "manage_genres",
+        "manage_notifications",
     })
 
     def home_endpoint(self):

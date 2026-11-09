@@ -17,6 +17,11 @@
   data-cover="{{ cover_url|e }}"
   data-url="{{ book_url|e }}"
   data-basket-action="{{ url_for('patron.basket_add', book_id=book.book_id)|e }}"
+  data-stock-total="{{ book.total_stock }}"
+  data-stock-available="{{ book.available_stock }}"
+  data-stock-borrowed="{{ book.borrowed_stock }}"
+  data-book-kind="{{ book.kind|e }}"
+  data-book-catalog="{{ 'true' if book.catalog else 'false' }}"
   data-available="{{ 'true' if can_borrow else 'false' }}"
   data-role="{{ role|e }}"
   data-csrf="{{ csrf_token()|e }}"
@@ -40,6 +45,7 @@
     <span class="book-stock-count">{{ book.available_copies }} available of {{ book.total_copies }}</span>
     <h3><a href="{{ book_url }}">{{ book.title }}</a></h3>
     <p>{{ book.author }}</p>
+    <p class="book-stock-count">{{ book.available_stock }} available / {{ book.total_stock }} total</p>
     {% if book.genre %}<span class="book-genre-label">{{ book.genre }}</span>{% endif %}
     {% set rating = ratings.get(book.book_id, {"average": 0, "count": 0}) %}
     <p class="book-rating" aria-label="{{ '%.1f'|format(rating.average) }} out of 5 stars from {{ rating.count }} reviews">

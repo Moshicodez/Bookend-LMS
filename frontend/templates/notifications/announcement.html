@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Send an announcement | Bookend Library{% endblock %}
+{% block content %}
+  <section class="page-heading">
+    <p class="eyebrow">LIBRARIAN TOOLS</p>
+    <h1>Library announcement</h1>
+    <p>Send an update to all active patrons.</p>
+  </section>
+  <form class="announcement-form" method="post" action="{{ url_for('notifications.announcement') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="announcement-title">Title</label>
+    <input id="announcement-title" name="title" maxlength="160" value="{{ request.form.get('title', '') }}" required>
+    <label for="announcement-message">Message</label>
+    <textarea id="announcement-message" name="message" maxlength="500" rows="5" required>{{ request.form.get('message', '') }}</textarea>
+    <p class="field-hint">Up to 500 characters. This will appear in each active patron’s notification list.</p>
+    <div class="announcement-actions">
+      <button class="button" type="submit">Send announcement</button>
+      <a class="button button-secondary" href="{{ url_for('notifications.index') }}">Cancel</a>
+    </div>
+  </form>
+{% endblock %}

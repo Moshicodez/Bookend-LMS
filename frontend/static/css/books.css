@@ -699,6 +699,12 @@
   color: var(--muted);
 }
 
+.catalog-status-badge.is-unavailable {
+  border-color: #e6c3bb;
+  background: #f8ece6;
+  color: #a44235;
+}
+
 .catalog-book-rating {
   margin: 7px 0 0;
   color: #9b712d;
