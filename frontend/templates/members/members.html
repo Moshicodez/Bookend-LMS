@@ -27,7 +27,7 @@
       <div>
         <p class="eyebrow">ONE-TIME CREDENTIAL</p>
         <h2 id="temporary-password-title">Temporary password</h2>
-        <p>Copy this password now. It will not be shown again.</p>
+        <p>Copy this password now. The member will keep using it until a librarian resets it again; it will not be shown again.</p>
       </div>
       <code>{{ temporary_password }}</code>
     </section>
@@ -74,7 +74,7 @@
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button class="button button-secondary" type="submit">{{ "Deactivate" if member.active else "Reactivate" }}</button>
                   </form>
-                  <form method="post" action="{{ url_for('members.reset_password', user_id=member.user_id) }}">
+                  <form method="post" action="{{ url_for('members.reset_password', user_id=member.user_id) }}" data-confirm-message="Reset this member's password and show a new temporary password?">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="q" value="{{ search_term or '' }}">
                     <input type="hidden" name="status" value="{{ status or '' }}">

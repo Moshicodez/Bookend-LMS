@@ -85,7 +85,7 @@
         {% if user and user.is_librarian() %}
           <a class="button button-secondary" href="{{ url_for('books.edit', book_id=book.book_id) }}">Edit details</a>
           {% if book.on_loan_copies == 0 and book.reserved_copies == 0 and book.catalog %}
-            <form method="post" action="{{ url_for('books.archive', book_id=book.book_id) }}">
+            <form method="post" action="{{ url_for('books.archive', book_id=book.book_id) }}" data-confirm-message="Archive this book? It will no longer appear in the active catalog.">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button class="button button-secondary" type="submit">Archive book</button>
             </form>
@@ -140,7 +140,7 @@
         <textarea id="edit-comment" name="comment" maxlength="2000">{{ own_review.comment }}</textarea>
         <button class="button" type="submit">Update review</button>
       </form>
-      <form class="review-delete-form" method="post" action="{{ url_for('social.delete_review', review_id=own_review.review_id) }}">
+      <form class="review-delete-form" method="post" action="{{ url_for('social.delete_review', review_id=own_review.review_id) }}" data-confirm-message="Delete your review?">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="button button-secondary" type="submit">Delete your review</button>
       </form>

@@ -42,6 +42,13 @@
   text-transform: none;
 }
 
+.landing-brand-group {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
 .landing-center-group {
   display: flex;
   align-items: center;
@@ -209,18 +216,19 @@
   box-shadow: 0 18px 42px rgb(37 42 37 / 16%);
   font-family: "Poppins", sans-serif;
   opacity: 0;
-  transform: translateY(-7px) scale(.985);
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-10px) scale(.985);
   transform-origin: top right;
-  transition: opacity 250ms ease, transform 250ms ease;
-}
-
-.notification-panel[hidden] {
-  display: none;
+  transition: opacity var(--dur-fast, 180ms) var(--ease-out, ease), transform var(--dur-fast, 180ms) var(--ease-out, ease), visibility 0s linear var(--dur-fast, 180ms);
 }
 
 .notification-panel.is-open {
   opacity: 1;
   transform: translateY(0) scale(1);
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: 0s;
 }
 
 .notification-panel-header {
@@ -425,173 +433,38 @@
   background: var(--ink);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .notification-panel {
-    transition: none;
-  }
-}
-
-@media (max-width: 900px) and (min-width: 681px) {
+@media (max-width: 900px) {
   .landing-navbar {
     padding-right: 16px;
     padding-left: 16px;
   }
 
   .landing-navbar-inner {
-    gap: 6px;
-  }
-
-  .landing-center-group {
-    gap: 4px;
-  }
-
-  .landing-navigation,
-  .nav-center-actions {
-    gap: 1px;
-  }
-
-  .nav-icon {
-    width: 38px;
-    height: 38px;
-  }
-
-  .nav-icon svg {
-    width: 20px;
-    height: 20px;
-  }
-
-  .landing-brand {
-    font-size: 18px;
-  }
-}
-
-@media (max-width: 680px) {
-  .landing-navbar {
-    height: 56px;
-    padding: 0 12px;
-  }
-
-  .landing-navbar-inner {
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 6px;
-  }
-
-  .landing-brand {
-    font-size: 19px;
+    gap: 10px;
   }
 
   .landing-center-group {
-    position: absolute;
-    z-index: 160;
-    top: calc(100% + 1px);
-    right: -12px;
-    left: -12px;
     display: none;
-    max-height: calc(100vh - 58px);
-    flex-direction: column;
-    align-items: stretch;
-    justify-self: auto;
-    gap: 0;
-    overflow-y: auto;
-    padding: 8px 16px 14px;
-    border-top: 1px solid var(--line);
-    background: var(--white);
-    box-shadow: 0 12px 24px rgb(37 42 37 / 12%);
-  }
-
-  .landing-center-group.is-open {
-    display: flex;
-  }
-
-  .landing-navigation {
-    width: 100%;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0;
-  }
-
-  .landing-navigation .nav-icon {
-    width: 100%;
-    height: 44px;
-    justify-content: start;
-    gap: 12px;
-    padding: 0 10px;
-    border-bottom: 1px solid var(--line);
-    border-radius: 7px;
-  }
-
-  .landing-navigation .nav-icon svg {
-    width: 20px;
-    height: 20px;
-  }
-
-  .landing-navigation .nav-main-link.is-current::after,
-  .landing-navigation .nav-main-link[aria-current="page"]::after {
-    top: 50%;
-    right: 10px;
-    bottom: auto;
-    left: auto;
-    width: 6px;
-    height: 6px;
-    transform: translateY(-50%);
-  }
-
-  .nav-icon-label {
-    display: inline;
-    color: inherit;
-    font-size: 13px;
-  }
-
-  .nav-tooltip {
-    display: none !important;
-  }
-
-  .nav-center-actions {
-    width: 100%;
-    flex-wrap: wrap;
-    gap: 4px;
-    padding-top: 7px;
-  }
-
-  .nav-center-actions .nav-action-divider {
-    display: none;
-  }
-
-  .nav-center-actions .nav-icon {
-    display: flex;
-    width: auto;
-    min-width: 44px;
-    height: 46px;
-    flex: 1 1 30%;
-    flex-direction: column;
-    gap: 1px;
-    border-radius: 8px;
-  }
-
-  .nav-center-actions .nav-icon-label {
-    font-size: 10px;
-    white-space: nowrap;
-  }
-
-  .nav-center-actions .nav-count {
-    top: 1px;
-    right: calc(50% - 20px);
-  }
-
-  .nav-right-actions {
-    gap: 2px;
-  }
-
-  .nav-right-actions > .nav-icon,
-  .nav-right-actions .notification-trigger {
-    width: 38px;
-    height: 38px;
   }
 
   .landing-menu-toggle {
     display: inline-flex;
     flex-direction: column;
     flex: 0 0 auto;
+  }
+
+  .nav-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .landing-brand {
+    font-size: 19px;
+  }
+
+  .nav-right-actions {
+    gap: 4px;
   }
 
   .notification-panel {
@@ -607,5 +480,22 @@
   .notification-panel-header {
     padding-right: 13px;
     padding-left: 13px;
+  }
+}
+
+@media (max-width: 680px) {
+  .landing-navbar {
+    height: 56px;
+    padding: 0 12px;
+  }
+
+  .nav-right-actions > .nav-icon,
+  .nav-right-actions .notification-trigger {
+    width: 38px;
+    height: 38px;
+  }
+
+  .notification-panel {
+    top: 60px;
   }
 }

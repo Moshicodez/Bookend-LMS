@@ -142,7 +142,7 @@
       <a href="{{ url_for('dashboard.export_backup') }}">Download backup</a>
     </div>
     <p class="muted">A backup contains account and library records. Store downloaded files securely.</p>
-    <form method="post" action="{{ url_for('dashboard.import_backup') }}" enctype="multipart/form-data" onsubmit="return confirm('Restore this backup? It will replace all current library data, including accounts and loan history.');">
+    <form method="post" action="{{ url_for('dashboard.import_backup') }}" enctype="multipart/form-data" data-confirm-message="Restore this backup? It will replace all current library data, including accounts and loan history.">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label for="backup-file">Restore from backup file</label>
       <input id="backup-file" name="backup_file" type="file" accept=".json,application/json" required>

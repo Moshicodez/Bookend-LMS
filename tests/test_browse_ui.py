@@ -56,6 +56,32 @@ class BrowseUiTests(unittest.TestCase):
             session["username"] = user.username
             session["role"] = user.role
 
+    def test_sidebar_navigation_is_role_aware(self):
+        guest_page = self.client.get("/books/")
+        guest_menu = guest_page.data.split(b'id="nav-drawer"', 1)[1].split(b"</aside>", 1)[0]
+        self.assertIn(b"aria-hidden=\"true\" inert", guest_menu)
+        self.assertIn(b">Genres</span>", guest_menu)
+        self.assertIn(b"Sign in", guest_menu)
+        self.assertIn(b"Create an account", guest_menu)
+        self.assertNotIn(b"Dashboard", guest_menu)
+        self.assertNotIn(b"Favorites", guest_menu)
+
+        self._sign_in(self.patron)
+        patron_page = self.client.get("/books/")
+        patron_menu = patron_page.data.split(b'id="nav-drawer"', 1)[1].split(b"</aside>", 1)[0]
+        self.assertIn(b"Favorites", patron_menu)
+        self.assertIn(b"Borrow basket", patron_menu)
+        self.assertIn(b"Notifications", patron_menu)
+        self.assertNotIn(b"Manage books", patron_menu)
+        self.assertNotIn(b"Members", patron_menu)
+
+        self._sign_in(self.librarian)
+        librarian_page = self.client.get("/books/")
+        librarian_menu = librarian_page.data.split(b'id="nav-drawer"', 1)[1].split(b"</aside>", 1)[0]
+        for label in (b"Dashboard", b"Manage books", b"Stock", b"Reservations", b"Archived books", b"Members", b"Loans", b"Notifications"):
+            self.assertIn(label, librarian_menu)
+        self.assertNotIn(b"Favorites", librarian_menu)
+
     def test_guest_can_browse_catalog_detail_and_search_overlay(self):
         catalog = self.client.get("/books/")
         self.assertEqual(catalog.status_code, 200)
@@ -126,7 +152,7 @@ class BrowseUiTests(unittest.TestCase):
         self.assertIn(b">Archived books</a>", page.data)
         self.assertIn(b">Edit</a>", page.data)
         self.assertNotIn(b">Borrow</button>", page.data)
-        self.assertNotIn(b"Manage books", page.data)
+        self.assertIn(b">Manage books</span>", page.data)
         self.assertIn(b'aria-label="Open account menu for staff"', page.data)
         navigation = page.data.split(b'class="landing-navigation"', 1)[1].split(b"</nav>", 1)[0]
         self.assertNotIn(b"About", navigation)

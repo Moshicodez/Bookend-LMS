@@ -1,0 +1,348 @@
+:root {
+  --ease-out: cubic-bezier(.22, .8, .3, 1);
+  --dur-fast: 180ms;
+  --dur-base: 300ms;
+  --dur-slow: 450ms;
+  --slide-distance: 16px;
+}
+
+@keyframes root-transition-out {
+  to { opacity: 0; transform: translateX(-8px); }
+}
+
+@keyframes root-transition-in {
+  from { opacity: 0; transform: translateX(8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.global-flashes {
+  position: fixed;
+  z-index: 300;
+  top: 76px;
+  right: 24px;
+  display: grid;
+  width: min(420px, calc(100vw - 32px));
+  gap: 8px;
+  margin: 0;
+  pointer-events: none;
+}
+
+.flash-message {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding: 12px 12px 12px 16px;
+  box-shadow: 0 10px 24px rgb(50 54 43 / 10%);
+  pointer-events: auto;
+}
+
+.flash-close {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: currentColor;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.flash-close:hover {
+  background: rgb(37 42 37 / 8%);
+}
+
+.confirm-dialog {
+  width: min(440px, calc(100vw - 32px));
+  max-width: 440px;
+  padding: 0;
+  overflow: visible;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: transparent;
+  color: var(--ink);
+}
+
+.confirm-dialog::backdrop {
+  background: rgb(37 42 37 / 45%);
+}
+
+.confirm-dialog-card {
+  padding: 26px;
+  border-radius: 15px;
+  background: var(--white);
+  box-shadow: 0 20px 48px rgb(50 54 43 / 10%);
+}
+
+.confirm-dialog-card h2 {
+  margin: 8px 0;
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.confirm-dialog-card > p:not(.eyebrow) {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.confirm-dialog-actions .button {
+  min-height: 40px;
+  border-radius: 8px;
+}
+
+@media (max-width: 680px) {
+  .global-flashes {
+    top: 56px;
+    right: 0;
+    width: 100%;
+  }
+
+  .flash-message {
+    border-radius: 0 0 8px 8px;
+  }
+
+  .confirm-dialog {
+    position: fixed;
+    inset: auto 0 0;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .confirm-dialog-card {
+    border-radius: 15px 15px 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root) {
+    animation: root-transition-out 180ms var(--ease-out) both;
+  }
+
+  ::view-transition-new(root) {
+    animation: root-transition-in 180ms var(--ease-out) both;
+  }
+
+  @keyframes motion-page-enter {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes motion-navbar-enter {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes motion-rise-enter {
+    from { opacity: 0; transform: translateY(var(--slide-distance)); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes motion-toast-enter {
+    from { opacity: 0; transform: translate3d(0, -12px, 0); }
+    to { opacity: 1; transform: translate3d(0, 0, 0); }
+  }
+
+  @keyframes motion-toast-exit {
+    to { opacity: 0; transform: translate3d(0, -10px, 0); }
+  }
+
+  @keyframes motion-dialog-enter {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes motion-dialog-exit {
+    to { opacity: 0; transform: translateY(24px); }
+  }
+
+  @keyframes motion-backdrop-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes motion-backdrop-exit {
+    to { opacity: 0; }
+  }
+
+  @keyframes motion-dropdown-enter {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes motion-dropdown-exit {
+    to { opacity: 0; transform: translateY(-10px); }
+  }
+
+  @keyframes motion-indicator-out {
+    to { opacity: 0; transform: translateX(8px); }
+  }
+
+  @keyframes motion-indicator-in {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .landing-navigation .nav-main-link[aria-current="page"] {
+    view-transition-name: active-nav-icon;
+  }
+
+  .catalog-book-grid > .catalog-book-card:first-child .catalog-page-number.is-current {
+    view-transition-name: catalog-page-indicator;
+  }
+
+  ::view-transition-old(active-nav-icon),
+  ::view-transition-old(catalog-page-indicator) {
+    animation: motion-indicator-out var(--dur-fast) var(--ease-out) both;
+  }
+
+  ::view-transition-new(active-nav-icon),
+  ::view-transition-new(catalog-page-indicator) {
+    animation: motion-indicator-in var(--dur-fast) var(--ease-out) both;
+  }
+
+  .motion-page-enter {
+    animation: motion-page-enter var(--dur-base) var(--ease-out) both;
+    will-change: transform, opacity;
+  }
+
+  .motion-navbar-enter {
+    animation: motion-navbar-enter 250ms var(--ease-out) both;
+    will-change: transform, opacity;
+  }
+
+  .js .motion-reveal {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  .js .motion-reveal.is-visible {
+    animation: motion-rise-enter 240ms var(--ease-out) both;
+    animation-delay: calc(var(--i, 0) * 45ms);
+  }
+
+  .flash-message {
+    animation: motion-toast-enter var(--dur-base) var(--ease-out) both;
+  }
+
+  .flash-message.is-leaving {
+    animation: motion-toast-exit 220ms var(--ease-out) both;
+  }
+
+  .confirm-dialog[open] {
+    animation: motion-dialog-enter 260ms var(--ease-out) both;
+  }
+
+  .confirm-dialog[data-closing="true"] {
+    animation: motion-dialog-exit 180ms var(--ease-out) both;
+  }
+
+  .confirm-dialog::backdrop {
+    background: rgb(37 42 37 / 45%);
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
+    animation: motion-backdrop-fade 180ms var(--ease-out) both;
+  }
+
+  .confirm-dialog[data-closing="true"]::backdrop {
+    animation: motion-backdrop-exit 180ms var(--ease-out) both;
+  }
+
+  .button,
+  .nav-drawer-row,
+  .catalog-book-card,
+  .book-card,
+  .review-card,
+  .catalog-page-number,
+  .genre-chips a,
+  .genre-filters a,
+  [role="tab"] {
+    transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  }
+
+  .button:hover,
+  .catalog-book-card:hover,
+  .book-card:hover,
+  .review-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgb(50 54 43 / 10%);
+  }
+
+  .button:active,
+  .catalog-book-card:active,
+  .book-card:active,
+  .review-card:active {
+    transform: translateY(0);
+  }
+
+  .nav-main-link::after {
+    transition: transform var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+  }
+
+  .nav-main-link:not([aria-current="page"])::after {
+    opacity: 0;
+    transform: translateX(-50%) scaleX(0);
+  }
+
+  .genre-chips a:hover,
+  .genre-filters a:hover,
+  .catalog-page-number:hover,
+  [role="tab"]:hover {
+    transform: translateY(-1px);
+  }
+
+  .nav-drawer-more-genres[open] > .nav-drawer-genre-list {
+    animation: motion-dropdown-enter var(--dur-fast) var(--ease-out) both;
+  }
+
+  .nav-drawer-more-genres[data-closing="true"] > .nav-drawer-genre-list {
+    animation: motion-dropdown-exit var(--dur-fast) var(--ease-out) both;
+  }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-page-enter,
+  .motion-navbar-enter,
+  .flash-message,
+  .confirm-dialog[open] {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+
+  .js .motion-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+
+  .confirm-dialog::backdrop {
+    background: rgb(37 42 37 / 45%);
+  }
+
+  .notification-panel {
+    transition-duration: 1ms;
+    transition-delay: 0ms;
+  }
+}

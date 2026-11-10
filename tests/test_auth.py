@@ -184,35 +184,6 @@ class AuthRouteTests(unittest.TestCase):
         self.assertEqual(deactivated.status_code, 403)
         self.assertIn(b"account has been deactivated", deactivated.data)
 
-    def test_change_password_requires_current_password_and_updates_hash(self):
-        self.register_account()
-        self.assertEqual(self.login().status_code, 302)
-
-        invalid = self.post(
-            "/change-password",
-            data={
-                "current_password": "wrong-password",
-                "password": "NewStrongPass2!",
-                "confirm_password": "NewStrongPass2!",
-            },
-        )
-        self.assertEqual(invalid.status_code, 200)
-        self.assertIn(b"Current password is incorrect", invalid.data)
-
-        updated = self.post(
-            "/change-password",
-            data={
-                "current_password": "StrongPass1!",
-                "password": "NewStrongPass2!",
-                "confirm_password": "NewStrongPass2!",
-            },
-        )
-        self.assertEqual(updated.status_code, 200)
-        password_hash = db.session.execute(
-            db.select(UserRecord.password_hash).where(UserRecord.username == "reader")
-        ).scalar_one()
-        self.assertTrue(check_password_hash(password_hash, "NewStrongPass2!"))
-
     def test_create_librarian_cli_creates_active_account(self):
         result = self.app.test_cli_runner().invoke(
             args=["create-librarian"],

@@ -274,6 +274,7 @@ class BackendRouteTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Temporary password", response.data)
+        self.assertIn(b"member will keep using it until a librarian resets it again", response.data)
         temporary_password = html.unescape(
             re.search(rb"<code>(.*?)</code>", response.data).group(1).decode()
         )

@@ -92,31 +92,6 @@ def register():
     )
 
 
-@auth_bp.route("/change-password", methods=["GET", "POST"])
-def change_password():
-    user = _signed_in_user()
-    if user is None:
-        return redirect(url_for("auth.login"))
-    error_message = None
-    if request.method == "POST":
-        try:
-            auth_service.change_password(
-                user.user_id,
-                request.form.get("current_password"),
-                request.form.get("password"),
-                request.form.get("confirm_password"),
-            )
-        except ValidationError as error:
-            error_message = str(error)
-        else:
-            return render_template(
-                "auth/change_password.html",
-                success_message="Your password has been changed successfully.",
-            )
-
-    return render_template("auth/change_password.html", error_message=error_message)
-
-
 @auth_bp.route("/logout", methods=["POST"])
 def logout():
     session.clear()

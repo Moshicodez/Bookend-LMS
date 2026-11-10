@@ -1,4 +1,33 @@
 (() => {
+  const closeOtherPanels = (except) => {
+    document.dispatchEvent(new CustomEvent("bookend:close-panels", {
+      detail: { except },
+    }));
+  };
+
+  const getFocusable = (panel) => Array.from(panel.querySelectorAll(
+    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+  )).filter((element) => element instanceof HTMLElement && element.getClientRects().length);
+
+  const trapFocus = (panel, event) => {
+    if (event.key !== "Tab") return;
+    const focusable = getFocusable(panel);
+    if (!focusable.length) {
+      event.preventDefault();
+      panel.focus();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && (document.activeElement === first || !panel.contains(document.activeElement))) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && (document.activeElement === last || !panel.contains(document.activeElement))) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
   const dialog = document.querySelector("[data-search-dialog]");
   if (dialog instanceof HTMLDialogElement) {
     const input = dialog.querySelector("[data-search-input]");
@@ -6,6 +35,7 @@
 
     document.querySelectorAll("[data-search-open]").forEach((button) => {
       button.addEventListener("click", () => {
+        closeOtherPanels("search");
         dialog.showModal();
         input?.focus();
       });
@@ -26,25 +56,103 @@
     });
   });
 
-  const menuToggle = document.querySelector("[data-menu-toggle]");
-  const navigation = document.querySelector("[data-navigation]");
-  if (menuToggle instanceof HTMLButtonElement && navigation instanceof HTMLElement) {
-    const setMenuOpen = (open) => {
-      menuToggle.setAttribute("aria-expanded", String(open));
-      menuToggle.setAttribute("aria-label", open ? "Close navigation menu" : "Open navigation menu");
-      navigation.classList.toggle("is-open", open);
-    };
-
-    menuToggle.addEventListener("click", () => {
-      setMenuOpen(menuToggle.getAttribute("aria-expanded") !== "true");
+  const navDrawer = document.querySelector("[data-nav-drawer]");
+  const navBackdrop = document.querySelector("[data-nav-drawer-backdrop]");
+  const navToggle = document.querySelector("[data-nav-drawer-toggle]");
+  const navClose = document.querySelector("[data-nav-drawer-close]");
+  const genreDisclosure = navDrawer?.querySelector(".nav-drawer-more-genres");
+  const genreDisclosureSummary = genreDisclosure?.querySelector("summary");
+  let navCloseTimer;
+  let genreCloseTimer;
+  const closeGenreDisclosure = (returnFocus = false) => {
+    if (!(genreDisclosure instanceof HTMLDetailsElement) || !genreDisclosure.open) return;
+    genreDisclosure.dataset.closing = "true";
+    window.clearTimeout(genreCloseTimer);
+    genreCloseTimer = window.setTimeout(() => {
+      genreDisclosure.open = false;
+      delete genreDisclosure.dataset.closing;
+      if (returnFocus && genreDisclosureSummary instanceof HTMLElement) genreDisclosureSummary.focus();
+    }, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 1 : 180);
+  };
+  if (genreDisclosure instanceof HTMLDetailsElement && genreDisclosureSummary instanceof HTMLElement) {
+    genreDisclosureSummary.addEventListener("click", (event) => {
+      event.preventDefault();
+      if (genreDisclosure.dataset.closing === "true") {
+        window.clearTimeout(genreCloseTimer);
+        delete genreDisclosure.dataset.closing;
+      } else if (genreDisclosure.open) {
+        closeGenreDisclosure();
+      } else {
+        window.clearTimeout(genreCloseTimer);
+        delete genreDisclosure.dataset.closing;
+        genreDisclosure.open = true;
+      }
     });
-    navigation.querySelectorAll("a, button").forEach((link) => {
-      link.addEventListener("click", () => setMenuOpen(false));
+    document.addEventListener("pointerdown", (event) => {
+      if (!genreDisclosure.contains(event.target)) closeGenreDisclosure();
+    });
+  }
+  const setNavDrawerOpen = (open, returnFocus = false) => {
+    if (!(navDrawer instanceof HTMLElement) || !(navToggle instanceof HTMLButtonElement)) return;
+    window.clearTimeout(navCloseTimer);
+    navToggle.setAttribute("aria-expanded", String(open));
+    navToggle.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+    navDrawer.setAttribute("aria-hidden", String(!open));
+    navDrawer.inert = !open;
+    document.body.classList.toggle("is-nav-open", open);
+    document.body.classList.toggle("has-open-panel", open || document.body.classList.contains("is-drawer-open"));
+    if (open) {
+      closeOtherPanels("navigation");
+      navDrawer.classList.add("is-open");
+      requestAnimationFrame(() => navClose?.focus());
+    } else {
+      window.clearTimeout(genreCloseTimer);
+      if (genreDisclosure instanceof HTMLDetailsElement) {
+        genreDisclosure.open = false;
+        delete genreDisclosure.dataset.closing;
+      }
+      navDrawer.classList.remove("is-open");
+      if (returnFocus) navToggle.focus();
+      navCloseTimer = window.setTimeout(() => {
+        if (navToggle.getAttribute("aria-expanded") === "false") {
+          navDrawer.setAttribute("aria-hidden", "true");
+          navDrawer.inert = true;
+        }
+      }, 450);
+    }
+  };
+  if (navDrawer instanceof HTMLElement && navToggle instanceof HTMLButtonElement) {
+    navToggle.addEventListener("click", () => {
+      setNavDrawerOpen(navToggle.getAttribute("aria-expanded") !== "true");
+    });
+    navClose?.addEventListener("click", () => setNavDrawerOpen(false, true));
+    navBackdrop?.addEventListener("click", () => setNavDrawerOpen(false, true));
+    navDrawer.querySelectorAll("a").forEach((link) => {
+      link.addEventListener("click", () => setNavDrawerOpen(false, true));
+    });
+    navDrawer.querySelectorAll("form").forEach((form) => {
+      form.addEventListener("submit", () => setNavDrawerOpen(false, true));
+    });
+    document.addEventListener("bookend:close-panels", (event) => {
+      if (event.detail?.except !== "navigation") setNavDrawerOpen(false);
     });
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && menuToggle.getAttribute("aria-expanded") === "true") {
-        setMenuOpen(false);
-        menuToggle.focus();
+      if (navToggle.getAttribute("aria-expanded") !== "true") return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        if (genreDisclosure instanceof HTMLDetailsElement && genreDisclosure.open) {
+          event.stopImmediatePropagation();
+          closeGenreDisclosure(true);
+          return;
+        }
+        setNavDrawerOpen(false, true);
+      } else {
+        trapFocus(navDrawer, event);
+      }
+    });
+    window.addEventListener("resize", () => {
+      if (window.getComputedStyle(navToggle).display === "none") {
+        setNavDrawerOpen(false, true);
       }
     });
   }
@@ -66,8 +174,6 @@
   ) {
     const csrfToken = notificationButton.dataset.csrfToken || "";
     let activeNotifications = [];
-    let closingTimer;
-
     const setUnreadCount = (value) => {
       const count = Math.max(0, Number(value) || 0);
       notificationButton.dataset.unreadCount = String(count);
@@ -80,6 +186,10 @@
         badge.textContent = count > 9 ? "9+" : String(count);
         badge.hidden = count === 0;
       }
+      document.querySelectorAll("[data-nav-notification-count]").forEach((sidebarBadge) => {
+        sidebarBadge.textContent = count > 9 ? "9+" : String(count);
+        sidebarBadge.hidden = count === 0;
+      });
       markAllButton.disabled = count === 0;
     };
 
@@ -223,19 +333,14 @@
       if (notificationButton.getAttribute("aria-expanded") !== "true") return;
       notificationButton.setAttribute("aria-expanded", "false");
       notificationPanel.setAttribute("aria-hidden", "true");
+      notificationPanel.inert = true;
       notificationPanel.classList.remove("is-open");
-      window.clearTimeout(closingTimer);
-      closingTimer = window.setTimeout(() => {
-        if (notificationButton.getAttribute("aria-expanded") === "false") {
-          notificationPanel.hidden = true;
-        }
-      }, 260);
       if (returnFocus) notificationButton.focus();
     };
 
     const openPanel = async () => {
-      window.clearTimeout(closingTimer);
-      if (window.matchMedia("(max-width: 680px)").matches) {
+      closeOtherPanels("notification");
+      if (window.getComputedStyle(notificationPanel).position === "fixed") {
         const bell = notificationButton.getBoundingClientRect();
         const panelWidth = Math.min(360, window.innerWidth * 0.92);
         const maxRight = window.innerWidth - panelWidth - 8;
@@ -245,11 +350,13 @@
         );
         notificationPanel.style.setProperty("--notification-panel-right", `${right}px`);
       }
-      notificationPanel.hidden = false;
       notificationPanel.setAttribute("aria-hidden", "false");
+      notificationPanel.inert = false;
       notificationButton.setAttribute("aria-expanded", "true");
-      requestAnimationFrame(() => notificationPanel.classList.add("is-open"));
-      notificationPanel.focus();
+      requestAnimationFrame(() => {
+        notificationPanel.classList.add("is-open");
+        notificationPanel.focus();
+      });
       await loadNotifications();
     };
 
@@ -290,6 +397,9 @@
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") closePanel(true);
     });
+    document.addEventListener("bookend:close-panels", (event) => {
+      if (event.detail?.except !== "notification") closePanel();
+    });
   }
 
   const drawer = document.querySelector("[data-account-drawer]");
@@ -297,19 +407,34 @@
   const openButtons = document.querySelectorAll("[data-account-open]");
   const closeButtons = document.querySelectorAll("[data-account-close]");
   let activeAccountButton = null;
+  let accountCloseTimer;
 
   const setDrawerOpen = (open) => {
     if (!(drawer instanceof HTMLElement)) return;
+    window.clearTimeout(accountCloseTimer);
+    if (open) closeOtherPanels("account");
     document.body.classList.toggle("is-drawer-open", open);
+    document.body.classList.toggle("has-open-panel", open || document.body.classList.contains("is-nav-open"));
     drawer.setAttribute("aria-hidden", String(!open));
+    drawer.inert = !open;
     openButtons.forEach((button) => {
       button.setAttribute("aria-expanded", String(open));
     });
     if (open) {
       activeAccountButton = document.activeElement;
-      drawer.querySelector("button, a")?.focus();
+      drawer.classList.add("is-open");
+      getFocusable(drawer)[0]?.focus();
     } else if (activeAccountButton instanceof HTMLElement) {
-      activeAccountButton.focus();
+      drawer.classList.remove("is-open");
+      accountCloseTimer = window.setTimeout(() => {
+        if (!document.body.classList.contains("is-drawer-open")) {
+          drawer.setAttribute("aria-hidden", "true");
+          drawer.inert = true;
+        }
+      }, 450);
+      if (document.activeElement instanceof HTMLElement && drawer.contains(document.activeElement)) {
+        activeAccountButton.focus();
+      }
       activeAccountButton = null;
     }
   };
@@ -322,9 +447,158 @@
       button.addEventListener("click", () => setDrawerOpen(false));
     });
     backdrop?.addEventListener("click", () => setDrawerOpen(false));
+    document.addEventListener("bookend:close-panels", (event) => {
+      if (event.detail?.except !== "account") setDrawerOpen(false);
+    });
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && document.body.classList.contains("is-drawer-open")) {
         setDrawerOpen(false);
+      } else if (document.body.classList.contains("is-drawer-open")) {
+        trapFocus(drawer, event);
+      }
+    });
+  }
+
+  document.documentElement.classList.add("js");
+  const viewTransitionPreference = window.matchMedia("(prefers-reduced-motion: no-preference)");
+  let viewTransitionStyle = null;
+  const setViewTransitions = () => {
+    if (viewTransitionPreference.matches && !viewTransitionStyle) {
+      viewTransitionStyle = document.createElement("style");
+      viewTransitionStyle.textContent = "@view-transition { navigation: auto; }";
+      document.head.append(viewTransitionStyle);
+    } else if (!viewTransitionPreference.matches && viewTransitionStyle) {
+      viewTransitionStyle.remove();
+      viewTransitionStyle = null;
+    }
+  };
+  setViewTransitions();
+  viewTransitionPreference.addEventListener("change", setViewTransitions);
+
+  const isAuthScreen = document.querySelector(".login-screen, .form-panel") !== null;
+  const page = document.querySelector("[data-motion-page]");
+  if (!isAuthScreen && page instanceof HTMLElement) {
+    page.classList.add("motion-page-enter");
+    page.addEventListener("animationend", () => page.classList.remove("motion-page-enter"), { once: true });
+
+    document.querySelector(".landing-navbar")?.classList.add("motion-navbar-enter");
+    const navbar = document.querySelector(".landing-navbar");
+    navbar?.addEventListener("animationend", () => navbar.classList.remove("motion-navbar-enter"), { once: true });
+
+    const staggerItems = new Set();
+    page.querySelectorAll(".catalog-book-grid, .book-grid, .review-list, .profile-stats, .admin-table tbody").forEach((group) => {
+      Array.from(group.children).forEach((item, index) => {
+        item.style.setProperty("--i", String(index < 8 ? index : 0));
+        staggerItems.add(item);
+      });
+    });
+
+    const revealTargets = new Set([
+      ...page.querySelectorAll(".book-detail-layout > section, .reviews-section, .admin-panel, .dashboard-card, .loan-card"),
+      ...staggerItems,
+    ]);
+    if ("IntersectionObserver" in window) {
+      const revealObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add("is-visible");
+          observer.unobserve(entry.target);
+        });
+      }, { threshold: 0.12 });
+      revealTargets.forEach((target) => {
+        target.classList.add("motion-reveal");
+        revealObserver.observe(target);
+      });
+    }
+  }
+
+  document.querySelectorAll("[data-toast]").forEach((toast) => {
+    if (!(toast instanceof HTMLElement)) return;
+    let toastTimer;
+    const dismissToast = () => {
+      window.clearTimeout(toastTimer);
+      toast.classList.add("is-leaving");
+      window.setTimeout(
+        () => toast.remove(),
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 1 : 220,
+      );
+    };
+    toast.querySelector("[data-toast-close]")?.addEventListener("click", dismissToast);
+    if (!toast.classList.contains("error")) {
+      toastTimer = window.setTimeout(dismissToast, 4000);
+    }
+  });
+
+  const confirmDialog = document.querySelector("[data-confirm-dialog]");
+  if (confirmDialog instanceof HTMLDialogElement) {
+    const message = confirmDialog.querySelector("[data-confirm-message]");
+    const acceptButton = confirmDialog.querySelector("[data-confirm-accept]");
+    const cancelButton = confirmDialog.querySelector("[data-confirm-cancel]");
+    let pendingForm = null;
+    let pendingSubmitter = null;
+    let closeTimer;
+
+    const closeConfirmDialog = (afterClose) => {
+      if (!confirmDialog.open) return;
+      confirmDialog.dataset.closing = "true";
+      window.clearTimeout(closeTimer);
+      closeTimer = window.setTimeout(() => {
+        delete confirmDialog.dataset.closing;
+        confirmDialog.close();
+        afterClose?.();
+      }, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 1 : 180);
+    };
+
+    document.querySelectorAll("form[data-confirm-message]").forEach((form) => {
+      form.addEventListener("submit", (event) => {
+        if (form.dataset.confirmed === "true") {
+          delete form.dataset.confirmed;
+          return;
+        }
+        event.preventDefault();
+        pendingForm = form;
+        pendingSubmitter = event.submitter instanceof HTMLElement ? event.submitter : null;
+        if (message instanceof HTMLElement) message.textContent = form.dataset.confirmMessage || "Are you sure you want to continue?";
+        confirmDialog.showModal();
+        acceptButton?.focus();
+      });
+    });
+
+    acceptButton?.addEventListener("click", () => {
+      if (!(pendingForm instanceof HTMLFormElement)) return;
+      const form = pendingForm;
+      const submitter = pendingSubmitter;
+      pendingForm = null;
+      pendingSubmitter = null;
+      form.dataset.confirmed = "true";
+      closeConfirmDialog(() => {
+        if (submitter instanceof HTMLElement) form.requestSubmit(submitter);
+        else form.requestSubmit();
+      });
+    });
+
+    cancelButton?.addEventListener("click", () => {
+      pendingForm = null;
+      pendingSubmitter = null;
+      closeConfirmDialog();
+    });
+    confirmDialog.addEventListener("cancel", (event) => {
+      event.preventDefault();
+      pendingForm = null;
+      pendingSubmitter = null;
+      closeConfirmDialog();
+    });
+    confirmDialog.addEventListener("click", (event) => {
+      if (event.target !== confirmDialog) return;
+      pendingForm = null;
+      pendingSubmitter = null;
+      closeConfirmDialog();
+    });
+    document.addEventListener("bookend:close-panels", () => {
+      if (confirmDialog.open) {
+        pendingForm = null;
+        pendingSubmitter = null;
+        closeConfirmDialog();
       }
     });
   }

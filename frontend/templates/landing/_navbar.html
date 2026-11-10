@@ -32,15 +32,21 @@
 
 <header class="landing-navbar" id="top">
   <div class="landing-navbar-inner">
-    <a class="brand landing-brand" href="{{ url_for('landing.index') }}" aria-label="Bookend Library home">
-      <span class="brand-mark" aria-hidden="true">B</span>
-      <span>bookend<span class="brand-period">.</span></span>
-    </a>
+    <div class="landing-brand-group">
+      <button class="landing-menu-toggle" type="button" aria-controls="nav-drawer" aria-expanded="false" aria-label="Open menu" data-nav-drawer-toggle>
+        <span></span><span></span><span></span>
+      </button>
+      <a class="brand landing-brand" href="{{ url_for('landing.index') }}" aria-label="Bookend Library home">
+        <span class="brand-mark" aria-hidden="true">B</span>
+        <span>bookend<span class="brand-period">.</span></span>
+      </a>
+    </div>
 
-    <div class="landing-center-group" data-navigation>
+    <div class="landing-center-group">
       <nav class="landing-navigation" aria-label="Main navigation">
         {{ nav_item("Home", url_for("landing.index"), "home", request.endpoint == "landing.index") }}
-        {{ nav_item("Books", url_for("books.catalog"), "book", request.endpoint in ["books.catalog", "books.detail"]) }}
+        {{ nav_item("Books", url_for("books.catalog"), "book", request.endpoint in ["books.catalog", "books.detail"] and not request.args.get("genre")) }}
+        {{ nav_item("Genres", url_for("books.catalog"), "genres", request.endpoint == "books.catalog" and request.args.get("genre")) }}
         {% if current_user and current_user.is_patron() %}
           {{ nav_item("Reservations", url_for("reservations.index"), "reservation", request.endpoint == "reservations.index", ready_reservation_count) }}
         {% elif current_user and current_user.is_librarian() %}
@@ -48,7 +54,6 @@
           {{ nav_item("Manage Books", url_for("books.manage"), "manage", request.endpoint == "books.manage") }}
           {{ nav_item("Members", url_for("members.index"), "members", request.endpoint in ["members.index", "members.detail"]) }}
           {{ nav_item("Loans", url_for("loans.index"), "loans", request.endpoint in ["loans.index", "loans.overdue"]) }}
-          {{ nav_item("Genres", url_for("genres.index"), "genres", request.endpoint == "genres.index") }}
           {{ nav_item("Archived Books", url_for("books.archived"), "archive", request.endpoint == "books.archived") }}
         {% endif %}
       </nav>
@@ -105,8 +110,8 @@
                    role="dialog"
                    aria-label="Notifications"
                    aria-hidden="true"
+                   inert
                    tabindex="-1"
-                   hidden
                    data-notification-panel>
             <header class="notification-panel-header">
               <h2>Notifications</h2>
@@ -121,9 +126,6 @@
             </footer>
           </section>
         </div>
-        <button class="landing-menu-toggle" type="button" aria-expanded="false" aria-label="Open navigation menu" data-menu-toggle>
-          <span></span><span></span><span></span>
-        </button>
         <button class="icon-button nav-icon account-trigger" type="button"
                 aria-label="Open account menu for {{ current_user.username }}"
                 aria-haspopup="dialog"
@@ -133,9 +135,6 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="9" r="3"></circle><path d="M6.5 18.5c.9-2.7 2.8-4 5.5-4s4.6 1.3 5.5 4"></path></svg>
         </button>
       {% else %}
-        <button class="landing-menu-toggle" type="button" aria-expanded="false" aria-label="Open navigation menu" data-menu-toggle>
-          <span></span><span></span><span></span>
-        </button>
         <a class="icon-button nav-icon" href="{{ url_for('auth.login') }}" aria-label="Sign in to view your profile" title="Profile">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="9" r="3"></circle><path d="M6.5 18.5c.9-2.7 2.8-4 5.5-4s4.6 1.3 5.5 4"></path></svg>
         </a>

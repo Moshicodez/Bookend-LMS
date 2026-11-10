@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/overlays.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/motion.css') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -19,6 +20,7 @@
   {% block account_drawer %}
     {% include "partials/_account_drawer.html" %}
   {% endblock %}
+  {% include "partials/_nav_drawer.html" %}
 
   {% block site_header %}
     {% include "landing/_navbar.html" %}
@@ -46,16 +48,30 @@
     </div>
   </dialog>
   {% endblock %}
+  <dialog class="confirm-dialog" data-confirm-dialog aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-message">
+    <div class="confirm-dialog-card">
+      <p class="eyebrow">Please confirm</p>
+      <h2 id="confirm-dialog-title">Confirm this action</h2>
+      <p id="confirm-dialog-message" data-confirm-message></p>
+      <div class="confirm-dialog-actions">
+        <button class="button button-secondary" type="button" data-confirm-cancel>Cancel</button>
+        <button class="button" type="button" data-confirm-accept>Continue</button>
+      </div>
+    </div>
+  </dialog>
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-      <div class="global-flashes" aria-live="polite">
+      <div class="global-flashes" aria-live="polite" data-toast-region>
         {% for category, message in messages %}
-          <p class="flash-message {{ category }}">{{ message }}</p>
+          <p class="flash-message {{ category }}" data-toast>
+            <span>{{ message }}</span>
+            <button type="button" class="flash-close" aria-label="Dismiss message" data-toast-close>×</button>
+          </p>
         {% endfor %}
       </div>
     {% endif %}
   {% endwith %}
-  <main class="{% block main_class %}{% endblock %}">
+  <main class="{% block main_class %}{% endblock %}" data-motion-page>
     {% block content %}{% endblock %}
   </main>
   {% block page_footer %}

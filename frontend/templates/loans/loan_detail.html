@@ -21,17 +21,17 @@
     {% if not card.loan.returned_at and not card.loan.lost %}
       {% if user.is_librarian() %}
         <div class="admin-actions">
-          <form method="post" action="{{ url_for('loans.librarian_return_loan', loan_id=card.loan.loan_id) }}">
+          <form method="post" action="{{ url_for('loans.librarian_return_loan', loan_id=card.loan.loan_id) }}" data-confirm-message="Mark this loan as returned?">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="button button-secondary" type="submit">Mark returned</button>
           </form>
-          <form method="post" action="{{ url_for('loans.librarian_mark_loan_lost', loan_id=card.loan.loan_id) }}">
+          <form method="post" action="{{ url_for('loans.librarian_mark_loan_lost', loan_id=card.loan.loan_id) }}" data-confirm-message="Mark this book as lost?">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="button button-danger" type="submit">Mark lost</button>
           </form>
         </div>
       {% else %}
-        <form method="post" action="{{ url_for('loans.return_book', book_id=card.loan.book_id) }}">
+        <form method="post" action="{{ url_for('loans.return_book', book_id=card.loan.book_id) }}" data-confirm-message="Return this book now?">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button class="button" type="submit">Return book</button>
         </form>
