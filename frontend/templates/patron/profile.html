@@ -12,7 +12,6 @@
       <p>{{ patron.email }}</p>
       <p class="profile-role">{{ patron.role|title }}</p>
     </div>
-    <a class="button button-secondary" href="{{ url_for('auth.change_password') }}">Change password</a>
   </section>
   <section class="profile-stats" aria-label="Loan summary">
     <article><strong>{{ summary.current_loans }}</strong><span>Current loans</span></article>

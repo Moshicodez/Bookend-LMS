@@ -56,39 +56,6 @@ body.is-drawer-open .account-drawer {
   flex: 0 0 auto;
 }
 
-.account-drawer-gear {
-  display: inline-grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
-  color: var(--ink);
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.account-drawer-gear svg:not(.account-action-icon),
-.account-drawer-logout svg:not(.account-action-icon) {
-  display: none;
-}
-
-.account-drawer-gear svg.account-action-icon {
-  width: 20px;
-  height: 20px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.6;
-}
-
-.account-drawer-gear:hover {
-  background: var(--paper-deep);
-  color: var(--green-dark);
-}
-
 .account-drawer-close {
   display: inline-grid;
   place-items: center;

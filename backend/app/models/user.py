@@ -79,11 +79,6 @@ class User(ABC):
             return False
         return check_password_hash(self._password_hash, password)
 
-    def change_password(self, old_password, new_password_hash):
-        if not self.check_pass(old_password):
-            raise ValidationError("Current password is incorrect.")
-        self._password_hash = new_password_hash
-
     def activate(self):
         self._active = True
 

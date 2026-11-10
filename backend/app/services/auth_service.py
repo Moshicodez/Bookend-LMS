@@ -109,20 +109,6 @@ class AuthService:
     def find_by_id(self, user_id):
         return self._user_repo.find_by_id(user_id)
 
-    def change_password(self, user_id, current_password, new_password, confirm_password):
-        user = self._user_repo.find_by_id(user_id)
-        if user is None or not user.active:
-            raise ValidationError("Your account is unavailable. Sign in again.")
-        if new_password != confirm_password:
-            raise ValidationError("Passwords do not match.")
-        score, _ = self.pass_strength(new_password)
-        if score < len(PASSWORD_RULES):
-            tips = self.pass_feedback(new_password)
-            raise ValidationError("Password too weak. " + " ".join(tips))
-
-        user.change_password(current_password, generate_password_hash(new_password))
-        self._user_repo.update_password_hash(user.user_id, user.password_hash)
-
     def reset_password(self, user_id, new_password, confirm_password):
         user = self._user_repo.find_by_id(user_id)
         if user is None:

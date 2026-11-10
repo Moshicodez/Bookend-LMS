@@ -186,7 +186,6 @@ class BorrowBasketTests(unittest.TestCase):
         self.assertIn(b"reader@example.com", profile.data)
         self.assertIn(b"Current loans", profile.data)
         self.assertIn(b">1</strong>", profile.data)
-        self.assertIn(b"Change password", profile.data)
 
     def test_guest_checkout_and_profile_redirect_to_login(self):
         self.client.post("/logout", data={"csrf_token": self.csrf_token})
