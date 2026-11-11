@@ -17,6 +17,7 @@ from .loan_service import LoanService
 ANALYTICS_RANGES = {
     "7d": 7,
     "30d": 30,
+    "12w": 84,
     "12m": 365,
 }
 

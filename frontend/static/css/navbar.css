@@ -190,6 +190,27 @@
   display: none;
 }
 
+.nav-count--muted {
+  position: static;
+  min-width: 18px;
+  height: 18px;
+  border: 0;
+  background: rgb(67 91 67 / 10%);
+  color: var(--green);
+}
+
+.nav-count--indicator {
+  position: absolute;
+  top: -2px;
+  right: -3px;
+}
+
+.nav-count--drawer-alert {
+  position: static;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
 .notification-control {
   position: relative;
 }

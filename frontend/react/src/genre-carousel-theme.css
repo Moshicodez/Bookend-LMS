@@ -102,7 +102,7 @@
 
 @media (max-width: 680px) {
   .genre-carousel-host {
-    height: 340px;
+    height: 320px;
   }
 
   .genre-carousel-host .circular-carousel__arrow--previous {
@@ -116,7 +116,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .genre-carousel-host .circular-carousel__stage,
-  .genre-carousel-host .circular-carousel__card {
+  .genre-carousel-host .circular-carousel__card,
+  .genre-carousel-host .circular-carousel__arrow,
+  .genre-carousel-host .circular-carousel__dot {
     transition-duration: 0.01ms;
   }
 }

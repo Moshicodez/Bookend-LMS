@@ -4,6 +4,9 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 
 import './CircularCarousel.css';
 
+const VISIBLE_STEPS = 1;
+const VISIBLE_FADE = 0.5;
+
 const photo = id => `https://images.unsplash.com/${id}?w=900&q=80&auto=format&fit=max&sat=-100`;
 
 const DEFAULT_ITEMS = [
@@ -79,7 +82,7 @@ const PRESETS = {
     inward: false,
     billboard: false,
     backfaces: true,
-    window: 0
+    window: VISIBLE_STEPS === Infinity ? 0 : VISIBLE_STEPS + VISIBLE_FADE
   },
   orbit: {
     axis: 'y',
@@ -591,14 +594,18 @@ const CircularCarousel = ({
       for (let index = 0; index < s.count; index++) {
         const card = cardRefs.current[index];
         if (!card) continue;
-        const distance = Math.abs(
-          ((index - centerIndex + s.count / 2 + s.count) % s.count) - s.count / 2
-        );
-        const isVisible = distance <= 1;
+        const base = index * s.step;
+        const world = wrap(base + angle);
+        const reach = Math.abs(world) / s.step;
+        const presence = VISIBLE_STEPS === Infinity
+          ? 1
+          : clamp(1 - (reach - VISIBLE_STEPS) / VISIBLE_FADE, 0, 1);
+        const isVisible = presence >= 0.02;
+        card.style.opacity = String(presence);
         card.style.visibility = isVisible ? '' : 'hidden';
+        card.style.pointerEvents = isVisible ? '' : 'none';
         card.dataset.active = String(index === centerIndex);
         card.setAttribute('aria-hidden', String(!isVisible));
-        const base = index * s.step;
         const mod = introCard(elapsed, base);
         const r = R * mod.radius;
         let transform;
@@ -613,7 +620,6 @@ const CircularCarousel = ({
         if (mod.lift) transform += s.axis === 'x' ? ` translateX(${mod.lift}px)` : ` translateY(${mod.lift}px)`;
         card.style.transform = transform;
 
-        const world = wrap(base + angle);
         const facing = Math.cos(world * TO_RAD);
         if (s.layout.inward && Math.abs(world) > 86) card.style.visibility = 'hidden';
         const fade = s.depthFade * Math.pow((1 - facing) / 2, 1.25);
@@ -652,11 +658,17 @@ const CircularCarousel = ({
       } else wake();
     };
 
+    const onResize = () => {
+      measure();
+      wake();
+    };
+
     const resize = new ResizeObserver(() => {
       measure();
       wake();
     });
     resize.observe(root);
+    window.addEventListener('resize', onResize);
 
     const io = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting;
@@ -672,7 +684,7 @@ const CircularCarousel = ({
     const onWheel = event => {
       const s = settingsRef.current;
       if (!s.draggable) return;
-      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : 0;
+      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
       if (!delta) return;
       event.preventDefault();
       const perPixel = 180 / (Math.PI * s.radius * state.fit);
@@ -701,6 +713,7 @@ const CircularCarousel = ({
       clearTimeout(state.wheelTimer);
       root.removeEventListener('wheel', onWheel);
       document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('resize', onResize);
     };
   }, []);
 

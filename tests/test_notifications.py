@@ -333,7 +333,7 @@ class NotificationRouteTests(unittest.TestCase):
         )
         db.session.commit()
         patron_page = self.client.get("/")
-        self.assertIn(b'aria-label="Reservations, 1 ready"', patron_page.data)
+        self.assertIn(b'aria-label="1 reservations ready for pickup"', patron_page.data)
 
         self._sign_in_as(self.librarian)
         librarian_page = self.client.get("/")

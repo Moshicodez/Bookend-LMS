@@ -1400,6 +1400,11 @@ body:not(.landing-page):not(.login-page) main:not(.landing-main) label:not(.visu
   box-shadow: 0 4px 16px rgb(37 42 37 / 5%);
 }
 
+.admin-panel.librarian-analytics {
+  padding: clamp(20px, 3vw, 34px);
+  border-radius: 16px;
+}
+
 .admin-panel-heading {
   display: flex;
   align-items: center;

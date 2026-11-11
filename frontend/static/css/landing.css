@@ -21,7 +21,7 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 88px;
+  scroll-padding-top: calc(var(--navbar-height, 60px) + 28px);
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -1104,6 +1104,7 @@ html::-webkit-scrollbar {
 
 .genre-panel-heading {
   flex-wrap: wrap;
+  min-width: 0;
   align-items: center;
   gap: 10px 14px;
 }
@@ -1114,10 +1115,19 @@ html::-webkit-scrollbar {
   white-space: nowrap;
 }
 
+@media (max-width: 480px) {
+  .genre-panel-heading .genre-books-link {
+    width: 100%;
+    margin-left: 0;
+    white-space: normal;
+  }
+}
+
 .genre-carousel-host {
   width: 100%;
   max-width: var(--landing-content-width);
   margin: 0 auto;
+  scroll-margin-top: calc(var(--navbar-height, 60px) + 28px);
 }
 
 .genre-empty-state,

@@ -19,12 +19,12 @@
         <a href="{{ url_for('social.favorites') }}" class="account-drawer-row">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 8.7c0 5-8.4 10.1-8.4 10.1S3.6 13.7 3.6 8.7a4.4 4.4 0 0 1 8.4-1.8 4.4 4.4 0 0 1 8.4 1.8Z"></svg>
           <span>Favorites</span>
-          {% if favorite_count %}<span class="nav-count">{{ favorite_count }}</span>{% endif %}
+          {% if favorite_count %}<span class="nav-count nav-count--muted">{{ favorite_count }}</span>{% endif %}
         </a>
         <a href="{{ url_for('patron.basket_index') }}" class="account-drawer-row">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16l-1.5 11h-13L4 9Z"></path><path d="m8 9 4-6 4 6M9 12v4m6-4v4"></path></svg>
           <span>Borrow Basket</span>
-          {% if basket_count %}<span class="nav-count">{{ basket_count }}</span>{% endif %}
+          {% if basket_count %}<span class="nav-count nav-count--muted">{{ basket_count }}</span>{% endif %}
         </a>
         <a href="{{ url_for('loans.index') }}" class="account-drawer-row">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="13" height="16" rx="2"></rect><path d="M8 3h11a2 2 0 0 1 2 2v12M8 9h5m-5 4h4"></path><circle cx="17.5" cy="17.5" r="3.5"></circle><path d="M17.5 15.8v1.9l1.2.8"></path></svg>
@@ -33,6 +33,7 @@
         <a href="{{ url_for('reservations.index') }}" class="account-drawer-row">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"></rect><path d="M8 8h8M8 12h5m-5 4h8"></path></svg>
           <span>Reservations</span>
+          {% if ready_reservation_count %}<span class="nav-count nav-count--drawer-alert" aria-label="{{ ready_reservation_count }} reservations ready for pickup">{{ ready_reservation_count }}</span>{% endif %}
         </a>
       {% elif current_user.is_librarian() %}
         <a href="{{ url_for('dashboard.librarian_dashboard') }}" class="account-drawer-row">

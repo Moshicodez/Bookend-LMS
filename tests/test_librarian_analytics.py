@@ -110,6 +110,21 @@ class LibrarianAnalyticsEndpointTests(unittest.TestCase):
         self.assertEqual(data["genres"], [])
         self.assertTrue(all(point["loans"] == point["returns"] == 0 for point in data["series"]))
 
+    def test_endpoint_supports_twelve_week_range(self):
+        self._sign_in(self.librarian)
+
+        response = self.client.get("/librarian/analytics?range=12w")
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["range"], "12w")
+        self.assertEqual(len(data["series"]), 84)
+        self.assertEqual(
+            data["start"],
+            (date.today() - timedelta(days=83)).isoformat(),
+        )
+        self.assertEqual(data["end"], date.today().isoformat())
+
     def test_endpoint_requires_librarian_and_returns_no_store_errors(self):
         unauthorized = self.client.get("/librarian/analytics")
         self.assertEqual(unauthorized.status_code, 401)

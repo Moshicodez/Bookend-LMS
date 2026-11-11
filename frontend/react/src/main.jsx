@@ -7,10 +7,8 @@ const mount = document.getElementById("genre-carousel-root");
 
 function GenreCarousel({ items, genrePanels }) {
   const [bookActive, setBookActive] = useState(false);
-  const bookActiveRef = useRef(bookActive);
   const keyboardFocusRef = useRef(false);
   const updateBookActive = (active) => {
-    bookActiveRef.current = active;
     setBookActive(active);
   };
 
@@ -118,12 +116,12 @@ function GenreCarousel({ items, genrePanels }) {
         items={items}
         preset="cylinder"
         intro="rise"
-        cardWidth={220}
+        cardWidth={210}
         aspectRatio={1}
         speed={14}
         captions={false}
-        gap={25}
-        tilt={-5}
+        gap={20}
+        tilt={-4}
         curve={1}
         perspective={2500}
         autoplay={bookActive ? "off" : "drift"}
@@ -141,7 +139,6 @@ function GenreCarousel({ items, genrePanels }) {
         innerShade={0.6}
         cornerRadius={12}
         onChange={(index) => {
-          if (bookActiveRef.current) return;
           const selectedGenre = items[index]?.title;
           genrePanels.forEach((panel) => {
             panel.hidden = panel.dataset.genreName !== selectedGenre;

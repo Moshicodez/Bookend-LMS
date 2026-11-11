@@ -1,7 +1,7 @@
-{% macro nav_item(label, href, icon, active, count=0) -%}
+{% macro nav_item(label, href, icon, active) -%}
   <a class="icon-button nav-icon nav-main-link{% if active %} is-current{% endif %}"
      href="{{ href }}"
-     aria-label="{{ label }}{% if count %}, {{ count }} ready{% endif %}"
+     aria-label="{{ label }}"
      title="{{ label }}"
      data-tooltip="{{ label }}"
      {% if active %}aria-current="page"{% endif %}>
@@ -26,7 +26,6 @@
     </svg>
     <span class="nav-icon-label">{{ label }}</span>
     <span class="nav-tooltip" aria-hidden="true">{{ label }}</span>
-    {% if count %}<span class="nav-count">{{ count }}</span>{% endif %}
   </a>
 {%- endmacro %}
 
@@ -48,7 +47,7 @@
         {{ nav_item("Books", url_for("books.catalog"), "book", request.endpoint in ["books.catalog", "books.detail"] and not request.args.get("genre")) }}
         {{ nav_item("Genres", url_for("books.catalog"), "genres", request.endpoint == "books.catalog" and request.args.get("genre")) }}
         {% if current_user and current_user.is_patron() %}
-          {{ nav_item("Reservations", url_for("reservations.index"), "reservation", request.endpoint == "reservations.index", ready_reservation_count) }}
+          {{ nav_item("Reservations", url_for("reservations.index"), "reservation", request.endpoint == "reservations.index") }}
         {% elif current_user and current_user.is_librarian() %}
           {{ nav_item("Reservations", url_for("reservations.manage"), "reservation", request.endpoint == "reservations.manage") }}
           {{ nav_item("Manage Books", url_for("books.manage"), "manage", request.endpoint == "books.manage") }}
@@ -66,17 +65,16 @@
           <span class="nav-tooltip" aria-hidden="true">Search</span>
         </button>
         {% if current_user and current_user.is_patron() %}
-          <a class="icon-button nav-icon" href="{{ url_for('social.favorites') }}" aria-label="Saved books, {{ favorite_count }} saved" title="Saved books" data-tooltip="Saved books">
+          <a class="icon-button nav-icon" href="{{ url_for('social.favorites') }}" aria-label="Saved books" title="Saved books" data-tooltip="Saved books">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 8.7c0 5-8.4 10.1-8.4 10.1S3.6 13.7 3.6 8.7a4.4 4.4 0 0 1 8.4-1.8 4.4 4.4 0 0 1 8.4 1.8Z"></path></svg>
             <span class="nav-icon-label">Saved books</span>
             <span class="nav-tooltip" aria-hidden="true">Saved books</span>
-            {% if favorite_count %}<span class="nav-count">{{ favorite_count }}</span>{% endif %}
           </a>
           <a class="icon-button nav-icon" href="{{ url_for('patron.basket_index') }}" aria-label="Borrow basket, {{ basket_count }} books" title="Borrow basket" data-tooltip="Borrow basket">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16l-1.5 11h-13L4 9Z"></path><path d="m8 9 4-6 4 6"></path></svg>
             <span class="nav-icon-label">Borrow basket</span>
             <span class="nav-tooltip" aria-hidden="true">Borrow basket</span>
-            {% if basket_count %}<span class="nav-count">{{ basket_count }}</span>{% endif %}
+            {% if basket_count %}<span class="nav-count nav-count--muted nav-count--indicator">{{ basket_count }}</span>{% endif %}
           </a>
           <a class="icon-button nav-icon" href="{{ url_for('loans.index') }}" aria-label="My loans" title="My loans" data-tooltip="My loans">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H20v18H7.5A2.5 2.5 0 0 0 5 22V4.5Z"></path><path d="M5 5h12M5 20h12"></path></svg>

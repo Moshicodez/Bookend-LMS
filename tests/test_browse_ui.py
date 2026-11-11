@@ -9,6 +9,8 @@ from backend.app.extensions import db
 from backend.app.models.book import Book
 from backend.app.models.favorite_record import FavoriteRecord
 from backend.app.models.loan_record import LoanRecord
+from backend.app.models.notification_record import NotificationRecord
+from backend.app.models.reservation_record import ReservationRecord
 from backend.app.repositories.book_repository import BookRepository
 from backend.app.repositories.user_repository import UserRepository
 
@@ -116,6 +118,44 @@ class BrowseUiTests(unittest.TestCase):
         self.assertNotIn(b"Stock", librarian_menu)
         self.assertNotIn(b"Favorites", librarian_menu)
 
+    def test_saved_count_is_neutral_and_unread_notifications_keep_alert_badge(self):
+        db.session.add(FavoriteRecord(
+            user_id=self.patron.user_id,
+            book_id=self.history.book_id,
+        ))
+        db.session.add(NotificationRecord(
+            user_id=self.patron.user_id,
+            category="general",
+            title="New library update",
+            message="A new update is available.",
+        ))
+        db.session.add(ReservationRecord(
+            patron_id=self.patron.user_id,
+            book_id=self.history.book_id,
+            status="ready",
+        ))
+        db.session.commit()
+        self._sign_in(self.patron)
+
+        response = self.client.get("/books/")
+
+        self.assertEqual(response.status_code, 200)
+        page = response.get_data(as_text=True)
+        header = page.split('<header class="landing-navbar"', 1)[1].split("</header>", 1)[0]
+        saved_link = page.split('aria-label="Saved books"', 1)[1].split("</a>", 1)[0]
+        self.assertNotIn("nav-count", saved_link)
+        self.assertEqual(header.count('class="nav-count'), 1)
+        self.assertIn('class="nav-count notification-count"', header)
+        self.assertIn(
+            '<span class="nav-count nav-count--muted">1</span>',
+            page,
+        )
+        self.assertIn('class="nav-count nav-count--drawer-alert"', page)
+        self.assertIn(
+            '<span class="nav-count notification-count" aria-live="polite" >1</span>',
+            page,
+        )
+
     def test_guest_can_browse_catalog_detail_and_search_overlay(self):
         catalog = self.client.get("/books/")
         self.assertEqual(catalog.status_code, 200)
@@ -216,7 +256,7 @@ class BrowseUiTests(unittest.TestCase):
             session["basket_book_ids"] = [self.history.book_id]
 
         catalog = self.client.get("/books/")
-        self.assertIn(b"Saved books, 1 saved", catalog.data)
+        self.assertIn(b'aria-label="Saved books"', catalog.data)
         self.assertIn(b"Borrow basket, 1 books", catalog.data)
         self.assertIn(b">Borrow</button>", catalog.data)
         self.assertIn(b"My loans", catalog.data)

@@ -2,35 +2,10 @@
 {% block title %}Librarian dashboard | Bookend Library{% endblock %}
 {% block page_styles %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/library-pages.css') }}">
-  <style>
-    .librarian-analytics { margin-block: 1.5rem; }
-    .analytics-heading { align-items: flex-start; }
-    .analytics-ranges { display: flex; flex-wrap: wrap; gap: .5rem; }
-    .analytics-ranges button[aria-pressed="true"] { background: var(--color-ink, #183d35); color: #fff; }
-    .analytics-status { min-height: 1.5rem; }
-    .analytics-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-block: 1rem; }
-    .analytics-stat { border: 1px solid #e3e5dc; border-radius: 12px; padding: 1rem; }
-    .analytics-stat strong { display: block; font-size: 1.6rem; }
-    .analytics-sparkline { display: block; width: min(100%, 220px); height: 36px; margin-top: .5rem; overflow: visible; }
-    .analytics-charts { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 1rem; }
-    .analytics-chart { width: 100%; height: auto; overflow: visible; }
-    .analytics-chart text { fill: currentColor; font: 12px sans-serif; }
-    .analytics-chart .chart-grid { stroke: #e3e5dc; stroke-width: 1; }
-    .analytics-chart .chart-line { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-    .analytics-chart .chart-loans { stroke: #426c55; }
-    .analytics-chart .chart-returns { stroke: #d3874b; }
-    .analytics-legend { display: flex; flex-wrap: wrap; gap: 1rem; margin: .25rem 0 0; }
-    .analytics-legend span::before { content: ""; display: inline-block; width: .65rem; height: .65rem; margin-right: .4rem; border-radius: 50%; background: #426c55; }
-    .analytics-legend span:last-child::before { background: #d3874b; }
-    .analytics-error { color: #9c2c24; }
-    @media (max-width: 760px) {
-      .analytics-charts { grid-template-columns: 1fr; }
-      .analytics-heading { flex-direction: column; }
-    }
-    @media (max-width: 480px) { .analytics-summary { grid-template-columns: 1fr; } }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/analytics.css') }}">
 {% endblock %}
 {% block page_scripts %}
+  <script src="{{ url_for('static', filename='js/analytics-fallback.js') }}" defer></script>
   <script src="{{ url_for('static', filename='js/librarian-analytics.js') }}" defer></script>
 {% endblock %}
 {% block content %}
@@ -52,45 +27,106 @@
 
   <section class="admin-panel librarian-analytics" data-librarian-analytics
            data-endpoint="{{ url_for('dashboard.librarian_analytics') }}"
+           data-on-loan="{{ dashboard.stats.on_loan }}"
+           data-overdue="{{ dashboard.stats.overdue }}"
+           data-fees-collected="{{ dashboard.stats.fees_collected }}"
+           data-members-with-fees="{{ fee_member_count }}"
            aria-labelledby="analytics-title" aria-busy="true">
     <div class="admin-panel-heading analytics-heading">
-      <div><p class="eyebrow">LIBRARY TRENDS</p><h2 id="analytics-title">Loans and returns</h2></div>
+      <div class="analytics-heading-copy">
+        <p class="eyebrow">LIBRARY ACTIVITY</p>
+        <h2 id="analytics-title">Loans, returns and trends</h2>
+        <p class="analytics-subtitle" data-analytics-subtitle>Showing activity for the last 30 days.</p>
+      </div>
       <div class="analytics-ranges" role="group" aria-label="Choose analytics date range">
-        <button class="button button-secondary" type="button" data-analytics-range="7d" aria-pressed="false">7 days</button>
-        <button class="button button-secondary" type="button" data-analytics-range="30d" aria-pressed="true">30 days</button>
-        <button class="button button-secondary" type="button" data-analytics-range="12m" aria-pressed="false">12 months</button>
+        <span class="analytics-range-pill" aria-hidden="true"></span>
+        <button type="button" data-analytics-range="7d" aria-pressed="false">7 days</button>
+        <button type="button" data-analytics-range="30d" aria-pressed="true">30 days</button>
+        <button type="button" data-analytics-range="12w" aria-pressed="false">12 weeks</button>
       </div>
     </div>
-    <p class="analytics-status" data-analytics-status role="status" aria-live="polite">Loading analytics…</p>
+    <p class="analytics-status" data-analytics-status role="status" aria-live="polite">Loading library activity…</p>
+    <div class="analytics-skeleton" data-analytics-loading aria-hidden="true">
+      <div class="analytics-skeleton-kpis">
+        <span></span><span></span><span></span><span></span>
+      </div>
+      <div class="analytics-skeleton-charts"><span></span><span></span></div>
+    </div>
     <div data-analytics-results hidden>
-      <p class="muted" data-analytics-empty hidden>No loan or return activity in this date range.</p>
-      <div data-analytics-visuals>
-        <div class="analytics-summary" aria-label="Selected range totals">
-          <article class="analytics-stat">
-            <span>Loans in range</span>
-            <strong data-analytics-total="loans">0</strong>
-            <svg class="analytics-sparkline" data-analytics-sparkline="loans" viewBox="0 0 160 36" role="img" aria-label="Daily loans trend"></svg>
-          </article>
-          <article class="analytics-stat">
-            <span>Returns in range</span>
-            <strong data-analytics-total="returns">0</strong>
-            <svg class="analytics-sparkline" data-analytics-sparkline="returns" viewBox="0 0 160 36" role="img" aria-label="Daily returns trend"></svg>
-          </article>
-        </div>
-        <div class="analytics-charts">
-          <section class="admin-panel" aria-labelledby="activity-chart-title">
-            <h3 id="activity-chart-title">Daily activity</h3>
-            <p class="analytics-legend"><span>Loans</span><span>Returns</span></p>
-            <svg class="analytics-chart" data-analytics-activity viewBox="0 0 720 260" role="img" aria-label="Loans and returns by date"></svg>
-          </section>
-          <section class="admin-panel" aria-labelledby="genre-chart-title">
-            <h3 id="genre-chart-title">Loans by genre</h3>
-            <svg class="analytics-chart" data-analytics-genres viewBox="0 0 640 120" role="img" aria-label="Loans by genre"></svg>
-          </section>
-        </div>
+      <div class="analytics-summary" aria-label="Library activity statistics">
+        <article class="analytics-stat" data-analytics-kpi="on-loan">
+          <div class="analytics-stat-heading"><span>On loan</span><span class="analytics-trend" data-analytics-trend hidden></span></div>
+          <strong data-kpi-value="on-loan">{{ dashboard.stats.on_loan }}</strong>
+          <svg class="analytics-sparkline" data-kpi-sparkline="on-loan" viewBox="0 0 180 42" role="img" aria-label="On-loan trend"></svg>
+        </article>
+        <article class="analytics-stat" data-analytics-kpi="overdue">
+          <div class="analytics-stat-heading"><span>Overdue</span><span class="analytics-trend" data-analytics-trend hidden></span></div>
+          <strong data-kpi-value="overdue">{{ dashboard.stats.overdue }}</strong>
+          <svg class="analytics-sparkline" data-kpi-sparkline="overdue" viewBox="0 0 180 42" role="img" aria-label="Overdue trend"></svg>
+        </article>
+        <article class="analytics-stat" data-analytics-kpi="fees-collected">
+          <div class="analytics-stat-heading"><span>Fees collected</span><span class="analytics-trend" data-analytics-trend hidden></span></div>
+          <strong data-kpi-value="fees-collected">{{ dashboard.stats.fees_collected|peso }}</strong>
+          <svg class="analytics-sparkline" data-kpi-sparkline="fees-collected" viewBox="0 0 180 42" role="img" aria-label="Fees collected trend"></svg>
+        </article>
+        <article class="analytics-stat" data-analytics-kpi="members-with-fees">
+          <div class="analytics-stat-heading"><span>Members with fees</span><span class="analytics-trend" data-analytics-trend hidden></span></div>
+          <strong data-kpi-value="members-with-fees">{{ fee_member_count }}</strong>
+          <svg class="analytics-sparkline" data-kpi-sparkline="members-with-fees" viewBox="0 0 180 42" role="img" aria-label="Members with fees trend"></svg>
+        </article>
+      </div>
+      <div class="analytics-empty" data-analytics-empty hidden>
+        <svg viewBox="0 0 64 64" role="img" aria-label="Books on a shelf">
+          <path d="M10 48h44M14 46V22h9v24m4 0V15h10v31m5 0V25h8v21M9 52h46" />
+          <path d="M17 27h3m8-7h4m-4 6h4m10 4h4" />
+        </svg>
+        <h3>No loans in this period yet</h3>
+        <p>Try a longer range to see more library activity.</p>
+      </div>
+      <div class="analytics-charts" data-analytics-visuals>
+        <section class="analytics-chart-card" aria-labelledby="activity-chart-title">
+          <div class="analytics-chart-heading">
+            <div><p class="eyebrow">DAILY ACTIVITY</p><h3 id="activity-chart-title">Borrowed and returned</h3></div>
+            <div class="analytics-legend" role="group" aria-label="Toggle chart series" data-analytics-legend>
+              <button type="button" data-series-toggle="loans" aria-pressed="true"><span class="analytics-legend-dot borrowed"></span>Borrowed</button>
+              <button type="button" data-series-toggle="returns" aria-pressed="true"><span class="analytics-legend-dot returned"></span>Returned</button>
+              <button type="button" data-series-toggle="overdue" aria-pressed="true"><span class="analytics-legend-dot overdue"></span>Overdue</button>
+            </div>
+          </div>
+          <div class="analytics-chart-frame" data-analytics-activity-frame>
+            <svg class="analytics-chart" data-analytics-activity viewBox="0 0 720 300" role="img" aria-label="Borrowed, returned and overdue books by date" tabindex="0"></svg>
+            <div class="analytics-tooltip" data-analytics-tooltip role="status" hidden>
+              <strong data-tooltip-date></strong>
+              <span>Borrowed <b data-tooltip-loans>0</b></span>
+              <span>Returned <b data-tooltip-returns>0</b></span>
+              <span>Overdue now <b data-tooltip-overdue>0</b></span>
+            </div>
+          </div>
+          <table class="analytics-sr-only" data-analytics-table>
+            <caption>Daily borrowed, returned, and overdue totals for the selected range</caption>
+            <thead><tr><th>Date</th><th>Borrowed</th><th>Returned</th><th>Overdue now</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </section>
+        <section class="analytics-chart-card analytics-genre-card" aria-labelledby="genre-chart-title">
+          <div class="analytics-chart-heading">
+            <div><p class="eyebrow">COLLECTION MIX</p><h3 id="genre-chart-title">Loans by genre</h3></div>
+          </div>
+          <svg class="analytics-chart analytics-genre-chart" data-analytics-genres viewBox="0 0 640 120" role="img" aria-label="Loans by genre"></svg>
+          <div class="analytics-genre-legend" data-genre-legend aria-label="Genre totals"></div>
+          <table class="analytics-sr-only" data-genre-table>
+            <caption>Loan totals and share by genre for the selected range</caption>
+            <thead><tr><th>Genre</th><th>Loans</th><th>Percent</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </section>
       </div>
     </div>
-    <button class="button button-secondary" type="button" data-analytics-retry hidden>Try again</button>
+    <div class="analytics-error-state" data-analytics-error hidden>
+      <p>We couldn’t load library analytics.</p>
+      <span data-analytics-error-message></span>
+    </div>
+    <button class="button button-secondary analytics-retry" type="button" data-analytics-retry hidden>Retry</button>
   </section>
 
   <div class="admin-dashboard-columns">
