@@ -31,17 +31,18 @@
             {% for genre in genres %}
               <tr>
                 <td>{{ genre.name }}</td>
-                <td>{{ "In use" if genre.in_use else "No books assigned" }}</td>
+                <td>{{ genre.book_count }}</td>
                 <td>
-                  {% if genre.in_use %}
-                    <button class="button button-danger" type="button" disabled title="Reassign or clear books in this genre first">Remove</button>
-                  {% else %}
-                    <form method="post" action="{{ url_for('genres.remove') }}">
-                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                      <input type="hidden" name="name" value="{{ genre.name }}">
-                      <button class="button button-danger" type="submit">Remove</button>
-                    </form>
-                  {% endif %}
+                  <form method="post" action="{{ url_for('genres.remove') }}"
+                        data-confirm-title="Remove {{ genre.name }}?"
+                        data-confirm-message="Remove this genre from Browse the stacks?"
+                        data-confirm-note="{{ genre.book_count }} book{{ '' if genre.book_count == 1 else 's' }} will be set to Uncategorized."
+                        data-confirm-action="Remove"
+                        data-confirm-danger="true">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="name" value="{{ genre.name }}">
+                    <button class="button button-danger" type="submit">Remove</button>
+                  </form>
                 </td>
               </tr>
             {% endfor %}

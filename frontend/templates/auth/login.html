@@ -82,6 +82,7 @@
                     {% endif %}
                     <form class="login-form" method="post" action="{{ url_for('auth.login') }}">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
                       <div class="form-field">
                         <label for="login-username">Username or email</label>
                         <input id="login-username" name="username" type="text"

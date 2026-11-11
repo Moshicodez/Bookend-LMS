@@ -29,8 +29,13 @@ class AuthRouteTests(unittest.TestCase):
         self.app_context.pop()
 
     def post(self, path, data=None):
-        page = self.client.get("/login")
-        token = re.search(rb'name="csrf_token" value="([^"]+)"', page.data).group(1).decode()
+        with self.client.session_transaction() as session:
+            token = session.get("_csrf_token")
+        if token is None:
+            page = self.client.get("/login")
+            token = re.search(
+                rb'name="csrf_token" value="([^"]+)"', page.data
+            ).group(1).decode()
         form_data = dict(data or {})
         form_data.setdefault("csrf_token", token)
         return self.client.post(path, data=form_data)
@@ -68,8 +73,13 @@ class AuthRouteTests(unittest.TestCase):
             },
         )
 
-        self.assertEqual(response.status_code, 400)
-        self.assertIn(b"CSRF token is missing or invalid", response.data)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.location, "/login")
+        login_page = self.client.get(response.location)
+        self.assertIn(
+            b"Your session expired. Please sign in again.",
+            login_page.data,
+        )
         self.assertEqual(db.session.scalar(db.select(db.func.count(UserRecord.user_id))), 0)
 
     def test_login_page_has_csrf_tokens_on_every_post_form(self):

@@ -187,6 +187,59 @@ class LoanRepository:
             for book_id, loan_count in rows
         ]
 
+    def analytics_counts(self, start_date, end_date):
+        borrowed_rows = db.session.execute(
+            db.select(
+                LoanRecord.borrowed_at,
+                db.func.count(LoanRecord.loan_id).label("loan_count"),
+            )
+            .where(
+                LoanRecord.borrowed_at >= start_date,
+                LoanRecord.borrowed_at <= end_date,
+            )
+            .group_by(LoanRecord.borrowed_at)
+            .order_by(LoanRecord.borrowed_at)
+        ).all()
+        returned_rows = db.session.execute(
+            db.select(
+                LoanRecord.returned_at,
+                db.func.count(LoanRecord.loan_id).label("return_count"),
+            )
+            .where(
+                LoanRecord.returned_at.is_not(None),
+                LoanRecord.returned_at >= start_date,
+                LoanRecord.returned_at <= end_date,
+            )
+            .group_by(LoanRecord.returned_at)
+            .order_by(LoanRecord.returned_at)
+        ).all()
+        genre_rows = db.session.execute(
+            db.select(
+                db.func.coalesce(
+                    db.func.nullif(db.func.trim(BookRecord.genre), ""),
+                    "Uncategorized",
+                ).label("genre"),
+                db.func.count(LoanRecord.loan_id).label("loan_count"),
+            )
+            .join(BookRecord, BookRecord.book_id == LoanRecord.book_id)
+            .where(
+                LoanRecord.borrowed_at >= start_date,
+                LoanRecord.borrowed_at <= end_date,
+            )
+            .group_by(
+                db.func.coalesce(
+                    db.func.nullif(db.func.trim(BookRecord.genre), ""),
+                    "Uncategorized",
+                )
+            )
+            .order_by(db.desc("loan_count"), "genre")
+        ).all()
+        return {
+            "loans": borrowed_rows,
+            "returns": returned_rows,
+            "genres": genre_rows,
+        }
+
     def return_record(self, loan_id, returned_at):
         loan_id = self._valid_id(loan_id)
         if loan_id is None:

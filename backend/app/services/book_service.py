@@ -203,6 +203,12 @@ class BookService:
         return book
 
     def archive_book(self, librarian, book_id):
+        return self._archive_book(librarian, book_id, "Book archived")
+
+    def delete_book(self, librarian, book_id):
+        return self._archive_book(librarian, book_id, "Book deleted")
+
+    def _archive_book(self, librarian, book_id, notification_title):
         librarian.require("archive_book")
         book = self._get_book(book_id)
         if self._reservations.find_ready_for_book(book_id):
@@ -214,8 +220,10 @@ class BookService:
         self._book_repo.update_book(book)
         self._notifications.notify_role(
             "librarian",
-            "Book archived",
-            f"{book.title} was archived from the catalog.",
+            notification_title,
+            f"{notification_title}: {book.title} was removed from the catalog."
+            if notification_title == "Book deleted"
+            else f"{book.title} was archived from the catalog.",
             category="book",
             link="/books/archived",
         )

@@ -41,9 +41,13 @@ def remove():
     if librarian is None:
         return redirect(url_for("auth.login"))
     try:
-        genre_service.remove_genre(librarian, request.form.get("name"))
+        name = request.form.get("name", "").strip()
+        book_count = genre_service.remove_genre(librarian, name)
     except ValidationError as error:
         flash(str(error), "error")
     else:
-        flash("Genre removed.", "success")
+        flash(
+            f"Genre removed: {name} ({book_count} books uncategorized).",
+            "success",
+        )
     return redirect(url_for("genres.index"))

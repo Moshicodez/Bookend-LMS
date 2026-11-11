@@ -89,27 +89,6 @@ class Loan:
             for fee in self.fees
         ]
 
-    def pay_late_fee(self, current_date=None):
-        today = to_date(current_date) or date.today()
-
-        if not self.is_returned():
-            raise ValidationError("Return the book first; late fees stop growing once it's back.")
-
-        amount = self._late_fee.amount(self, today)
-
-        if amount <= 0:
-            raise ValidationError("There is no late fee on this loan.")
-
-        self._late_fee.pay()
-        return amount
-
-    def pay_loss_fee(self):
-        if not self.lost:
-            raise ValidationError("This loan hasn't been marked as lost.")
-
-        self._loss_fee.pay()
-        return self._loss_fee.amount(self, date.today())
-
     def to_record(self):
         today = date.today()
 

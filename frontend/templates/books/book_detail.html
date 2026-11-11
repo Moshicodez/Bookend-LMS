@@ -87,6 +87,7 @@
           {% if book.on_loan_copies == 0 and book.reserved_copies == 0 and book.catalog %}
             <form method="post" action="{{ url_for('books.archive', book_id=book.book_id) }}" data-confirm-message="Archive this book? It will no longer appear in the active catalog.">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
               <button class="button button-secondary" type="submit">Archive book</button>
             </form>
           {% endif %}

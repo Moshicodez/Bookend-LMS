@@ -36,8 +36,13 @@ class BackendRouteTests(unittest.TestCase):
         self.context.pop()
 
     def post(self, path, data=None):
-        page = self.client.get("/login")
-        token = re.search(rb'name="csrf_token" value="([^"]+)"', page.data).group(1).decode()
+        with self.client.session_transaction() as session:
+            token = session.get("_csrf_token")
+        if token is None:
+            page = self.client.get("/login")
+            token = re.search(
+                rb'name="csrf_token" value="([^"]+)"', page.data
+            ).group(1).decode()
         form_data = dict(data or {})
         form_data.setdefault("csrf_token", token)
         return self.client.post(path, data=form_data)
@@ -111,6 +116,45 @@ class BackendRouteTests(unittest.TestCase):
         format_peso = self.app.jinja_env.filters["peso"]
         self.assertEqual(format_peso(1234.5), "₱1,234.50")
         self.assertEqual(format_peso(0), "₱0.00")
+
+    def test_invalid_csrf_redirects_to_login_with_safe_next_target(self):
+        response = self.client.post(
+            "/loans/borrow/123",
+            headers={"Referer": "http://localhost/books/?q=history"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login?next=", response.location)
+        self.assertIn("books", response.location)
+        self.assertIn("history", response.location)
+
+    def test_fetch_csrf_failure_returns_json_login_redirect(self):
+        response = self.client.post(
+            "/loans/borrow/123",
+            headers={
+                "X-Requested-With": "XMLHttpRequest",
+                "Referer": "http://localhost/books/",
+            },
+        )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.mimetype, "application/json")
+        self.assertIn("redirect_url", response.json)
+        self.assertIn("/login", response.json["redirect_url"])
+
+    def test_patron_catalog_pagination_omits_previous_button(self):
+        self.register_patron()
+        for index in range(30):
+            BookRepository().create(
+                Book(None, f"Catalog title {index:02}", "Writer", "History", "")
+            )
+
+        response = self.client.get("/books/?page=1")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data.count(b'class="catalog-pagination"'), 1)
+        self.assertNotIn(b">Previous</a>", response.data)
+        self.assertIn(b">Next</a>", response.data)
 
     def test_patron_can_borrow_and_return_a_book(self):
         self.register_patron()
@@ -323,6 +367,32 @@ class BackendRouteTests(unittest.TestCase):
         self.assertEqual(restored.location, "/books/archived")
         self.assertNotIn(b"Archived title", self.client.get("/books/archived").data)
         self.assertIn(b"Archived title", self.client.get("/books/").data)
+
+    def test_book_archive_restore_and_delete_only_redirect_to_local_next(self):
+        self.create_librarian()
+        self.post(
+            "/login",
+            data={"username": "staff", "password": "StrongPass1!"},
+        )
+        book = BookRepository().create(Book(None, "Return target", "Writer", "", ""))
+
+        archived = self.post(
+            f"/books/{book.book_id}/archive",
+            data={"next": "/books/?genre=History"},
+        )
+        self.assertEqual(archived.location, "/books/?genre=History")
+
+        restored = self.post(
+            f"/books/{book.book_id}/restore",
+            data={"next": "https://example.com/outside"},
+        )
+        self.assertEqual(restored.location, "/books/archived")
+
+        deleted = self.post(
+            f"/books/{book.book_id}/delete",
+            data={"next": "/%2f%2fevil.example"},
+        )
+        self.assertEqual(deleted.location, "/books/manage")
 
     def test_patron_cannot_view_or_restore_archived_books(self):
         self.register_patron()

@@ -26,9 +26,3 @@ class PatronService:
 
     def view_payments(self, patron, loan_id=None):
         return self._loans.view_payments(patron, loan_id)
-
-    def pay_late_fee(self, patron, loan_id):
-        return self._loans.pay_late_fee(patron, loan_id)
-
-    def pay_loss(self, patron, loan_id):
-        return self._loans.pay_loss_fee(patron, loan_id)

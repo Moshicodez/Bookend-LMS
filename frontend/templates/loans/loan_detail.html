@@ -16,7 +16,7 @@
       <div><dt>Due</dt><dd>{{ card.loan.due_date.strftime("%b %d, %Y") }}</dd></div>
       <div><dt>Returned</dt><dd>{{ card.loan.returned_at.strftime("%b %d, %Y") if card.loan.returned_at else "Not returned" }}</dd></div>
       <div><dt>Days overdue</dt><dd>{{ card.days_overdue }}</dd></div>
-      <div><dt>Outstanding fees</dt><dd>${{ "%.2f"|format(card.outstanding) }}</dd></div>
+      <div><dt>Outstanding fees</dt><dd>{{ card.outstanding|peso }}</dd></div>
     </dl>
     {% if not card.loan.returned_at and not card.loan.lost %}
       {% if user.is_librarian() %}

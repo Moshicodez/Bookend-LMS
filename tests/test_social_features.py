@@ -8,6 +8,7 @@ from backend.app.extensions import db
 from backend.app.models.book import Book
 from backend.app.models.favorite_record import FavoriteRecord
 from backend.app.models.review_record import ReviewRecord
+from backend.app.models.notification_record import NotificationRecord
 from backend.app.repositories.book_repository import BookRepository
 from backend.app.repositories.user_repository import UserRepository
 
@@ -45,10 +46,13 @@ class SocialFeatureRouteTests(unittest.TestCase):
         )
 
     def _sign_in(self, user):
-        response = self.client.get("/login")
-        token = re.search(
-            rb'name="csrf_token" value="([^"]+)"', response.data
-        ).group(1).decode()
+        with self.client.session_transaction() as session:
+            token = session.get("_csrf_token")
+        if token is None:
+            response = self.client.get("/login")
+            token = re.search(
+                rb'name="csrf_token" value="([^"]+)"', response.data
+            ).group(1).decode()
         with self.client.session_transaction() as session:
             session["user_id"] = user.user_id
             session["username"] = user.username
@@ -98,6 +102,7 @@ class SocialFeatureRouteTests(unittest.TestCase):
         self.assertEqual(response.location, "/login")
 
     def test_review_create_edit_delete_and_average_rating(self):
+        librarian = self._create_user("staff", "librarian")
         token = self._sign_in(self.patron)
         detail_url = f"/books/{self.book.book_id}"
 
@@ -130,6 +135,14 @@ class SocialFeatureRouteTests(unittest.TestCase):
         self.assertEqual(deleted.status_code, 302)
         self.assertEqual(db.session.query(ReviewRecord).count(), 0)
         self.assertIn(b"0 reviews", self.client.get(detail_url).data)
+        self.assertGreater(
+            db.session.scalar(
+                db.select(db.func.count(NotificationRecord.notification_id)).where(
+                    NotificationRecord.title == "Review deleted"
+                )
+            ),
+            0,
+        )
 
     def test_review_constraints_and_review_ownership(self):
         token = self._sign_in(self.patron)

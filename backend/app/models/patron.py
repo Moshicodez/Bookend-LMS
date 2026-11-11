@@ -11,8 +11,6 @@ class Patron(User):
         "return_book",
         "view_loans",
         "view_payments",
-        "pay_late_fee",
-        "pay_loss",
         "save_favorites",
         "write_review",
     })

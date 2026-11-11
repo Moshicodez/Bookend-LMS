@@ -12,23 +12,30 @@ from ..models.reservation_record import ReservationRecord
 
 class BookRepository:
     def list_genres(self):
-        names = db.session.execute(
+        saved_names = db.session.execute(
             db.select(BookRecord.genre)
             .where(BookRecord.catalog.is_(True), BookRecord.genre != "")
-            .distinct()
         ).scalars()
-        return GenreTree(names).in_order()
+        names = {}
+        for name in saved_names:
+            cleaned_name = (name or "").strip()
+            if cleaned_name:
+                names.setdefault(cleaned_name.casefold(), cleaned_name)
+        return GenreTree(names.values()).in_order()
 
     def genre_counts(self):
-        rows = db.session.execute(
-            db.select(
-                db.func.lower(BookRecord.genre),
-                db.func.count(BookRecord.book_id),
+        names = db.session.execute(
+            db.select(BookRecord.genre).where(
+                BookRecord.catalog.is_(True),
+                BookRecord.genre != "",
             )
-            .where(BookRecord.catalog.is_(True), BookRecord.genre != "")
-            .group_by(db.func.lower(BookRecord.genre))
-        )
-        return {genre: count for genre, count in rows}
+        ).scalars()
+        counts = {}
+        for name in names:
+            normalized = (name or "").strip().casefold()
+            if normalized:
+                counts[normalized] = counts.get(normalized, 0) + 1
+        return counts
 
     @staticmethod
     def _stock_counts():
@@ -145,8 +152,16 @@ class BookRepository:
                     BookRecord.genre.ilike(pattern, escape="\\"),
                 )
             )
-        if genre:
-            stmt = stmt.where(db.func.lower(BookRecord.genre) == genre.casefold())
+        normalized_genre = (genre or "").strip().casefold()
+        if normalized_genre:
+            matching_ids = [
+                book_id
+                for book_id, book_genre in db.session.execute(
+                    db.select(BookRecord.book_id, BookRecord.genre)
+                )
+                if (book_genre or "").strip().casefold() == normalized_genre
+            ]
+            stmt = stmt.where(BookRecord.book_id.in_(matching_ids))
 
         order = {
             "title": BookRecord.title.collate("NOCASE"),

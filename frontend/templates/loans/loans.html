@@ -55,6 +55,22 @@
                     <span class="loan-due-pill is-on-time">{{ card.days_left }} day{{ "" if card.days_left == 1 else "s" }} left</span>
                   {% endif %}
                   {% if card.outstanding > 0 %}<p class="loan-fee-due">Fees due: {{ card.outstanding|peso }}</p>{% endif %}
+                  {% for fee in card.fees %}
+                    {% if fee.amount > 0 %}
+                      <p class="loan-fee-due">
+                        {{ fee.type }}: {{ fee.amount|peso }} —
+                        {% if fee.paid %}
+                          <span class="loan-status status-returned">Paid</span>
+                          {% set payment = card.fee_confirmations["late" if fee.type == "Late fee" else "loss"] %}
+                          {% if payment %}
+                            <span>Confirmed by {{ payment.confirmer or "previous system" }}{% if payment.confirmed_at %} on {{ payment.confirmed_at.strftime("%b %d, %Y") }}{% endif %}</span>
+                          {% endif %}
+                        {% else %}
+                          <span>Please pay {{ fee.amount|peso }} at the library desk. A librarian will confirm your payment.</span>
+                        {% endif %}
+                      </p>
+                    {% endif %}
+                  {% endfor %}
                   <div class="loan-card-actions">
                     {% if card.status in ["On loan", "Overdue"] %}
                       <form method="post" action="{{ url_for('loans.return_book', book_id=card.loan.book_id) }}" data-confirm-message="Return this book now?">
@@ -62,14 +78,6 @@
                         <button class="button" type="submit">Return book</button>
                       </form>
                     {% endif %}
-                    {% for fee in card.fees %}
-                      {% if fee.amount > 0 and not fee.paid and (fee.type == "Loss fee" or card.loan.returned_at) %}
-                        <form method="post" action="{{ url_for('loans.pay_loss_fee' if fee.type == 'Loss fee' else 'loans.pay_late_fee', loan_id=card.loan.loan_id) }}" data-confirm-message="Pay this {{ fee.type|lower }} of {{ fee.amount|peso }}?">
-                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                          <button class="button button-secondary" type="submit">Pay {{ fee.type|lower }} ({{ fee.amount|peso }})</button>
-                        </form>
-                      {% endif %}
-                    {% endfor %}
                   </div>
                 </div>
               </article>

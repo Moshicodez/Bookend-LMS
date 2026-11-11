@@ -7,7 +7,7 @@ from datetime import date, timedelta
 from html import unescape
 from io import BytesIO
 from pathlib import Path
-from urllib.parse import unquote
+from urllib.parse import parse_qs, unquote, urlsplit
 
 from PIL import Image
 from werkzeug.security import generate_password_hash
@@ -151,6 +151,36 @@ class LandingRouteTests(unittest.TestCase):
             ["/books/?genre=History", "/books/?genre=Mystery"],
         )
         self.assertIn(b'id="genre-carousel-root"', response.data)
+
+    def test_genre_carousel_and_view_cta_link_to_encoded_catalog_genre(self):
+        genre = "Sci-Fi + Mystery & More"
+        BookRepository().create(Book(None, "The Crossroads", "D. Writer", genre, ""))
+        BookRepository().create(Book(None, "A Quiet Mystery", "B. Writer", "Mystery", ""))
+
+        response = self.client.get("/")
+        items_attribute = re.search(rb'data-items="([^"]+)"', response.data)
+        carousel_items = json.loads(unescape(items_attribute.group(1).decode()))
+        selected = next(item for item in carousel_items if item["title"] == genre)
+        cta_links = [
+            match.group(1).decode()
+            for match in re.finditer(
+                rb'class="button button-secondary genre-books-link"\s+href="([^"]+)"',
+                response.data,
+            )
+        ]
+
+        self.assertEqual(
+            parse_qs(urlsplit(selected["href"]).query).get("genre"),
+            [genre],
+        )
+        self.assertEqual(
+            [
+                parse_qs(urlsplit(link).query).get("genre", [None])[0]
+                for link in cta_links
+            ],
+            ["Mystery", genre],
+        )
+        self.assertIn(b'aria-label="View all Sci-Fi + Mystery &amp; More books"', response.data)
 
     def test_carousel_uses_oldest_books_and_embeds_cover_thumbnail(self):
         upload_dir = Path(self.app.static_folder) / "uploads"

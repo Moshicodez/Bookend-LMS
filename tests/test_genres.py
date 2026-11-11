@@ -6,6 +6,7 @@ from werkzeug.security import generate_password_hash
 from backend.app import create_app
 from backend.app.extensions import db
 from backend.app.models.book import Book
+from backend.app.models.notification_record import NotificationRecord
 from backend.app.repositories.book_repository import BookRepository
 from backend.app.repositories.genre_repository import GenreRepository
 from backend.app.repositories.user_repository import UserRepository
@@ -80,15 +81,18 @@ class GenreManagementTests(unittest.TestCase):
             data={"csrf_token": token, "name": "Fantasy"},
             follow_redirects=True,
         )
-        self.assertIn(b"Genre removed.", removed.data)
+        self.assertIn(b"Genre removed:", removed.data)
         self.assertNotIn("Fantasy", self.genres.list_genres())
 
-    def test_removing_a_genre_in_use_is_blocked(self):
-        self.books.create(Book(None, "The Harbor Archive", "A. Writer", "History", ""))
+    def test_removing_a_genre_uncategorizes_books_and_notifies_librarians(self):
+        book = self.books.create(
+            Book(None, "The Harbor Archive", "A. Writer", "History", "")
+        )
         token = self._sign_in()
 
         page = self.client.get("/librarian/genres/")
-        self.assertIn(b"Reassign or clear books in this genre first", page.data)
+        self.assertIn(b">1</td>", page.data)
+        self.assertIn(b'data-confirm-action="Remove"', page.data)
 
         response = self.client.post(
             "/librarian/genres/remove",
@@ -96,11 +100,15 @@ class GenreManagementTests(unittest.TestCase):
             follow_redirects=True,
         )
 
-        self.assertIn(
-            b"Reassign or clear books in this genre before removing it.",
-            response.data,
-        )
-        self.assertIn("History", self.genres.list_genres())
+        self.assertIn(b"Genre removed: History (1 books uncategorized).", response.data)
+        self.assertNotIn("History", self.genres.list_genres())
+        self.assertEqual(self.books.find_book(book.book_id).genre, "")
+        notice = db.session.execute(
+            db.select(NotificationRecord).where(
+                NotificationRecord.title == "Genre removed"
+            )
+        ).scalar_one()
+        self.assertIn("History (1 books uncategorized)", notice.message)
 
     def test_genre_management_post_requires_csrf(self):
         response = self.client.post(
@@ -108,7 +116,8 @@ class GenreManagementTests(unittest.TestCase):
             data={"name": "Fantasy"},
         )
 
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.location.startswith("/login"))
 
     def test_patron_cannot_open_genre_management(self):
         patron = self.users.create(

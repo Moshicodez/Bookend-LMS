@@ -1,6 +1,7 @@
 from datetime import date
+from urllib.parse import unquote, urlsplit
 
-from flask import Blueprint, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from ..config import COVER_COLORS
 from ..models.book import Book
@@ -24,6 +25,27 @@ favorite_repository = FavoriteRepository()
 PER_PAGE = 24
 
 
+def _safe_local_next(value):
+    candidate = (value or "").strip()
+    if not candidate or "\\" in candidate or any(ord(char) < 32 for char in candidate):
+        return None
+    try:
+        parsed = urlsplit(candidate)
+    except ValueError:
+        return None
+    decoded_path = unquote(parsed.path)
+    if (
+        parsed.scheme
+        or parsed.netloc
+        or not parsed.path.startswith("/")
+        or parsed.path.startswith("//")
+        or decoded_path.startswith("//")
+        or "\\" in decoded_path
+    ):
+        return None
+    return candidate
+
+
 def _require_user():
     user = _signed_in_user()
     if user is None:
@@ -35,7 +57,16 @@ def _require_user():
 def catalog():
     user = _signed_in_user()
     search_term = request.args.get("q", "")
-    genre = request.args.get("genre", "").strip()
+    requested_genre = request.args.get("genre", "").strip()
+    genres = BookRepository().list_genres()
+    genre = next(
+        (
+            name
+            for name in genres
+            if name.strip().casefold() == requested_genre.casefold()
+        ),
+        requested_genre,
+    )
     available_only = request.args.get("available") == "1"
     sort = request.args.get("sort", "title")
     page = max(request.args.get("page", 1, type=int), 1)
@@ -78,7 +109,7 @@ def catalog():
         sort=sort,
         search_term=search_term,
         selected_genre=genre,
-        genres=BookRepository().list_genres(),
+        genres=genres,
         genre_counts=book_service.catalog_genre_counts(),
         user=user,
         current_year=date.today().year,
@@ -202,7 +233,10 @@ def archive(book_id):
     if response:
         return response
     book_service.archive_book(user, book_id)
-    return redirect(url_for("books.catalog"))
+    return redirect(
+        _safe_local_next(request.values.get("next"))
+        or url_for("books.catalog")
+    )
 
 
 @books_bp.route("/<int:book_id>/delete", methods=["POST"])
@@ -210,8 +244,12 @@ def delete(book_id):
     user, response = _require_user()
     if response:
         return response
-    book_service.archive_book(user, book_id)
-    return redirect(url_for("books.manage"))
+    book = book_service.delete_book(user, book_id)
+    flash(f"{book.title} was removed from the catalog. Loan history will be kept.", "success")
+    return redirect(
+        _safe_local_next(request.values.get("next"))
+        or url_for("books.manage")
+    )
 
 
 @books_bp.route("/archived")
@@ -230,4 +268,7 @@ def restore(book_id):
     if response:
         return response
     book_service.restore_book(user, book_id)
-    return redirect(url_for("books.archived"))
+    return redirect(
+        _safe_local_next(request.values.get("next"))
+        or url_for("books.archived")
+    )

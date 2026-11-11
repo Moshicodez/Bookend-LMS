@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Confirm payment | Bookend Library{% endblock %}
+{% block page_styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/fees.css') }}">
+{% endblock %}
+{% block content %}
+  <section class="admin-panel fee-fallback-confirm" aria-labelledby="fee-confirm-title">
+    <p class="eyebrow">PAYMENT CONFIRMATION</p>
+    <h1 id="fee-confirm-title">Confirm payment</h1>
+    <p>
+      Confirm {{ "all payments for" if confirm_all else "this payment for" }}
+      <strong>{{ preview.member.username }}</strong>:
+      {{ preview.book_title }} — {{ preview.amount|peso }}
+      {% if not confirm_all %}({{ "Late fee" if preview.fee_type == "late" else "Loss fee" }}){% endif %}
+    </p>
+    <form method="post" action="{{ action }}" class="fee-fallback-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token_value }}">
+      {% if not confirm_all %}
+        <input type="hidden" name="loan_id" value="{{ request.form.get('loan_id', '') }}">
+        <input type="hidden" name="fee_type" value="{{ preview.fee_type }}">
+      {% endif %}
+      <input type="hidden" name="next" value="{{ next_url }}">
+      <label for="fallback-receipt">Receipt / OR number <span>(optional)</span></label>
+      <input id="fallback-receipt" name="receipt_no" maxlength="40">
+      <label for="fallback-note">Note <span>(optional)</span></label>
+      <textarea id="fallback-note" name="note" maxlength="200" rows="3"></textarea>
+      <label class="fee-received-check">
+        <input type="checkbox" name="received_full" required>
+        <span>I received this payment in full</span>
+      </label>
+      <div class="fee-dialog-actions">
+        <a class="button button-secondary" href="{{ next_url }}">Cancel</a>
+        <button class="button" type="submit">Confirm payment</button>
+      </div>
+    </form>
+  </section>
+{% endblock %}

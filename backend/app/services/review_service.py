@@ -1,10 +1,15 @@
 from ..exceptions import NotFoundError, ValidationError
+from ..repositories.notification_repository import NotificationRepository
+from .notification_service import NotificationService
 
 
 class ReviewService:
-    def __init__(self, review_repository, book_repository):
+    def __init__(self, review_repository, book_repository, notification_service=None):
         self._reviews = review_repository
         self._books = book_repository
+        self._notifications = notification_service or NotificationService(
+            NotificationRepository()
+        )
 
     @staticmethod
     def _validated(rating, comment):
@@ -59,6 +64,7 @@ class ReviewService:
         review = self._owned_review(patron, review_id)
         book_id = review.book_id
         self._reviews.delete(review)
+        self._notify_review_deleted(review)
         return book_id
 
     def _owned_review(self, patron, review_id):
@@ -77,3 +83,23 @@ class ReviewService:
         if review is None:
             raise NotFoundError("Review not found.")
         self._reviews.delete(review)
+        self._notify_review_deleted(review)
+
+    def _notify_review_deleted(self, review):
+        book = self._books.find_book(review.book_id)
+        title = book.title if book else "a book"
+        message = f"A review of {title} was removed."
+        self._notifications.notify(
+            review.user_id,
+            "Review deleted",
+            f"Your review of {title} was deleted.",
+            category="review",
+            link=f"/books/{review.book_id}",
+        )
+        self._notifications.notify_role(
+            "librarian",
+            "Review deleted",
+            message,
+            category="review",
+            link="/librarian/reviews",
+        )

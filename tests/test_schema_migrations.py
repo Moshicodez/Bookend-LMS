@@ -9,6 +9,7 @@ from backend.app import create_app
 from backend.app.extensions import db
 from backend.app.models.book_record import BookRecord
 from backend.app.models.favorite_record import FavoriteRecord
+from backend.app.models.fee_payment_record import FeePaymentRecord
 from backend.app.models.review_record import ReviewRecord
 from backend.app.models.user_record import UserRecord
 from backend.app.repositories.book_repository import BookRepository
@@ -105,10 +106,11 @@ class LegacySchemaMigrationTests(unittest.TestCase):
 
         self.assertEqual(book.title, "Legacy Book")
         self.assertEqual(book.kind, "standard")
-        self.assertEqual(book.total_copies, 1)
+        self.assertGreaterEqual(book.total_copies, 1)
+        self.assertLessEqual(book.total_copies, 10)
         self.assertEqual(
             BookRepository().find_book(book.book_id).available_copies,
-            0,
+            book.total_copies - 1,
         )
         self.assertTrue(
             {"kind", "cover", "archived_at", "total_copies"}.issubset(
@@ -165,6 +167,49 @@ class LegacySchemaMigrationTests(unittest.TestCase):
         with self.assertRaises(IntegrityError):
             db.session.commit()
         db.session.rollback()
+
+    def test_unpaid_legacy_loss_fees_are_updated_to_current_amount(self):
+        db.session.execute(
+            text(
+                "UPDATE loans SET lost = 1, loss_fee = 25, loss_paid = 0 "
+                "WHERE loan_id = 1"
+            )
+        )
+        db.session.commit()
+
+        upgrade_legacy_sqlite_schema()
+
+        fee = db.session.scalar(
+            text("SELECT loss_fee FROM loans WHERE loan_id = 1")
+        )
+        self.assertEqual(fee, 2500.0)
+
+    def test_paid_legacy_fees_are_imported_into_the_ledger_once(self):
+        today = date.today()
+        db.session.execute(
+            text(
+                "UPDATE loans SET fee_paid = 1, due_date = :due_date, "
+                "returned_at = :returned_at, lost = 1, loss_fee = 2500, "
+                "loss_paid = 1 WHERE loan_id = 1"
+            ),
+            {
+                "due_date": (today - timedelta(days=4)).isoformat(),
+                "returned_at": (today - timedelta(days=1)).isoformat(),
+            },
+        )
+        db.session.commit()
+
+        upgrade_legacy_sqlite_schema()
+        upgrade_legacy_sqlite_schema()
+
+        payments = db.session.scalars(
+            db.select(FeePaymentRecord).order_by(FeePaymentRecord.fee_type)
+        ).all()
+        self.assertEqual([payment.fee_type for payment in payments], ["late", "loss"])
+        late = next(payment for payment in payments if payment.fee_type == "late")
+        self.assertEqual(late.amount, 1.5)
+        self.assertIsNone(late.confirmed_by)
+        self.assertEqual(late.note, "Imported")
 
 
 if __name__ == "__main__":

@@ -1,9 +1,10 @@
-from flask import Blueprint, redirect, render_template, request, url_for
+from flask import Blueprint, abort, redirect, render_template, request, url_for
 
 from ..repositories.book_repository import BookRepository
 from ..repositories.loan_repository import LoanRepository
 from ..services.loan_service import LoanService
 from .auth import _signed_in_user
+from .social import _safe_return_path
 
 
 loans_bp = Blueprint("loans", __name__, url_prefix="/loans")
@@ -85,7 +86,7 @@ def librarian_return_book(loan_id):
     if response:
         return response
     loan_service.process_return(user, loan_id)
-    return redirect(url_for("loans.index"))
+    return redirect(_safe_return_path() or url_for("loans.index"))
 
 
 @loans_bp.route("/manage/<int:loan_id>/lost", methods=["POST"])
@@ -102,8 +103,7 @@ def pay_late_fee(loan_id):
     user, response = _require_user()
     if response:
         return response
-    loan_service.pay_late_fee(user, loan_id)
-    return redirect(url_for("loans.index"))
+    abort(403)
 
 
 @loans_bp.route("/<int:loan_id>/pay-loss-fee", methods=["POST"])
@@ -111,8 +111,7 @@ def pay_loss_fee(loan_id):
     user, response = _require_user()
     if response:
         return response
-    loan_service.pay_loss_fee(user, loan_id)
-    return redirect(url_for("loans.index"))
+    abort(403)
 
 
 @loans_bp.route("/overdue")

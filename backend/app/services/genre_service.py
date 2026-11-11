@@ -1,9 +1,14 @@
 from ..exceptions import NotFoundError, ValidationError
+from ..repositories.notification_repository import NotificationRepository
+from .notification_service import NotificationService
 
 
 class GenreService:
-    def __init__(self, genre_repository):
+    def __init__(self, genre_repository, notification_service=None):
         self._genres = genre_repository
+        self._notifications = notification_service or NotificationService(
+            NotificationRepository()
+        )
 
     def list_genres(self):
         return self._genres.list_genres()
@@ -31,9 +36,14 @@ class GenreService:
             for existing in self._genres.list_genres()
         ):
             raise NotFoundError("Genre not found.")
-        if self._genres.books_use_genre(name):
-            raise ValidationError(
-                "Reassign or clear books in this genre before removing it."
-            )
-        if not self._genres.remove(name):
+        book_count = self._genres.remove(name)
+        if book_count is False:
             raise NotFoundError("Genre not found.")
+        self._notifications.notify_role(
+            "librarian",
+            "Genre removed",
+            f"Genre removed: {name} ({book_count} books uncategorized).",
+            category="genre",
+            link="/librarian/genres/",
+        )
+        return book_count

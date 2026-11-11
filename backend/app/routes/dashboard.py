@@ -3,13 +3,16 @@ from io import BytesIO
 
 from flask import (
     Blueprint,
+    current_app,
     flash,
+    jsonify,
     redirect,
     render_template,
     request,
     send_file,
     url_for,
 )
+from werkzeug.exceptions import HTTPException
 
 from ..exceptions import ValidationError
 from ..repositories.book_repository import BookRepository
@@ -50,6 +53,35 @@ def librarian_dashboard():
         username=user.username,
         dashboard=dashboard,
     )
+
+
+@dashboard_bp.route("/librarian/analytics")
+def librarian_analytics():
+    def json_response(payload, status=200):
+        response = jsonify(payload)
+        response.status_code = status
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Pragma"] = "no-cache"
+        return response
+
+    try:
+        user = _signed_in_user()
+    except HTTPException as error:
+        return json_response({"error": error.description}, error.code or 403)
+    if user is None:
+        return json_response({"error": "Authentication required."}, 401)
+    if not user.is_librarian():
+        return json_response({"error": "Librarian access required."}, 403)
+
+    period = request.args.get("range", "30d")
+    try:
+        analytics = librarian_service.dashboard_analytics(user, period)
+    except ValueError:
+        return json_response({"error": "Unsupported analytics range."}, 400)
+    except Exception:
+        current_app.logger.exception("Unable to load librarian analytics.")
+        return json_response({"error": "Analytics could not be loaded."}, 500)
+    return json_response(analytics)
 
 
 @dashboard_bp.route("/librarian/backup/export")

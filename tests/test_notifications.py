@@ -14,6 +14,7 @@ from backend.app.repositories.loan_repository import LoanRepository
 from backend.app.repositories.notification_repository import NotificationRepository
 from backend.app.repositories.user_repository import UserRepository
 from backend.app.services.loan_service import LoanService
+from backend.app.services.fee_service import FeeService
 
 
 class NotificationRouteTests(unittest.TestCase):
@@ -286,12 +287,12 @@ class NotificationRouteTests(unittest.TestCase):
         )
         fee_loan.mark_returned(today)
         loans.update_loan(fee_loan)
-        LoanService(BookRepository(), loans).pay_late_fee(self.user, fee_loan.loan_id)
+        FeeService().confirm_payment(self.librarian, fee_loan.loan_id, "late")
 
         patron_updates = NotificationRepository().for_user(self.user.user_id)
         librarian_updates = NotificationRepository().for_user(self.librarian.user_id)
-        self.assertTrue(any(item.title == "Late fee paid" for item in patron_updates))
-        self.assertTrue(any(item.title == "Fee payment received" for item in librarian_updates))
+        self.assertTrue(any(item.title == "Fee payment confirmed" for item in patron_updates))
+        self.assertFalse(any(item.title == "Fee payment received" for item in librarian_updates))
 
     def test_inventory_threshold_notifies_on_low_and_zero_available(self):
         repository = BookRepository()

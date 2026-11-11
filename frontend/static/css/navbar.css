@@ -1,13 +1,15 @@
 /* Unified navbar — single source of truth for every page */
 .landing-navbar {
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 100;
+  right: 0;
+  left: 0;
+  z-index: 199;
   display: flex;
   width: 100%;
   height: 60px;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   margin: 0;
   padding: 0 24px;
   border-bottom: 1px solid var(--line);
@@ -20,12 +22,11 @@
 
 .landing-navbar-inner {
   position: relative;
-  display: grid;
+  display: flex;
   width: 100%;
-  max-width: 1180px;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .landing-brand {
@@ -45,15 +46,13 @@
 .landing-brand-group {
   display: flex;
   min-width: 0;
+  flex: 0 1 auto;
   align-items: center;
   gap: 8px;
 }
 
 .landing-center-group {
-  display: flex;
-  align-items: center;
-  justify-self: center;
-  gap: 9px;
+  display: none;
 }
 
 .landing-navigation,
@@ -80,7 +79,8 @@
 }
 
 .nav-right-actions {
-  justify-self: end;
+  flex: 0 0 auto;
+  margin-left: auto;
   gap: 6px;
 }
 
@@ -408,10 +408,11 @@
 }
 
 .landing-menu-toggle {
-  display: none;
+  display: inline-flex;
   width: 36px;
   height: 36px;
   align-items: center;
+  flex-direction: column;
   justify-content: center;
   padding: 6px;
   border: 0;
@@ -440,17 +441,11 @@
   }
 
   .landing-navbar-inner {
-    grid-template-columns: minmax(0, 1fr) auto;
     gap: 10px;
-  }
-
-  .landing-center-group {
-    display: none;
   }
 
   .landing-menu-toggle {
     display: inline-flex;
-    flex-direction: column;
     flex: 0 0 auto;
   }
 
@@ -497,5 +492,9 @@
 
   .notification-panel {
     top: 60px;
+  }
+
+  body {
+    --navbar-height: 56px;
   }
 }

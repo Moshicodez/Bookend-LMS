@@ -19,6 +19,7 @@ class NotificationService:
         category="general",
         link=None,
         dedupe_key=None,
+        commit=True,
     ):
         return self._notifications.create(
             user_id,
@@ -27,6 +28,7 @@ class NotificationService:
             category=category,
             link=link,
             dedupe_key=dedupe_key,
+            commit=commit,
         )
 
     def notify_role(

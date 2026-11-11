@@ -111,30 +111,47 @@ class FeeAndLoanModelTests(unittest.TestCase):
         self.loan.mark_returned(today)
         self.assertEqual(self.loan.calculate_late_fee(today + timedelta(days=9)), 1.5)
 
-    def test_paying_fee_changes_outstanding_amount(self):
+    def test_paid_status_is_read_only_loan_state(self):
         returned = self.due_date + timedelta(days=2)
-        self.loan.mark_returned(returned)
-
-        self.assertEqual(self.loan.outstanding(), 1.0)
-        self.assertEqual(self.loan.pay_late_fee(), 1.0)
-        self.assertEqual(self.loan.outstanding(), 0.0)
-        with self.assertRaises(ValidationError):
-            self.loan.pay_late_fee()
+        paid = Loan(
+            1,
+            1,
+            1,
+            self.due_date - timedelta(days=14),
+            self.due_date,
+            returned_at=returned,
+            fee_paid=True,
+        )
+        self.assertEqual(paid.outstanding(), 0.0)
+        self.assertTrue(paid.fee_breakdown()[0]["paid"])
 
     def test_lost_loan_closes_and_adds_loss_fee(self):
         self.loan.mark_lost(returned_at=self.due_date + timedelta(days=1))
 
         self.assertTrue(self.loan.lost)
         self.assertTrue(self.loan.is_returned())
-        self.assertEqual(self.loan.outstanding(), 25.0)
-        self.assertEqual(self.loan.pay_loss_fee(), 25.0)
-        self.assertEqual(self.loan.outstanding(), 0.0)
+        self.assertEqual(self.loan.outstanding(), 2500.0)
+        paid_loss = Loan(
+            2,
+            1,
+            1,
+            self.due_date - timedelta(days=14),
+            self.due_date,
+            returned_at=self.due_date + timedelta(days=1),
+            lost=True,
+            loss_fee=2500,
+            loss_paid=True,
+        )
+        self.assertEqual(paid_loss.outstanding(), 0.0)
 
     def test_fee_classes_report_amounts_and_paid_status(self):
         fee = LateFee(daily_fee=0.75)
         self.assertEqual(fee.amount(self.loan, self.due_date + timedelta(days=4)), 3.0)
-        fee.pay()
-        self.assertEqual(fee.outstanding(self.loan, self.due_date + timedelta(days=4)), 0)
+        paid_fee = LateFee(daily_fee=0.75, paid=True)
+        self.assertEqual(
+            paid_fee.outstanding(self.loan, self.due_date + timedelta(days=4)),
+            0,
+        )
         self.assertEqual(LossFee(10).amount(self.loan, date.today()), 10)
 
 

@@ -1,7 +1,7 @@
 import json
 import re
 import unittest
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from io import BytesIO
 
 from werkzeug.security import generate_password_hash
@@ -10,7 +10,9 @@ from backend.app import create_app
 from backend.app.extensions import db
 from backend.app.models.book import Book
 from backend.app.models.loan_record import LoanRecord
+from backend.app.models.fee_payment_record import FeePaymentRecord
 from backend.app.models.review_record import ReviewRecord
+from backend.app.models.notification_record import NotificationRecord
 from backend.app.models.reservation_record import ReservationRecord
 from backend.app.repositories.book_repository import BookRepository
 from backend.app.repositories.genre_repository import GenreRepository
@@ -54,10 +56,13 @@ class LibrarianUiTests(unittest.TestCase):
         )
 
     def _sign_in(self, user):
-        login = self.client.get("/login")
-        token = re.search(
-            rb'name="csrf_token" value="([^"]+)"', login.data
-        ).group(1).decode()
+        with self.client.session_transaction() as session:
+            token = session.get("_csrf_token")
+        if token is None:
+            login = self.client.get("/login")
+            token = re.search(
+                rb'name="csrf_token" value="([^"]+)"', login.data
+            ).group(1).decode()
         with self.client.session_transaction() as session:
             session["user_id"] = user.user_id
             session["username"] = user.username
@@ -97,6 +102,28 @@ class LibrarianUiTests(unittest.TestCase):
                 ),
             ]
         )
+        db.session.flush()
+        paid_loans = db.session.scalars(
+            db.select(LoanRecord).order_by(LoanRecord.loan_id)
+        ).all()
+        db.session.add_all(
+            [
+                FeePaymentRecord(
+                    loan_id=paid_loans[0].loan_id,
+                    fee_type="late",
+                    amount=1.0,
+                    confirmed_at=datetime.now(timezone.utc),
+                    note="Imported",
+                ),
+                FeePaymentRecord(
+                    loan_id=paid_loans[1].loan_id,
+                    fee_type="loss",
+                    amount=25.0,
+                    confirmed_at=datetime.now(timezone.utc),
+                    note="Imported",
+                ),
+            ]
+        )
         db.session.commit()
         token = self._sign_in(self.librarian)
 
@@ -117,6 +144,8 @@ class LibrarianUiTests(unittest.TestCase):
         self.assertIn(b"Most borrowed books", response.data)
         self.assertIn(b"Manage books", response.data)
         self.assertIn(b"Reviews", response.data)
+        self.assertIn(b"Manage fees", response.data)
+        self.assertNotIn(b'class="admin-quick-links"', response.data)
 
         self.assertEqual(self.client.get("/loans/").status_code, 200)
         self.assertIn(b"Mark returned", self.client.get("/loans/").data)
@@ -131,6 +160,8 @@ class LibrarianUiTests(unittest.TestCase):
         self.assertIn(b"History", table.data)
         self.assertIn(b"Edit", table.data)
         self.assertIn(b"Delete", table.data)
+        self.assertIn(b"Loan history will be kept.", table.data)
+        self.assertIn(b'data-confirm-title="Delete The Old Library?"', table.data)
 
         deleted = self._post(
             f"/books/{self.history.book_id}/delete",
@@ -138,6 +169,15 @@ class LibrarianUiTests(unittest.TestCase):
         )
         self.assertEqual(deleted.status_code, 302)
         self.assertFalse(self.books.find_book(self.history.book_id).catalog)
+        self.assertEqual(
+            db.session.scalar(
+                db.select(db.func.count(NotificationRecord.notification_id)).where(
+                    NotificationRecord.title == "Book deleted"
+                )
+            ),
+            1,
+        )
+        self.assertIn(b"removed from the catalog", self.client.get("/books/manage").data)
         self.assertIn(b"Archived", self.client.get("/books/manage").data)
         dashboard = self.client.get("/librarian")
         self.assertIn(b"Archived books", dashboard.data)
@@ -211,7 +251,7 @@ class LibrarianUiTests(unittest.TestCase):
         self.assertEqual(backup["format"], "bookend-lms-backup")
         self.assertEqual(
             set(backup["tables"]),
-            {"books", "favorites", "genres", "loans", "notifications", "reservations", "reviews", "users"},
+            {"books", "favorites", "fee_payments", "genres", "loans", "notifications", "reservations", "reviews", "users"},
         )
 
         temporary_book = self.books.create(

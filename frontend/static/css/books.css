@@ -204,7 +204,51 @@
   margin: 0 0 30px;
 }
 
+.catalog-active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -12px 0 20px;
+}
 
+.catalog-filter-chip {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px 4px 12px;
+  border: 1px solid var(--books-line);
+  border-radius: 999px;
+  background: var(--books-paper);
+  color: var(--books-muted);
+  font-size: 11px;
+}
+
+.catalog-filter-chip strong {
+  color: var(--books-ink);
+  font-weight: 600;
+}
+
+.catalog-filter-chip a {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--books-ink);
+  font-size: 17px;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.catalog-filter-chip a:hover {
+  background: var(--books-cream);
+}
+
+.catalog-filter-chip a:focus-visible {
+  outline: 3px solid rgb(65 87 63 / 40%);
+  outline-offset: 2px;
+}
 
 .catalog-search {
   display: flex;

@@ -12,12 +12,24 @@
   <section class="page-heading catalog-heading">
     <div>
       <p class="eyebrow">THE COLLECTION</p>
-      <h1 class="catalog-display">{% if user and user.is_librarian() %}Catalog{% else %}Books to borrow{% endif %}</h1>
+      <h1 class="catalog-display">{% if user and user.is_librarian() %}Catalog{% else %}Books to borrow{% endif %}{% if selected_genre %}: {{ selected_genre }}{% endif %}</h1>
     </div>
     {% if user and user.is_librarian() %}
       <a class="button catalog-add-book" href="{{ url_for('books.add') }}">Add a book</a>
     {% endif %}
   </section>
+
+  {% if selected_genre %}
+    <div class="catalog-active-filters" aria-label="Selected filters">
+      <span class="catalog-filter-chip">
+        Genre: <strong>{{ selected_genre }}</strong>
+        <a
+          href="{{ url_for('books.catalog', q=search_term, sort=sort, available='1' if available_only else none) }}"
+          aria-label="Clear genre filter"
+        >×</a>
+      </span>
+    </div>
+  {% endif %}
 
   <div class="catalog-toolbar-wrap">
     <form class="catalog-toolbar" method="get" action="{{ url_for('books.catalog') }}" role="search">
@@ -85,44 +97,49 @@
                 <a class="button catalog-card-button" href="{{ url_for('auth.login') }}">Sign in to borrow</a>
               {% endif %}
             </div>
-            {% if pages > 1 %}
-              <nav class="catalog-pagination" aria-label="Catalog pages">
-                {% if page > 1 %}
-                  <a class="button button-secondary" href="{{ url_for('books.catalog', q=search_term, genre=selected_genre, sort=sort, available='1' if available_only else none, page=page - 1) }}">Previous</a>
-                {% else %}
-                  <span class="button button-secondary is-disabled" aria-disabled="true">Previous</span>
-                {% endif %}
-                <div class="catalog-page-numbers">
-                  {% if page_numbers[0] > 1 %}
-                    <a class="catalog-page-number" href="{{ url_for('books.catalog', q=search_term, genre=selected_genre, sort=sort, available='1' if available_only else none, page=1) }}">1</a>
-                    {% if page_numbers[0] > 2 %}<span class="catalog-page-ellipsis" aria-hidden="true">…</span>{% endif %}
-                  {% endif %}
-                  {% for page_number in page_numbers %}
-                    {% if page_number == page %}
-                      <span class="catalog-page-number is-current" aria-current="page">{{ page_number }}</span>
-                    {% else %}
-                      <a class="catalog-page-number" href="{{ url_for('books.catalog', q=search_term, genre=selected_genre, sort=sort, available='1' if available_only else none, page=page_number) }}">{{ page_number }}</a>
-                    {% endif %}
-                  {% endfor %}
-                  {% if page_numbers[-1] < pages %}
-                    {% if page_numbers[-1] < pages - 1 %}<span class="catalog-page-ellipsis" aria-hidden="true">…</span>{% endif %}
-                    <a class="catalog-page-number" href="{{ url_for('books.catalog', q=search_term, genre=selected_genre, sort=sort, available='1' if available_only else none, page=pages) }}">{{ pages }}</a>
-                  {% endif %}
-                </div>
-                {% if page < pages %}
-                  <a class="button button-secondary" href="{{ url_for('books.catalog', q=search_term, genre=selected_genre, sort=sort, available='1' if available_only else none, page=page + 1) }}">Next</a>
-                {% else %}
-                  <span class="button button-secondary is-disabled" aria-disabled="true">Next</span>
-                {% endif %}
-              </nav>
-            {% endif %}
           </div>
         </article>
       {% endfor %}
     </div>
+    {% if pages > 1 %}
+      <nav class="catalog-pagination" aria-label="Catalog pages">
+        {% if not user or not user.is_patron() %}
+          {% if page > 1 %}
+            <a class="button button-secondary" href="{{ url_for('books.catalog', q=search_term, genre=selected_genre, sort=sort, available='1' if available_only else none, page=page - 1) }}">Previous</a>
+          {% else %}
+            <span class="button button-secondary is-disabled" aria-disabled="true">Previous</span>
+          {% endif %}
+        {% endif %}
+        <div class="catalog-page-numbers">
+          {% if page_numbers[0] > 1 %}
+            <a class="catalog-page-number" href="{{ url_for('books.catalog', q=search_term, genre=selected_genre, sort=sort, available='1' if available_only else none, page=1) }}">1</a>
+            {% if page_numbers[0] > 2 %}<span class="catalog-page-ellipsis" aria-hidden="true">…</span>{% endif %}
+          {% endif %}
+          {% for page_number in page_numbers %}
+            {% if page_number == page %}
+              <span class="catalog-page-number is-current" aria-current="page">{{ page_number }}</span>
+            {% else %}
+              <a class="catalog-page-number" href="{{ url_for('books.catalog', q=search_term, genre=selected_genre, sort=sort, available='1' if available_only else none, page=page_number) }}">{{ page_number }}</a>
+            {% endif %}
+          {% endfor %}
+          {% if page_numbers[-1] < pages %}
+            {% if page_numbers[-1] < pages - 1 %}<span class="catalog-page-ellipsis" aria-hidden="true">…</span>{% endif %}
+            <a class="catalog-page-number" href="{{ url_for('books.catalog', q=search_term, genre=selected_genre, sort=sort, available='1' if available_only else none, page=pages) }}">{{ pages }}</a>
+          {% endif %}
+        </div>
+        {% if page < pages %}
+          <a class="button button-secondary" href="{{ url_for('books.catalog', q=search_term, genre=selected_genre, sort=sort, available='1' if available_only else none, page=page + 1) }}">Next</a>
+        {% else %}
+          <span class="button button-secondary is-disabled" aria-disabled="true">Next</span>
+        {% endif %}
+      </nav>
+    {% endif %}
   {% else %}
     <section class="catalog-empty">
-      {% if search_term or selected_genre %}
+      {% if selected_genre %}
+        <p>No books found in {{ selected_genre }}.</p>
+        <a href="{{ url_for('books.catalog', q=search_term, sort=sort, available='1' if available_only else none) }}">Clear genre filter</a>
+      {% elif search_term %}
         <p>No matching books found.</p>
         <a href="{{ url_for('books.catalog') }}">Clear search and filters</a>
       {% else %}

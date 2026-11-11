@@ -10,6 +10,7 @@ from ..extensions import db
 from ..models import (
     BookRecord,
     FavoriteRecord,
+    FeePaymentRecord,
     GenreRecord,
     LoanRecord,
     NotificationRecord,
@@ -25,6 +26,7 @@ MAX_BACKUP_BYTES = 20 * 1024 * 1024
 BACKUP_RECORDS = (
     BookRecord,
     FavoriteRecord,
+    FeePaymentRecord,
     GenreRecord,
     LoanRecord,
     NotificationRecord,
@@ -88,11 +90,18 @@ class BackupService:
         tables = BackupService._tables()
         table_data = backup.get("tables")
         expected_names = {table.name for table in tables}
-        if not isinstance(table_data, dict) or set(table_data) != expected_names:
+        legacy_names = expected_names - {"fee_payments"}
+        if (
+            not isinstance(table_data, dict)
+            or set(table_data) not in (expected_names, legacy_names)
+        ):
             raise ValidationError("The backup does not match this database schema.")
 
         rows_by_table = {
-            table.name: BackupService._validated_rows(table, table_data[table.name])
+            table.name: BackupService._validated_rows(
+                table,
+                table_data.get(table.name, []),
+            )
             for table in tables
         }
 

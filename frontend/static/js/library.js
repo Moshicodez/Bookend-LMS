@@ -532,6 +532,8 @@
   const confirmDialog = document.querySelector("[data-confirm-dialog]");
   if (confirmDialog instanceof HTMLDialogElement) {
     const message = confirmDialog.querySelector("[data-confirm-message]");
+    const title = confirmDialog.querySelector("#confirm-dialog-title");
+    const note = confirmDialog.querySelector("[data-confirm-note]");
     const acceptButton = confirmDialog.querySelector("[data-confirm-accept]");
     const cancelButton = confirmDialog.querySelector("[data-confirm-cancel]");
     let pendingForm = null;
@@ -559,6 +561,15 @@
         pendingForm = form;
         pendingSubmitter = event.submitter instanceof HTMLElement ? event.submitter : null;
         if (message instanceof HTMLElement) message.textContent = form.dataset.confirmMessage || "Are you sure you want to continue?";
+        if (title instanceof HTMLElement) title.textContent = form.dataset.confirmTitle || "Confirm this action";
+        if (note instanceof HTMLElement) {
+          note.textContent = form.dataset.confirmNote || "";
+          note.hidden = !form.dataset.confirmNote;
+        }
+        if (acceptButton instanceof HTMLButtonElement) {
+          acceptButton.textContent = form.dataset.confirmAction || "Continue";
+          acceptButton.classList.toggle("button-danger", form.dataset.confirmDanger === "true");
+        }
         confirmDialog.showModal();
         acceptButton?.focus();
       });

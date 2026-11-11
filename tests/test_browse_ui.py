@@ -1,5 +1,6 @@
 import unittest
 from datetime import date, timedelta
+from urllib.parse import urlencode
 
 from werkzeug.security import generate_password_hash
 
@@ -78,8 +79,41 @@ class BrowseUiTests(unittest.TestCase):
         self._sign_in(self.librarian)
         librarian_page = self.client.get("/books/")
         librarian_menu = librarian_page.data.split(b'id="nav-drawer"', 1)[1].split(b"</aside>", 1)[0]
-        for label in (b"Dashboard", b"Manage books", b"Stock", b"Reservations", b"Archived books", b"Members", b"Loans", b"Notifications"):
+        for label in (
+            b"Home",
+            b"Dashboard",
+            b"Books",
+            b"Manage books",
+            b"Manage genres",
+            b"Reviews",
+            b"Reservations",
+            b"Manage loans",
+            b"Manage fees",
+            b"Overdue loans",
+            b"Members",
+            b"Archived",
+            b"Notifications",
+        ):
             self.assertIn(label, librarian_menu)
+        expected_order = (
+            b"<span>Home</span>",
+            b"<span>Notifications</span>",
+            b"<span>Dashboard</span>",
+            b"<span>Books</span>",
+            b"<span>Manage books</span>",
+            b"<span>Manage genres</span>",
+            b"<span>Reviews</span>",
+            b"<span>Reservations</span>",
+            b"<span>Manage loans</span>",
+            b"<span>Manage fees</span>",
+            b"<span>Overdue loans</span>",
+            b"<span>Members</span>",
+            b"<span>Archived</span>",
+        )
+        positions = [librarian_menu.index(label) for label in expected_order]
+        self.assertEqual(positions, sorted(positions))
+        self.assertEqual(librarian_menu.count(b"<span>Notifications</span>"), 1)
+        self.assertNotIn(b"Stock", librarian_menu)
         self.assertNotIn(b"Favorites", librarian_menu)
 
     def test_guest_can_browse_catalog_detail_and_search_overlay(self):
@@ -126,6 +160,51 @@ class BrowseUiTests(unittest.TestCase):
 
         by_genre = self.client.get("/books/?q=Mystery")
         self.assertIn(b"Mystery in the Stacks", by_genre.data)
+
+    def test_catalog_matches_trimmed_encoded_genres_and_shows_unknown_empty_state(self):
+        unusual = self.books.create(
+            Book(
+                None,
+                "The Crossroads",
+                "D. Writer",
+                "  Sci-Fi + Mystery & More  ",
+                "",
+            )
+        )
+        query = urlencode({"genre": " sci-fi + mystery & more "})
+        matching = self.client.get(f"/books/?{query}")
+
+        self.assertEqual(matching.status_code, 200)
+        self.assertIn(unusual.title.encode(), matching.data)
+        self.assertIn(b"Books to borrow: Sci-Fi + Mystery &amp; More", matching.data)
+        self.assertIn(b"Genre: <strong>Sci-Fi + Mystery &amp; More</strong>", matching.data)
+        self.assertIn(b'aria-label="Clear genre filter"', matching.data)
+        self.assertNotIn(self.history.title.encode(), matching.data)
+
+        unknown = self.client.get("/books/?genre=Unlisted+Shelf")
+        self.assertEqual(unknown.status_code, 200)
+        self.assertIn(b"No books found in Unlisted Shelf.", unknown.data)
+        self.assertIn(b'aria-label="Clear genre filter"', unknown.data)
+        self.assertIn(
+            b'href="/books/?q=&amp;sort=title">Clear genre filter</a>',
+            unknown.data,
+        )
+
+    def test_genre_catalog_actions_are_role_appropriate(self):
+        guest_page = self.client.get("/books/?genre=History")
+        self.assertIn(b">Sign in to borrow</a>", guest_page.data)
+        self.assertNotIn(b">Borrow</button>", guest_page.data)
+        self.assertNotIn(b">Edit</a>", guest_page.data)
+
+        self._sign_in(self.patron)
+        patron_page = self.client.get("/books/?genre=History")
+        self.assertIn(b">Borrow</button>", patron_page.data)
+        self.assertNotIn(b">Edit</a>", patron_page.data)
+
+        self._sign_in(self.librarian)
+        librarian_page = self.client.get("/books/?genre=History")
+        self.assertIn(b">Edit</a>", librarian_page.data)
+        self.assertNotIn(b">Borrow</button>", librarian_page.data)
 
     def test_patron_navigation_counts_and_add_to_basket_action(self):
         self._sign_in(self.patron)

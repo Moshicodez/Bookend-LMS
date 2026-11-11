@@ -328,23 +328,6 @@ class BackendServiceTests(unittest.TestCase):
         with self.assertRaises(NotFoundError):
             self.loan_service.view_payments(other_patron, loan.loan_id)
 
-    def test_paid_late_fee_is_persisted(self):
-        book = self.books.create(Book(None, "Overdue", "Writer", "", ""))
-        today = date.today()
-        loan = self.loans.create_loan(
-            self.patron.user_id,
-            book.book_id,
-            today - timedelta(days=20),
-            today - timedelta(days=6),
-        )
-        loan.mark_returned(today)
-        self.loans.update_loan(loan)
-
-        self.assertEqual(self.loan_service.pay_late_fee(self.patron, loan.loan_id), 3.0)
-        saved = self.loans.find_loan(loan.loan_id)
-        self.assertEqual(saved.outstanding(today), 0.0)
-        self.assertTrue(saved.fee_breakdown(today)[0]["paid"])
-
     def test_librarian_lost_return_closes_loan_and_removes_book_from_catalog(self):
         book = self.books.create(Book(None, "Lost book", "Writer", "", ""))
         loan = self.loan_service.borrow_book(self.patron, book.book_id)
@@ -364,7 +347,7 @@ class BackendServiceTests(unittest.TestCase):
         self.assertEqual(updated_loan.loan_id, loan.loan_id)
         self.assertTrue(updated_loan.is_returned())
         self.assertTrue(updated_loan.lost)
-        self.assertEqual(updated_loan.outstanding(), 25.0)
+        self.assertEqual(updated_loan.outstanding(), 2500.0)
         self.assertIsNone(self.loans.find_active_loan_by_book(book.book_id))
         self.assertFalse(updated_book.available)
         self.assertFalse(updated_book.catalog)

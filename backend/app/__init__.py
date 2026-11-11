@@ -37,6 +37,7 @@ def create_app(test_config=None):
     from .routes.books import books_bp
     from .routes.dashboard import dashboard_bp
     from .routes.genres import genres_bp
+    from .routes.fees import fees_bp
     from .routes.landing import landing_bp
     from .routes.loans import loans_bp
     from .routes.members import members_bp
@@ -79,6 +80,7 @@ def create_app(test_config=None):
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(genres_bp)
+    app.register_blueprint(fees_bp)
     app.register_blueprint(books_bp)
     app.register_blueprint(loans_bp)
     app.register_blueprint(members_bp)
@@ -105,6 +107,7 @@ def create_app(test_config=None):
         favorite_count = 0
         basket_count = 0
         overdue_count = 0
+        fee_member_count = 0
         notification_count = 0
         ready_reservation_count = 0
         active_book_ids = set()
@@ -133,6 +136,9 @@ def create_app(test_config=None):
                 current_user.user_id
             )
         elif current_user is not None and current_user.is_librarian():
+            from .repositories.fee_repository import FeeRepository
+
+            fee_member_count = FeeRepository().members_with_outstanding_count()
             loan_repository = LoanRepository()
             overdue = loan_repository.find_overdue()
             overdue_count = len(overdue)
@@ -152,6 +158,7 @@ def create_app(test_config=None):
             "favorite_count": favorite_count,
             "basket_count": basket_count,
             "overdue_count": overdue_count,
+            "fee_member_count": fee_member_count,
             "notification_count": notification_count,
             "ready_reservation_count": ready_reservation_count,
             "active_book_ids": active_book_ids,

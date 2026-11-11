@@ -1,4 +1,5 @@
 import re
+import random
 import unittest
 from datetime import date, timedelta
 
@@ -198,6 +199,157 @@ class StockManagementTests(unittest.TestCase):
         self.loan_service.process_return(self.librarian, second.loan_id, lost=True)
         self.assertFalse(self.books.find_book(book.book_id).catalog)
         self.assertEqual(self.books.find_book(book.book_id).total_copies, 0)
+
+    def test_randomized_inventory_lifecycle_preserves_stock_invariant(self):
+        rng = random.Random(6206)
+        patrons = self.patrons + [
+            self._create_user(f"random-reader{index}", "patron")
+            for index in range(5, 9)
+        ]
+        books = [
+            self.books.create(
+                Book(
+                    None,
+                    f"Random Shelf {index}",
+                    f"Writer {index}",
+                    "Fiction",
+                    "",
+                    total_copies=rng.randint(2, 4),
+                )
+            )
+            for index in range(4)
+        ]
+        coverage_book = self.books.create(
+            Book(None, "Coverage Shelf", "Random Writer", "Fiction", "", total_copies=3)
+        )
+        books.append(coverage_book)
+        expected_actions = {"borrow", "return", "lost", "reserve", "archive", "restore"}
+        exercised_actions = set()
+
+        def assert_invariant():
+            for original in books:
+                book = self.books.find_book(original.book_id)
+                self.assertEqual(
+                    book.total_copies,
+                    book.on_loan_copies
+                    + book.reserved_copies
+                    + book.available_copies,
+                    f"Inventory invariant failed for {book.title}",
+                )
+
+        def perform(action, book, subject=None):
+            if action == "borrow":
+                self.loan_service.borrow_book(subject, book.book_id)
+            elif action == "return":
+                self.loan_service.return_book(subject, book.book_id)
+            elif action == "lost":
+                self.loan_service.process_return(
+                    self.librarian,
+                    subject.loan_id,
+                    lost=True,
+                )
+            elif action == "reserve":
+                self.loan_service.reserve_book(subject, book.book_id)
+            elif action == "archive":
+                self.book_service.archive_book(self.librarian, book.book_id)
+            else:
+                self.book_service.restore_book(self.librarian, book.book_id)
+            exercised_actions.add(action)
+            assert_invariant()
+
+        borrowers = rng.sample(patrons, 4)
+        for patron in borrowers[:3]:
+            perform("borrow", coverage_book, patron)
+        perform("reserve", coverage_book, borrowers[3])
+        perform("return", coverage_book, borrowers[0])
+        perform("borrow", coverage_book, borrowers[3])
+        lost_loan = self.loans.find_active_loan(
+            borrowers[1].user_id,
+            coverage_book.book_id,
+        )
+        perform("lost", coverage_book, lost_loan)
+        perform("return", coverage_book, borrowers[2])
+        perform("return", coverage_book, borrowers[3])
+        perform("archive", coverage_book)
+        perform("restore", coverage_book)
+
+        for step in range(150):
+            candidates = []
+            for original in books:
+                book = self.books.find_book(original.book_id)
+                active_loans = self.loans.find_active_loans_by_book(book.book_id)
+                if book.catalog:
+                    for patron in patrons:
+                        patron_loans = self.loans.find_patron_loans(
+                            patron.user_id
+                        )
+                        can_transact = (
+                            not any(
+                                loan.outstanding(date.today()) > 0
+                                for loan in patron_loans
+                            )
+                            and sum(
+                                not loan.is_returned() for loan in patron_loans
+                            )
+                            + self.reservations.count_open_for_patron(
+                                patron.user_id
+                            )
+                            < patron.loan_limit
+                        )
+                        if (
+                            can_transact
+                            and book.available_copies > 0
+                            and self.loans.find_active_loan(
+                                patron.user_id, book.book_id
+                            )
+                            is None
+                            and self.reservations.find_for_patron_book(
+                                patron.user_id, book.book_id
+                            )
+                            is None
+                        ):
+                            candidates.append(("borrow", book, patron))
+                        if (
+                            can_transact
+                            and book.total_copies > 0
+                            and book.available_copies == 0
+                            and self.loans.find_active_loan(
+                                patron.user_id, book.book_id
+                            )
+                            is None
+                            and self.reservations.find_for_patron_book(
+                                patron.user_id, book.book_id
+                            )
+                            is None
+                        ):
+                            candidates.append(("reserve", book, patron))
+                    if (
+                        not active_loans
+                        and book.reserved_copies == 0
+                        and self.reservations.waiting_count(book.book_id) == 0
+                    ):
+                        candidates.append(("archive", book, None))
+                elif book.total_copies > 0:
+                    candidates.append(("restore", book, None))
+
+                for loan in active_loans:
+                    patron = next(
+                        patron
+                        for patron in patrons
+                        if patron.user_id == loan.patron_id
+                    )
+                    candidates.append(("return", book, patron))
+                    candidates.append(("lost", book, loan))
+
+            if not candidates:
+                break
+
+            action, book, subject = rng.choice(candidates)
+            perform(action, book, subject)
+            if step >= 59 and expected_actions.issubset(exercised_actions):
+                break
+
+        self.assertEqual(exercised_actions, expected_actions)
 
     def test_stale_competing_loan_cannot_exceed_stock(self):
         book = self.books.create(

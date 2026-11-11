@@ -47,6 +47,11 @@
           {% if genre.all_books %}
           <span class="section-count">{{ genre.all_books|length }} books</span>
           {% endif %}
+          <a
+            class="button button-secondary genre-books-link"
+            href="{{ url_for('books.catalog', genre=genre.name) }}"
+            aria-label="View all {{ genre.name }} books"
+          >View genre books <span aria-hidden="true">→</span></a>
         </div>
         {% if genre.all_books %}
         <div class="landing-book-grid">

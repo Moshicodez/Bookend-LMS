@@ -254,8 +254,14 @@ class LoanService:
     def loan_cards(self, patron):
         patron.require("view_loans")
         current_date = today()
+        loans = self._loan_repo.find_patron_loans(patron.user_id)
+        from ..repositories.fee_repository import FeeRepository
+
+        payment_details = FeeRepository().payment_details_for_loans(
+            [loan.loan_id for loan in loans]
+        )
         cards = []
-        for loan in self._loan_repo.find_patron_loans(patron.user_id):
+        for loan in loans:
             book = self._book_repo.find_book(loan.book_id)
             status = self._loan_status(loan, current_date)
             cards.append(
@@ -267,6 +273,10 @@ class LoanService:
                     "fees": loan.fee_breakdown(current_date),
                     "days_left": max(0, (loan.due_date - current_date).days),
                     "days_overdue": max(0, (current_date - loan.due_date).days),
+                    "fee_confirmations": {
+                        fee_type: payment_details.get((loan.loan_id, fee_type))
+                        for fee_type in ("late", "loss")
+                    },
                 }
             )
         return cards
@@ -446,56 +456,6 @@ class LoanService:
             })
 
         return report
-
-    def pay_late_fee(self, patron, loan_id):
-        patron.require("pay_late_fee")
-        loan = self._get_own_loan(patron, loan_id)
-
-        amount = loan.pay_late_fee(today())
-        self._loan_repo.update_loan(loan)
-        self._notifications.notify(
-            patron.user_id,
-            "Late fee paid",
-            f"Your late fee of ₱{amount:,.2f} was recorded as paid.",
-            category="fee",
-            link="/loans/",
-            dedupe_key=f"loan:{loan.loan_id}:late-fee:paid",
-        )
-        self._notifications.notify_role(
-            "librarian",
-            "Fee payment received",
-            f"A late fee of ₱{amount:,.2f} was paid for loan #{loan.loan_id}.",
-            category="fee",
-            link="/loans/",
-            dedupe_key=f"loan:{loan.loan_id}:late-fee:paid",
-        )
-
-        return amount
-
-    def pay_loss_fee(self, patron, loan_id):
-        patron.require("pay_loss")
-        loan = self._get_own_loan(patron, loan_id)
-
-        amount = loan.pay_loss_fee()
-        self._loan_repo.update_loan(loan)
-        self._notifications.notify(
-            patron.user_id,
-            "Loss fee paid",
-            f"Your loss fee of ₱{amount:,.2f} was recorded as paid.",
-            category="fee",
-            link="/loans/",
-            dedupe_key=f"loan:{loan.loan_id}:loss-fee:paid",
-        )
-        self._notifications.notify_role(
-            "librarian",
-            "Fee payment received",
-            f"A loss fee of ₱{amount:,.2f} was paid for loan #{loan.loan_id}.",
-            category="fee",
-            link="/loans/",
-            dedupe_key=f"loan:{loan.loan_id}:loss-fee:paid",
-        )
-
-        return amount
 
     def process_return(self, librarian, loan_id, lost=False):
         librarian.require("update_return_status")

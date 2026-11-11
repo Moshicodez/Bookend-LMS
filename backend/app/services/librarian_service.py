@@ -1,15 +1,40 @@
 import secrets
 import string
+from datetime import date, timedelta
 
 from werkzeug.security import generate_password_hash
 
 from ..exceptions import NotFoundError, PermissionDenied
 from ..repositories.genre_repository import GenreRepository
+from ..repositories.fee_repository import FeeRepository
 from ..repositories.reservation_repository import ReservationRepository
 from ..utils.date_utils import today
 from .auth_service import AuthService
 from .book_service import BookService
 from .loan_service import LoanService
+
+
+ANALYTICS_RANGES = {
+    "7d": 7,
+    "30d": 30,
+    "12m": 365,
+}
+
+
+def build_analytics_series(start_date, end_date, loan_rows, return_rows):
+    """Fill missing dates without relying on database-specific date functions."""
+    loans_by_date = {day: count for day, count in loan_rows}
+    returns_by_date = {day: count for day, count in return_rows}
+    series = []
+    current = start_date
+    while current <= end_date:
+        series.append({
+            "date": current.isoformat(),
+            "loans": int(loans_by_date.get(current, 0)),
+            "returns": int(returns_by_date.get(current, 0)),
+        })
+        current += timedelta(days=1)
+    return series
 
 
 class LibrarianService:
@@ -21,6 +46,7 @@ class LibrarianService:
         self._user_repo = user_repo
         self._genre_repo = GenreRepository()
         self._reservations = ReservationRepository()
+        self._fee_repository = FeeRepository()
 
     def add_book(
         self,
@@ -111,12 +137,7 @@ class LibrarianService:
                     }
                 )
 
-        fees_collected = sum(
-            fee["amount"]
-            for loan in loans
-            for fee in loan.fee_breakdown(today())
-            if fee["paid"]
-        )
+        fees_collected = self._fee_repository.collected_total()
         reservation_counts = self._reservations.open_counts()
         recent_reservations = self._reservations.find_for_management()[:6]
         archived_books = list(self._book_repo.find_archived())
@@ -136,6 +157,36 @@ class LibrarianService:
             "most_borrowed": most_borrowed,
             "recent_reservations": recent_reservations,
             "archived_books": archived_books[:5],
+        }
+
+    def dashboard_analytics(self, librarian, period="30d", current_date=None):
+        librarian.require("manage_loans")
+        librarian.require("manage_mem")
+        if period not in ANALYTICS_RANGES:
+            raise ValueError("Unsupported analytics range.")
+
+        end_date = current_date or date.today()
+        start_date = end_date - timedelta(days=ANALYTICS_RANGES[period] - 1)
+        aggregates = self._loan_repo.analytics_counts(start_date, end_date)
+        series = build_analytics_series(
+            start_date,
+            end_date,
+            aggregates["loans"],
+            aggregates["returns"],
+        )
+        return {
+            "range": period,
+            "start": start_date.isoformat(),
+            "end": end_date.isoformat(),
+            "series": series,
+            "genres": [
+                {"genre": genre, "loans": int(count)}
+                for genre, count in aggregates["genres"]
+            ],
+            "totals": {
+                "loans": sum(point["loans"] for point in series),
+                "returns": sum(point["returns"] for point in series),
+            },
         }
 
     def reservation_management(self, librarian, status="", search=""):

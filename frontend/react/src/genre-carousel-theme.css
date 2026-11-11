@@ -19,6 +19,14 @@
   outline-offset: 4px;
 }
 
+.genre-carousel-host .circular-carousel__card {
+  transition: filter 180ms ease;
+}
+
+.genre-carousel-host .circular-carousel__card[data-active="true"] {
+  filter: drop-shadow(0 10px 14px rgb(50 54 43 / 22%));
+}
+
 .genre-carousel-host .circular-carousel__controls {
   position: absolute;
   z-index: 2;
@@ -107,7 +115,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .genre-carousel-host .circular-carousel__stage {
+  .genre-carousel-host .circular-carousel__stage,
+  .genre-carousel-host .circular-carousel__card {
     transition-duration: 0.01ms;
   }
 }

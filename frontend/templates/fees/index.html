@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% block title %}Manage fees | Bookend Library{% endblock %}
+{% block page_styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/fees.css') }}">
+{% endblock %}
+{% block page_scripts %}
+  <script src="{{ url_for('static', filename='js/fees.js') }}" defer></script>
+{% endblock %}
+{% block content %}
+  <section class="page-heading">
+    <p class="eyebrow">LIBRARIAN TOOLS</p>
+    <h1>Manage fees</h1>
+    <p>Review outstanding balances and record payments received at the library desk.</p>
+  </section>
+
+  <section class="fees-summary" aria-label="Fee summary">
+    <article class="admin-stat-card"><span>Total outstanding</span><strong>{{ summary.outstanding|peso }}</strong></article>
+    <article class="admin-stat-card"><span>Members with fees</span><strong>{{ summary.members }}</strong></article>
+    <article class="admin-stat-card"><span>Late fees outstanding</span><strong>{{ summary.late|peso }}</strong></article>
+    <article class="admin-stat-card"><span>Loss fees outstanding</span><strong>{{ summary.loss|peso }}</strong></article>
+    <article class="admin-stat-card"><span>Collected this month</span><strong>{{ summary.collected_month|peso }}</strong></article>
+  </section>
+
+  <section class="admin-panel fees-controls" aria-label="Find and filter fees">
+    <form method="get" action="{{ url_for('fees.index') }}" class="fees-filter-form">
+      <label for="fees-search">Search members or books</label>
+      <input id="fees-search" name="q" type="search" value="{{ search }}" placeholder="Username, email, or book title">
+      <input type="hidden" name="status" value="{{ status }}">
+      <input type="hidden" name="type" value="{{ fee_type }}">
+      <input type="hidden" name="sort" value="{{ sort }}">
+      <button class="button button-secondary" type="submit">Search</button>
+    </form>
+    <nav class="fees-status-tabs" aria-label="Fee status filter">
+      {% for value, label in [("outstanding", "Outstanding"), ("paid", "Paid"), ("all", "All")] %}
+        <a class="button {{ 'fees-tab-active' if status == value else 'button-secondary' }}"
+           href="{{ url_for('fees.index', status=value, type=fee_type, q=search, sort=sort) }}"
+           {% if status == value %}aria-current="page"{% endif %}>{{ label }}</a>
+      {% endfor %}
+    </nav>
+    <form method="get" action="{{ url_for('fees.index') }}" class="fees-sort-form">
+      <input type="hidden" name="status" value="{{ status }}">
+      <input type="hidden" name="q" value="{{ search }}">
+      <label for="fees-type">Fee type</label>
+      <select id="fees-type" name="type">
+        <option value="all" {{ "selected" if fee_type == "all" else "" }}>All fee types</option>
+        <option value="late" {{ "selected" if fee_type == "late" else "" }}>Late fees</option>
+        <option value="loss" {{ "selected" if fee_type == "loss" else "" }}>Loss fees</option>
+      </select>
+      <label for="fees-sort">Sort by</label>
+      <select id="fees-sort" name="sort">
+        <option value="amount" {{ "selected" if sort == "amount" else "" }}>Amount owed</option>
+        <option value="overdue" {{ "selected" if sort == "overdue" else "" }}>Days overdue</option>
+        <option value="name" {{ "selected" if sort == "name" else "" }}>Member name</option>
+      </select>
+      <button class="button button-secondary" type="submit">Apply</button>
+    </form>
+  </section>
+
+  {% if members %}
+    <section class="table-scroll fees-table-wrap" aria-label="Members and fee details">
+      <table class="admin-table fees-members-table">
+        <thead>
+          <tr><th scope="col">Member</th><th scope="col">Total owed</th><th scope="col">Fee details and actions</th></tr>
+        </thead>
+        <tbody>
+      {% for member in members %}
+        <tr class="fees-member-row">
+          <td data-label="Member">
+            <a class="fees-member-name" href="{{ url_for('members.detail', user_id=member.user_id) }}">{{ member.username }}</a>
+            <a class="fees-member-email" href="{{ url_for('members.detail', user_id=member.user_id) }}">{{ member.email }}</a>
+          </td>
+          <td data-label="Total owed"><strong class="fees-member-total">{{ member.amount_owed|peso }}</strong></td>
+          <td data-label="Fee details and actions">
+          <details class="fees-lines" open>
+            <summary>{{ member.fees|length }} fee line{{ "" if member.fees|length == 1 else "s" }}</summary>
+            <div class="fees-lines-list">
+              {% for fee in member.fees %}
+                <article class="fees-line">
+                  <div class="fees-line-title">
+                    <h3>{{ fee.book_title }}</h3>
+                    <span class="catalog-status-badge">{{ "Late fee" if fee.fee_type == "late" else "Loss fee" }}</span>
+                  </div>
+                  <dl class="fees-line-facts">
+                    <div><dt>Due date</dt><dd>{{ fee.due_date.strftime("%b %d, %Y") }}</dd></div>
+                    {% if fee.fee_type == "late" %}
+                      <div><dt>Days overdue</dt><dd>{{ fee.days_overdue }}</dd></div>
+                    {% endif %}
+                    <div><dt>Amount</dt><dd>{{ fee.amount|peso }}</dd></div>
+                  </dl>
+                  <div class="fees-line-status">
+                    {% if fee.paid %}
+                      <span class="fee-state is-paid">Paid</span>
+                      <p>
+                        Confirmed by {{ fee.confirmer or "previous system" }}
+                        {% if fee.confirmed_at %}on {{ fee.confirmed_at.strftime("%b %d, %Y") }}{% endif %}
+                        {% if fee.receipt_no %}<br>Receipt / OR: {{ fee.receipt_no }}{% endif %}
+                      </p>
+                    {% elif fee.fee_type == "late" and not fee.returned_at %}
+                      <span class="fee-state is-accruing">Accruing</span>
+                      <p>Book not yet returned.</p>
+                    {% else %}
+                      <span class="fee-state is-unpaid">Unpaid</span>
+                    {% endif %}
+                  </div>
+                  {% if not fee.paid %}
+                    <div class="fees-line-actions">
+                      {% if fee.fee_type == "late" and not fee.returned_at %}
+                        <button class="button" type="button" disabled aria-describedby="return-hint-{{ fee.loan_id }}">Confirm payment received</button>
+                        <span class="fees-hint" id="return-hint-{{ fee.loan_id }}">Return the book first</span>
+                        <form method="post" action="{{ url_for('loans.librarian_return_book', loan_id=fee.loan_id) }}">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                          <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+                          <button class="button button-secondary" type="submit">Mark returned</button>
+                        </form>
+                      {% else %}
+                        <form method="post" action="{{ url_for('fees.confirm') }}">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                          <input type="hidden" name="loan_id" value="{{ fee.loan_id }}">
+                          <input type="hidden" name="fee_type" value="{{ fee.fee_type }}">
+                          <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+                          <button class="button fees-confirm-trigger" type="submit"
+                                  data-fee-confirm
+                                  data-action="{{ url_for('fees.confirm') }}"
+                                  data-loan-id="{{ fee.loan_id }}"
+                                  data-fee-type="{{ fee.fee_type }}"
+                                  data-fee-label="{{ 'Late fee' if fee.fee_type == 'late' else 'Loss fee' }}"
+                                  data-member="{{ member.username }}"
+                                  data-book="{{ fee.book_title }}"
+                                  data-amount="{{ fee.amount|peso }}"
+                                  data-next="{{ request.full_path if request.query_string else request.path }}">Confirm payment received</button>
+                        </form>
+                      {% endif %}
+                    </div>
+                  {% endif %}
+                </article>
+              {% endfor %}
+            </div>
+          </details>
+          {% set unpaid_fees = member.fees|selectattr("paid", "equalto", false)|list %}
+          {% if unpaid_fees|length > 1 and fee_type == "all" and status == "outstanding" and not search %}
+            <form method="post" action="{{ url_for('fees.confirm_all', member_id=member.user_id) }}" class="fees-confirm-all">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+              <button class="button button-secondary fees-confirm-trigger" type="submit"
+                      data-fee-confirm
+                      data-action="{{ url_for('fees.confirm_all', member_id=member.user_id) }}"
+                      data-confirm-all
+                      data-member="{{ member.username }}"
+                      data-book="{{ unpaid_fees|length }} outstanding fees"
+                      data-fee-label="All fees"
+                      data-amount="{{ member.amount_owed|peso }}"
+                      data-next="{{ request.full_path if request.query_string else request.path }}">Confirm all payments ({{ member.amount_owed|peso }})</button>
+            </form>
+          {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    {% if pages > 1 %}
+      <nav class="pagination-nav" aria-label="Fee list pages">
+        {% if page > 1 %}<a href="{{ url_for('fees.index', status=status, type=fee_type, q=search, sort=sort, page=page-1) }}">Previous</a>{% endif %}
+        {% for page_number in range(1, pages + 1) %}
+          {% if page_number == page %}<span aria-current="page">{{ page_number }}</span>
+          {% else %}<a href="{{ url_for('fees.index', status=status, type=fee_type, q=search, sort=sort, page=page_number) }}">{{ page_number }}</a>{% endif %}
+        {% endfor %}
+        {% if page < pages %}<a href="{{ url_for('fees.index', status=status, type=fee_type, q=search, sort=sort, page=page+1) }}">Next</a>{% endif %}
+      </nav>
+    {% endif %}
+  {% elif status == "outstanding" %}
+    <p class="empty-state fees-empty">No outstanding fees. Everything is settled.</p>
+  {% elif status == "paid" %}
+    <p class="empty-state fees-empty">No paid fees match these filters.</p>
+  {% else %}
+    <p class="empty-state fees-empty">No fees match these filters.</p>
+  {% endif %}
+
+  <dialog class="fee-payment-dialog" data-fee-dialog aria-labelledby="fee-dialog-title" aria-describedby="fee-dialog-summary">
+    <form method="post" data-fee-dialog-form>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="loan_id">
+      <input type="hidden" name="fee_type">
+      <input type="hidden" name="next">
+      <h2 id="fee-dialog-title">Confirm payment</h2>
+      <p id="fee-dialog-summary" data-fee-dialog-summary></p>
+      <label for="fee-receipt">Receipt / OR number <span>(optional)</span></label>
+      <input id="fee-receipt" name="receipt_no" maxlength="40">
+      <label for="fee-note">Note <span>(optional)</span></label>
+      <textarea id="fee-note" name="note" maxlength="200" rows="3"></textarea>
+      <label class="fee-received-check">
+        <input type="checkbox" name="received_full" required>
+        <span>I received this payment in full</span>
+      </label>
+      <div class="fee-dialog-actions">
+        <button class="button button-secondary" type="button" data-fee-dialog-cancel>Cancel</button>
+        <button class="button" type="submit">Confirm</button>
+      </div>
+    </form>
+  </dialog>
+{% endblock %}

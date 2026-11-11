@@ -103,6 +103,7 @@ def delete_review(review_id):
     if user is None:
         return _login_redirect()
     book_id = review_service.delete_own(user, review_id)
+    flash("Your review was deleted.", "success")
     return redirect(url_for("books.detail", book_id=book_id))
 
 
@@ -121,4 +122,5 @@ def delete_review_as_librarian(review_id):
     if librarian is None:
         return _login_redirect()
     review_service.delete_any(librarian, review_id)
+    flash("Review deleted.", "success")
     return redirect(url_for("social.moderate_reviews"))

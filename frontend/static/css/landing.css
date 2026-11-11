@@ -1102,6 +1102,18 @@ html::-webkit-scrollbar {
   text-align: right;
 }
 
+.genre-panel-heading {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+
+.genre-panel-heading .genre-books-link {
+  flex: 0 0 auto;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
 .genre-carousel-host {
   width: 100%;
   max-width: var(--landing-content-width);

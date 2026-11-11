@@ -16,6 +16,7 @@ class NotificationRepository:
         category="general",
         link=None,
         dedupe_key=None,
+        commit=True,
     ):
         record = NotificationRecord(
             user_id=user_id,
@@ -26,6 +27,8 @@ class NotificationRepository:
             dedupe_key=dedupe_key,
         )
         db.session.add(record)
+        if not commit:
+            return record
         try:
             db.session.commit()
         except IntegrityError as error:

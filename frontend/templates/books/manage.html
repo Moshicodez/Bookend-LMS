@@ -43,8 +43,14 @@
                 <a class="button button-secondary" href="{{ url_for('books.edit', book_id=book.book_id) }}">Edit</a>
                 {% if book.catalog %}
                   {% if book.on_loan_copies == 0 and book.reserved_copies == 0 %}
-                    <form method="post" action="{{ url_for('books.delete', book_id=book.book_id) }}" data-confirm-message="Remove this book from the catalog? Loan history will be kept.">
+                    <form method="post" action="{{ url_for('books.delete', book_id=book.book_id) }}"
+                          data-confirm-title="Delete {{ book.title }}?"
+                          data-confirm-message="This book will be removed from the catalog."
+                          data-confirm-note="Loan history will be kept."
+                          data-confirm-action="Delete"
+                          data-confirm-danger="true">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
                       <button class="button button-danger" type="submit">Delete</button>
                     </form>
                   {% else %}
@@ -53,6 +59,7 @@
                 {% else %}
                   <form method="post" action="{{ url_for('books.restore', book_id=book.book_id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
                     <button class="button button-secondary" type="submit">Restore</button>
                   </form>
                 {% endif %}

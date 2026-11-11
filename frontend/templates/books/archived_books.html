@@ -1,22 +1,46 @@
 {% extends "base.html" %}
 {% block title %}Archived books | Bookend Library{% endblock %}
 {% block content %}
-  <h1>Archived books</h1>
-  <p><a href="{{ url_for('books.catalog') }}">Back to catalog</a></p>
+  <section class="page-heading archived-books-heading">
+    <div>
+      <p class="eyebrow">LIBRARIAN TOOLS</p>
+      <h1>Archived books</h1>
+      <p>Books hidden from the catalog. Restore them any time.</p>
+    </div>
+    <a class="button button-secondary" href="{{ url_for('books.manage') }}">← Back to manage books</a>
+  </section>
   {% if books %}
-    <ul>
+    <section class="archived-book-list" aria-label="Archived books">
       {% for book in books %}
-        <li>
-          <strong>{{ book.title }}</strong> by {{ book.author }}
-          {% if book.genre %}<span> · {{ book.genre }}</span>{% endif %}
+        <article class="archived-book-card">
+          {% if book.cover %}
+            <img class="archived-book-cover" src="{{ url_for('static', filename='uploads/' ~ book.cover) }}" alt="Cover of {{ book.title }}">
+          {% else %}
+            <span class="archived-book-cover archived-book-cover-placeholder" aria-hidden="true">{{ book.title[:1] }}</span>
+          {% endif %}
+          <div class="archived-book-details">
+            <h2>{{ book.title }}</h2>
+            <p class="archived-book-author">by {{ book.author }}</p>
+            <span class="archived-book-genre">{{ book.genre or "Uncategorized" }}</span>
+            <p class="archived-book-date">
+              Archived
+              {% if book.archived_at %}on {{ book.archived_at.strftime("%b %d, %Y") }}{% else %}date unavailable{% endif %}
+            </p>
+          </div>
           <form method="post" action="{{ url_for('books.restore', book_id=book.book_id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit">Restore</button>
+            <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+            <button class="button archived-book-restore" type="submit">Restore</button>
           </form>
-        </li>
+        </article>
       {% endfor %}
-    </ul>
+    </section>
   {% else %}
-    <p>No archived books.</p>
+    <section class="empty-state archived-books-empty">
+      <span class="archived-empty-icon" aria-hidden="true">▤</span>
+      <h2>No archived books</h2>
+      <p>Books you archive will show up here.</p>
+      <a class="button" href="{{ url_for('books.manage') }}">Go to manage books</a>
+    </section>
   {% endif %}
 {% endblock %}

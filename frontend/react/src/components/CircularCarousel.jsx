@@ -575,6 +575,7 @@ const CircularCarousel = ({
       }
       const angle = state.angle + spinOffset;
       const R = s.radius * swell;
+      const centerIndex = ((Math.round(-state.angle / s.step) % s.count) + s.count) % s.count;
 
       if (s.axis === 'x') {
         camera.style.transform = `translate3d(0, 0, ${-R}px) rotateY(${s.tilt + state.yaw}deg) rotateX(${state.pitch}deg)`;
@@ -590,6 +591,13 @@ const CircularCarousel = ({
       for (let index = 0; index < s.count; index++) {
         const card = cardRefs.current[index];
         if (!card) continue;
+        const distance = Math.abs(
+          ((index - centerIndex + s.count / 2 + s.count) % s.count) - s.count / 2
+        );
+        const isVisible = distance <= 1;
+        card.style.visibility = isVisible ? '' : 'hidden';
+        card.dataset.active = String(index === centerIndex);
+        card.setAttribute('aria-hidden', String(!isVisible));
         const base = index * s.step;
         const mod = introCard(elapsed, base);
         const r = R * mod.radius;
@@ -607,12 +615,12 @@ const CircularCarousel = ({
 
         const world = wrap(base + angle);
         const facing = Math.cos(world * TO_RAD);
-        if (s.layout.inward) card.style.visibility = Math.abs(world) > 86 ? 'hidden' : '';
+        if (s.layout.inward && Math.abs(world) > 86) card.style.visibility = 'hidden';
         const fade = s.depthFade * Math.pow((1 - facing) / 2, 1.25);
         card.style.setProperty('--cc-depth', fade.toFixed(3));
       }
 
-      const index = ((Math.round(-state.angle / s.step) % s.count) + s.count) % s.count || 0;
+      const index = centerIndex || 0;
       if (index !== activeRef.current) {
         activeRef.current = index;
         setActive(index);
@@ -840,7 +848,10 @@ const CircularCarousel = ({
       window.location.assign(list[index].href);
       return;
     }
-    if (focusOnClick) focusIndex(index);
+    if (focusOnClick) {
+      focusIndex(index);
+      rootRef.current?.focus({ preventScroll: true });
+    }
     onItemClick?.(list[index], index);
   };
 

@@ -18,14 +18,24 @@
 }
 
 body {
+  --navbar-height: 60px;
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
+  padding-top: var(--navbar-height);
   overflow-x: clip;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--sans);
   -webkit-font-smoothing: antialiased;
+}
+
+html {
+  scroll-padding-top: calc(var(--navbar-height, 60px) + 12px);
+}
+
+.login-page {
+  padding-top: 0;
 }
 
 button,

@@ -26,20 +26,26 @@ class GenreRepository:
         return GenreTree(names.values()).in_order()
 
     def list_for_management(self):
+        counts = dict(
+            db.session.execute(
+                db.select(
+                    db.func.lower(db.func.trim(BookRecord.genre)),
+                    db.func.count(BookRecord.book_id),
+                )
+                .where(BookRecord.genre != "")
+                .group_by(db.func.lower(db.func.trim(BookRecord.genre)))
+            ).all()
+        )
         return [
-            {
-                "name": name,
-                "in_use": self.books_use_genre(name),
-            }
+            {"name": name, "book_count": counts.get(name.casefold(), 0)}
             for name in self.list_genres()
         ]
 
     def books_use_genre(self, name):
         return db.session.scalar(
-            db.select(BookRecord.book_id)
+            db.select(db.func.count(BookRecord.book_id))
             .where(db.func.lower(db.func.trim(BookRecord.genre)) == name.casefold())
-            .limit(1)
-        ) is not None
+        ) or 0
 
     def add(self, name):
         record = GenreRecord(name=name)
@@ -52,13 +58,23 @@ class GenreRepository:
         return record
 
     def remove(self, name):
-        record = db.session.execute(
-            db.select(GenreRecord).where(
-                db.func.lower(GenreRecord.name) == name.casefold()
-            )
-        ).scalars().first()
-        if record is None:
-            return False
-        db.session.delete(record)
-        db.session.commit()
-        return True
+        try:
+            count = db.session.execute(
+                db.update(BookRecord)
+                .where(
+                    db.func.lower(db.func.trim(BookRecord.genre)) == name.casefold()
+                )
+                .values(genre="")
+            ).rowcount
+            record = db.session.execute(
+                db.select(GenreRecord).where(
+                    db.func.lower(GenreRecord.name) == name.casefold()
+                )
+            ).scalars().first()
+            if record is not None:
+                db.session.delete(record)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
+        return count

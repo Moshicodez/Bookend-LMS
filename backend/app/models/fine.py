@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
 
 from ..config import Config
-from ..exceptions import ValidationError
-
 class Fee(ABC):
     label = "Fee"
 
@@ -12,11 +10,6 @@ class Fee(ABC):
     @property
     def paid(self):
         return self._paid
-
-    def pay(self):
-        if self._paid:
-            raise ValidationError(f"This {self.label.lower()} has already been paid.")
-        self._paid = True
 
     @abstractmethod
     def amount(self, loan, current_date):
