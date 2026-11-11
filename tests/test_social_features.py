@@ -62,7 +62,11 @@ class SocialFeatureRouteTests(unittest.TestCase):
     def _post(self, path, token, data=None):
         return self.client.post(
             path,
-            data={"csrf_token": token, **(data or {})},
+            data={
+                "csrf_token": token,
+                "confirm_action": "confirmed",
+                **(data or {}),
+            },
         )
 
     def test_favorite_toggle_and_saved_books_page(self):
@@ -165,7 +169,7 @@ class SocialFeatureRouteTests(unittest.TestCase):
         self._sign_in(self.other_patron)
         forbidden = self.client.post(
             f"/reviews/{review.review_id}/delete",
-            data={"csrf_token": token},
+            data={"csrf_token": token, "confirm_action": "confirmed"},
         )
         self.assertEqual(forbidden.status_code, 404)
         self.assertEqual(db.session.query(ReviewRecord).count(), 1)

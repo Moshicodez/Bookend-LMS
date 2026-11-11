@@ -33,7 +33,7 @@ class LegacySchemaMigrationTests(unittest.TestCase):
                 "book_id INTEGER PRIMARY KEY, "
                 "title VARCHAR(200) NOT NULL, "
                 "author VARCHAR(120) NOT NULL, "
-                "genre VARCHAR(80), "
+                "genre VARCHAR(80) NOT NULL, "
                 "description TEXT, "
                 "available BOOLEAN NOT NULL, "
                 "catalog BOOLEAN NOT NULL)"
@@ -57,6 +57,11 @@ class LegacySchemaMigrationTests(unittest.TestCase):
                 "role VARCHAR(20) NOT NULL, "
                 "active BOOLEAN NOT NULL DEFAULT 1)"
             )
+            connection.exec_driver_sql(
+                "CREATE TABLE genres ("
+                "genre_id INTEGER PRIMARY KEY, "
+                "name VARCHAR(100) NOT NULL)"
+            )
 
         db.create_all()
         db.session.execute(
@@ -71,7 +76,13 @@ class LegacySchemaMigrationTests(unittest.TestCase):
             text(
                 "INSERT INTO books "
                 "(book_id, title, author, genre, description, available, catalog) "
-                "VALUES (1, 'Legacy Book', 'A. Writer', 'History', '', 1, 1)"
+                "VALUES (1, 'Legacy Book', 'A. Writer', 'Uncategorized', '', 1, 1)"
+            )
+        )
+        db.session.execute(
+            text(
+                "INSERT INTO genres (genre_id, name) "
+                "VALUES (1, '  UnCaTeGoRiZeD  ')"
             )
         )
         db.session.execute(
@@ -105,6 +116,11 @@ class LegacySchemaMigrationTests(unittest.TestCase):
         }
 
         self.assertEqual(book.title, "Legacy Book")
+        self.assertEqual(book.genre, "")
+        self.assertEqual(
+            db.session.scalar(text("SELECT COUNT(*) FROM genres")),
+            0,
+        )
         self.assertEqual(book.kind, "standard")
         self.assertGreaterEqual(book.total_copies, 1)
         self.assertLessEqual(book.total_copies, 10)
@@ -120,6 +136,32 @@ class LegacySchemaMigrationTests(unittest.TestCase):
         self.assertTrue(
             {"fee_paid", "lost", "loss_fee", "loss_paid"}.issubset(columns["loans"])
         )
+        self.assertTrue({"book_title", "book_author"}.issubset(columns["loans"]))
+        self.assertTrue(
+            next(
+                column for column in inspect(db.engine).get_columns("books")
+                if column["name"] == "genre"
+            )["nullable"]
+        )
+        foreign_key = next(
+            row for row in db.session.execute(
+                text("PRAGMA foreign_key_list(loans)")
+            ).all()
+            if row[3] == "book_id"
+        )
+        self.assertEqual(foreign_key[6], "SET NULL")
+        migrated_loan = db.session.execute(
+            text("SELECT book_id, book_title, book_author FROM loans WHERE loan_id = 1")
+        ).one()
+        self.assertEqual(migrated_loan.book_id, 1)
+        self.assertEqual(migrated_loan.book_title, "Legacy Book")
+        self.assertEqual(migrated_loan.book_author, "A. Writer")
+        with self.assertRaises(IntegrityError):
+            db.session.execute(
+                text("INSERT INTO genres (name) VALUES ('  Uncategorized  ')")
+            )
+            db.session.commit()
+        db.session.rollback()
         migrated_user = db.session.get(UserRecord, 1)
         self.assertEqual(migrated_user.email, "reader@example.com")
 

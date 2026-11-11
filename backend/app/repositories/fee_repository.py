@@ -298,7 +298,8 @@ class FeeRepository:
                 LoanRecord.patron_id.label("patron_id"),
                 LoanRecord.loan_id.label("loan_id"),
                 LoanRecord.book_id.label("book_id"),
-                BookRecord.title.label("book_title"),
+                func.coalesce(BookRecord.title, LoanRecord.book_title).label("book_title"),
+                LoanRecord.book_id.is_(None).label("deleted_book"),
                 literal("late").label("fee_type"),
                 case(
                     (payment.payment_id.is_not(None), payment.amount),
@@ -315,7 +316,7 @@ class FeeRepository:
                 payment.note.label("note"),
                 confirmer.username.label("confirmer"),
             )
-            .join(BookRecord, BookRecord.book_id == LoanRecord.book_id)
+            .outerjoin(BookRecord, BookRecord.book_id == LoanRecord.book_id)
             .join(patron, patron.user_id == LoanRecord.patron_id)
             .outerjoin(
                 payment,
@@ -338,7 +339,8 @@ class FeeRepository:
                 LoanRecord.patron_id.label("patron_id"),
                 LoanRecord.loan_id.label("loan_id"),
                 LoanRecord.book_id.label("book_id"),
-                BookRecord.title.label("book_title"),
+                func.coalesce(BookRecord.title, LoanRecord.book_title).label("book_title"),
+                LoanRecord.book_id.is_(None).label("deleted_book"),
                 literal("loss").label("fee_type"),
                 case(
                     (loss_payment.payment_id.is_not(None), loss_payment.amount),
@@ -355,7 +357,7 @@ class FeeRepository:
                 loss_payment.note.label("note"),
                 loss_confirmer.username.label("confirmer"),
             )
-            .join(BookRecord, BookRecord.book_id == LoanRecord.book_id)
+            .outerjoin(BookRecord, BookRecord.book_id == LoanRecord.book_id)
             .join(patron, patron.user_id == LoanRecord.patron_id)
             .outerjoin(
                 loss_payment,

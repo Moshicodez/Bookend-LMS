@@ -50,11 +50,38 @@
   document.querySelectorAll("[data-select-all]").forEach((selectAll) => {
     selectAll.addEventListener("change", () => {
       const form = selectAll.closest("form");
-      form?.querySelectorAll("[data-basket-select]").forEach((checkbox) => {
+      const checkboxes = form
+        ? form.querySelectorAll("[data-basket-select], [data-book-select]")
+        : document.querySelectorAll("[data-book-select]");
+      checkboxes.forEach((checkbox) => {
         checkbox.checked = selectAll.checked;
       });
     });
   });
+  const archivedBulkForm = document.querySelector("#archived-bulk-form");
+  if (archivedBulkForm instanceof HTMLFormElement) {
+    const checkboxes = Array.from(document.querySelectorAll("[data-book-select]"));
+    const selectAll = document.querySelector("[data-select-all]");
+    const bulkBar = archivedBulkForm.querySelector("[data-bulk-bar]");
+    const selectedCount = archivedBulkForm.querySelector("[data-selected-count]");
+    const updateSelection = () => {
+      const selected = checkboxes.filter((checkbox) => checkbox.checked);
+      if (bulkBar instanceof HTMLElement) bulkBar.hidden = selected.length === 0;
+      if (selectedCount instanceof HTMLElement) selectedCount.textContent = String(selected.length);
+      if (selectAll instanceof HTMLInputElement) {
+        selectAll.checked = selected.length === checkboxes.length;
+        selectAll.indeterminate = selected.length > 0 && selected.length < checkboxes.length;
+      }
+    };
+    checkboxes.forEach((checkbox) => checkbox.addEventListener("change", updateSelection));
+    selectAll?.addEventListener("change", updateSelection);
+    archivedBulkForm.addEventListener("submit", (event) => {
+      if (event.submitter instanceof HTMLElement && event.submitter.hasAttribute("data-confirm-skip")) {
+        event.stopImmediatePropagation();
+      }
+    }, true);
+    updateSelection();
+  }
 
   const navDrawer = document.querySelector("[data-nav-drawer]");
   const navBackdrop = document.querySelector("[data-nav-drawer-backdrop]");
@@ -186,10 +213,6 @@
         badge.textContent = count > 9 ? "9+" : String(count);
         badge.hidden = count === 0;
       }
-      document.querySelectorAll("[data-nav-notification-count]").forEach((sidebarBadge) => {
-        sidebarBadge.textContent = count > 9 ? "9+" : String(count);
-        sidebarBadge.hidden = count === 0;
-      });
       markAllButton.disabled = count === 0;
     };
 
@@ -536,8 +559,12 @@
     const note = confirmDialog.querySelector("[data-confirm-note]");
     const acceptButton = confirmDialog.querySelector("[data-confirm-accept]");
     const cancelButton = confirmDialog.querySelector("[data-confirm-cancel]");
+    const phraseWrap = confirmDialog.querySelector("[data-confirm-phrase-wrap]");
+    const phraseLabel = confirmDialog.querySelector("[data-confirm-phrase-label]");
+    const phraseInput = confirmDialog.querySelector("[data-confirm-phrase-input]");
     let pendingForm = null;
     let pendingSubmitter = null;
+    let previousFocus = null;
     let closeTimer;
 
     const closeConfirmDialog = (afterClose) => {
@@ -547,12 +574,32 @@
       closeTimer = window.setTimeout(() => {
         delete confirmDialog.dataset.closing;
         confirmDialog.close();
+        if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
+          previousFocus.focus();
+        }
+        previousFocus = null;
         afterClose?.();
       }, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 1 : 180);
     };
 
+    const clearPending = () => {
+      pendingForm = null;
+      pendingSubmitter = null;
+      if (phraseInput instanceof HTMLInputElement) phraseInput.value = "";
+      if (acceptButton instanceof HTMLButtonElement) acceptButton.disabled = false;
+    };
+
+    const selectedBookSummary = (form) => {
+      const selected = Array.from(document.querySelectorAll("[data-book-select]:checked"));
+      if (form.id !== "archived-bulk-form" || !selected.length) return null;
+      const titles = selected.slice(0, 5).map((checkbox) => checkbox.dataset.bookTitle || "Untitled book");
+      const remainder = selected.length > titles.length ? `, and ${selected.length - titles.length} more` : "";
+      return `${selected.length} book${selected.length === 1 ? "" : "s"} selected: ${titles.join(", ")}${remainder}. Loan history is kept; favorites and reviews are removed.`;
+    };
+
     document.querySelectorAll("form[data-confirm-message]").forEach((form) => {
       form.addEventListener("submit", (event) => {
+        if (event.submitter instanceof HTMLElement && event.submitter.hasAttribute("data-confirm-skip")) return;
         if (form.dataset.confirmed === "true") {
           delete form.dataset.confirmed;
           return;
@@ -560,25 +607,68 @@
         event.preventDefault();
         pendingForm = form;
         pendingSubmitter = event.submitter instanceof HTMLElement ? event.submitter : null;
-        if (message instanceof HTMLElement) message.textContent = form.dataset.confirmMessage || "Are you sure you want to continue?";
+        previousFocus = document.activeElement;
+        const summary = selectedBookSummary(form);
+        if (message instanceof HTMLElement) message.textContent = summary || form.dataset.confirmMessage || "Are you sure you want to continue?";
         if (title instanceof HTMLElement) title.textContent = form.dataset.confirmTitle || "Confirm this action";
         if (note instanceof HTMLElement) {
           note.textContent = form.dataset.confirmNote || "";
           note.hidden = !form.dataset.confirmNote;
         }
+        const phrase = form.dataset.confirmPhrase || "";
+        if (phraseWrap instanceof HTMLElement) phraseWrap.hidden = !phrase;
+        if (phraseLabel instanceof HTMLElement) phraseLabel.textContent = phrase;
+        if (phraseInput instanceof HTMLInputElement) {
+          phraseInput.value = "";
+          phraseInput.dataset.requiredPhrase = phrase;
+        }
         if (acceptButton instanceof HTMLButtonElement) {
           acceptButton.textContent = form.dataset.confirmAction || "Continue";
           acceptButton.classList.toggle("button-danger", form.dataset.confirmDanger === "true");
+          acceptButton.disabled = Boolean(phrase);
         }
         confirmDialog.showModal();
-        acceptButton?.focus();
+        cancelButton?.focus();
       });
     });
 
+    phraseInput?.addEventListener("input", () => {
+      if (acceptButton instanceof HTMLButtonElement && phraseInput instanceof HTMLInputElement) {
+        acceptButton.disabled = phraseInput.value !== phraseInput.dataset.requiredPhrase;
+      }
+    });
+
+    confirmDialog.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        clearPending();
+        closeConfirmDialog();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = getFocusable(confirmDialog);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
+
     acceptButton?.addEventListener("click", () => {
-      if (!(pendingForm instanceof HTMLFormElement)) return;
+      if (!(pendingForm instanceof HTMLFormElement) || acceptButton.disabled) return;
       const form = pendingForm;
       const submitter = pendingSubmitter;
+      const confirmationField = form.querySelector('input[name="confirm_action"]');
+      if (confirmationField instanceof HTMLInputElement) confirmationField.value = "confirmed";
+      const confirmTextField = form.querySelector('input[name="confirm_text"]');
+      if (confirmTextField instanceof HTMLInputElement && phraseInput instanceof HTMLInputElement) {
+        confirmTextField.value = phraseInput.value;
+      }
       pendingForm = null;
       pendingSubmitter = null;
       form.dataset.confirmed = "true";
@@ -589,26 +679,22 @@
     });
 
     cancelButton?.addEventListener("click", () => {
-      pendingForm = null;
-      pendingSubmitter = null;
+      clearPending();
       closeConfirmDialog();
     });
     confirmDialog.addEventListener("cancel", (event) => {
       event.preventDefault();
-      pendingForm = null;
-      pendingSubmitter = null;
+      clearPending();
       closeConfirmDialog();
     });
     confirmDialog.addEventListener("click", (event) => {
       if (event.target !== confirmDialog) return;
-      pendingForm = null;
-      pendingSubmitter = null;
+      clearPending();
       closeConfirmDialog();
     });
     document.addEventListener("bookend:close-panels", () => {
       if (confirmDialog.open) {
-        pendingForm = null;
-        pendingSubmitter = null;
+        clearPending();
         closeConfirmDialog();
       }
     });

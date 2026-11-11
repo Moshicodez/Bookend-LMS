@@ -5,9 +5,14 @@ from ..exceptions import ValidationError
 from ..extensions import db
 from ..models.book_record import BookRecord
 from ..models.genre_record import GenreRecord
+from ..constants import UNCATEGORIZED
 
 
 class GenreRepository:
+    @staticmethod
+    def _trimmed_genre():
+        return db.func.trim(BookRecord.genre, " \t\n\r\f\v")
+
     def list_genres(self):
         names = {}
         saved_names = db.session.execute(
@@ -15,7 +20,11 @@ class GenreRepository:
         ).scalars()
         book_names = db.session.execute(
             db.select(BookRecord.genre)
-            .where(BookRecord.catalog.is_(True), BookRecord.genre != "")
+            .where(
+                BookRecord.catalog.is_(True),
+                BookRecord.genre.is_not(None),
+                self._trimmed_genre() != "",
+            )
             .distinct()
             .order_by(db.func.lower(BookRecord.genre))
         ).scalars()
@@ -29,22 +38,40 @@ class GenreRepository:
         counts = dict(
             db.session.execute(
                 db.select(
-                    db.func.lower(db.func.trim(BookRecord.genre)),
+                    db.func.lower(self._trimmed_genre()),
                     db.func.count(BookRecord.book_id),
                 )
-                .where(BookRecord.genre != "")
-                .group_by(db.func.lower(db.func.trim(BookRecord.genre)))
+                .where(
+                    BookRecord.genre.is_not(None),
+                    self._trimmed_genre() != "",
+                )
+                .group_by(db.func.lower(self._trimmed_genre()))
             ).all()
         )
-        return [
+        genres = [
             {"name": name, "book_count": counts.get(name.casefold(), 0)}
             for name in self.list_genres()
         ]
+        genres.append(
+            {
+                "name": UNCATEGORIZED,
+                "book_count": db.session.scalar(
+                    db.select(db.func.count(BookRecord.book_id)).where(
+                        db.or_(
+                            BookRecord.genre.is_(None),
+                            self._trimmed_genre() == "",
+                        )
+                    )
+                ) or 0,
+                "system": True,
+            }
+        )
+        return genres
 
     def books_use_genre(self, name):
         return db.session.scalar(
             db.select(db.func.count(BookRecord.book_id))
-            .where(db.func.lower(db.func.trim(BookRecord.genre)) == name.casefold())
+            .where(db.func.lower(self._trimmed_genre()) == name.casefold())
         ) or 0
 
     def add(self, name):
@@ -54,7 +81,9 @@ class GenreRepository:
             db.session.commit()
         except IntegrityError as error:
             db.session.rollback()
-            raise ValidationError("A genre with this name already exists.") from error
+            raise ValidationError(
+                "A genre with this name already exists or is reserved."
+            ) from error
         return record
 
     def remove(self, name):
@@ -62,7 +91,7 @@ class GenreRepository:
             count = db.session.execute(
                 db.update(BookRecord)
                 .where(
-                    db.func.lower(db.func.trim(BookRecord.genre)) == name.casefold()
+                    db.func.lower(self._trimmed_genre()) == name.casefold()
                 )
                 .values(genre="")
             ).rowcount

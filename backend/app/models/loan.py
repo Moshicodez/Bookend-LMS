@@ -9,10 +9,12 @@ from .fine import LateFee, LossFee
 class Loan:
     def __init__(self, loan_id, patron_id, book_id, borrowed_at, due_date,
                  returned_at=None, fee_paid=False, lost=False,
-                 loss_fee=0, loss_paid=False):
+                 loss_fee=0, loss_paid=False, book_title="", book_author=""):
         self._loan_id = loan_id
         self._patron_id = patron_id
         self._book_id = book_id
+        self._book_title = book_title
+        self._book_author = book_author
         self._borrowed_at = to_date(borrowed_at)
         self._due_date = to_date(due_date)
         self._returned_at = to_date(returned_at)
@@ -30,6 +32,14 @@ class Loan:
     @property
     def book_id(self):
         return self._book_id
+
+    @property
+    def book_title(self):
+        return self._book_title
+
+    @property
+    def book_author(self):
+        return self._book_author
 
     @property
     def borrowed_at(self):

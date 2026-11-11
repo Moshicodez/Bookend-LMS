@@ -3,6 +3,7 @@ import random
 from sqlalchemy import inspect, text
 
 from .extensions import db
+from .constants import UNCATEGORIZED
 
 
 SQLITE_COLUMN_UPGRADES = {
@@ -23,8 +24,210 @@ SQLITE_COLUMN_UPGRADES = {
 def upgrade_legacy_sqlite_schema():
     if db.engine.dialect.name == "sqlite":
         _upgrade_sqlite_schema()
+        _upgrade_sqlite_nullable_references()
     _upgrade_loss_fee_amount()
     _upgrade_fee_payments()
+
+
+def _upgrade_sqlite_nullable_references():
+    if db.engine.dialect.name != "sqlite":
+        return
+    raw_connection = db.engine.raw_connection()
+    cursor = raw_connection.cursor()
+    try:
+        cursor.execute("PRAGMA foreign_keys=OFF")
+        cursor.execute("BEGIN")
+        tables = {
+            row[0]
+            for row in cursor.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
+        }
+        if "books" in tables:
+            book_info = cursor.execute("PRAGMA table_info(books)").fetchall()
+            genre_column = next(
+                (column for column in book_info if column[1] == "genre"),
+                None,
+            )
+            if genre_column and genre_column[3]:
+                columns = {column[1] for column in book_info}
+                cursor.execute(
+                    """
+                    CREATE TABLE books_replacement (
+                        book_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        kind VARCHAR(30) NOT NULL DEFAULT 'standard',
+                        title VARCHAR(250) NOT NULL,
+                        author VARCHAR(160) NOT NULL,
+                        genre VARCHAR(100),
+                        description TEXT NOT NULL DEFAULT '',
+                        cover VARCHAR(255),
+                        available BOOLEAN NOT NULL DEFAULT 1,
+                        catalog BOOLEAN NOT NULL DEFAULT 1,
+                        archived_at DATETIME,
+                        total_copies INTEGER NOT NULL DEFAULT 1
+                            CHECK (total_copies >= 0),
+                        CONSTRAINT valid_book_kind
+                            CHECK (kind IN ('standard', 'new_release', 'reference'))
+                    )
+                    """
+                )
+                target_columns = (
+                    "book_id", "kind", "title", "author", "genre",
+                    "description", "cover", "available", "catalog",
+                    "archived_at", "total_copies",
+                )
+                defaults = {
+                    "kind": "'standard'",
+                    "genre": "''",
+                    "description": "''",
+                    "cover": "NULL",
+                    "available": "1",
+                    "catalog": "1",
+                    "archived_at": "NULL",
+                    "total_copies": "1",
+                }
+                select_columns = [
+                    name if name in columns else defaults[name]
+                    for name in target_columns
+                ]
+                cursor.execute(
+                    "INSERT INTO books_replacement ("
+                    + ", ".join(target_columns)
+                    + ") SELECT "
+                    + ", ".join(select_columns)
+                    + " FROM books"
+                )
+                cursor.execute("DROP TABLE books")
+                cursor.execute("ALTER TABLE books_replacement RENAME TO books")
+
+        if "loans" in tables:
+            loan_info = cursor.execute("PRAGMA table_info(loans)").fetchall()
+            book_column = next(
+                (column for column in loan_info if column[1] == "book_id"),
+                None,
+            )
+            book_fk = next(
+                (
+                    row for row in cursor.execute("PRAGMA foreign_key_list(loans)")
+                    if row[3] == "book_id"
+                ),
+                None,
+            )
+            loan_columns = {column[1] for column in loan_info}
+            if (
+                (book_column and book_column[3])
+                or not {"book_title", "book_author"}.issubset(loan_columns)
+                or (book_fk and book_fk[6].upper() != "SET NULL")
+            ):
+                cursor.execute(
+                    """
+                    CREATE TABLE loans_replacement (
+                        loan_id INTEGER PRIMARY KEY,
+                        patron_id INTEGER NOT NULL
+                            REFERENCES users(user_id) ON DELETE RESTRICT,
+                        book_id INTEGER REFERENCES books(book_id) ON DELETE SET NULL,
+                        book_title VARCHAR(250) NOT NULL DEFAULT '',
+                        book_author VARCHAR(160) NOT NULL DEFAULT '',
+                        borrowed_at DATE NOT NULL,
+                        due_date DATE NOT NULL,
+                        returned_at DATE,
+                        fee_paid BOOLEAN NOT NULL DEFAULT 0,
+                        lost BOOLEAN NOT NULL DEFAULT 0,
+                        loss_fee FLOAT NOT NULL DEFAULT 0,
+                        loss_paid BOOLEAN NOT NULL DEFAULT 0
+                    )
+                    """
+                )
+                value = lambda name, fallback: name if name in loan_columns else fallback
+                book_id = value("book_id", "NULL")
+                title = (
+                    "COALESCE(loans.book_title, books.title, '')"
+                    if "book_title" in loan_columns
+                    else "COALESCE(books.title, '')"
+                )
+                author = (
+                    "COALESCE(loans.book_author, books.author, '')"
+                    if "book_author" in loan_columns
+                    else "COALESCE(books.author, '')"
+                )
+                fields = (
+                    "loan_id", "patron_id", "book_id", "book_title",
+                    "book_author", "borrowed_at", "due_date", "returned_at",
+                    "fee_paid", "lost", "loss_fee", "loss_paid",
+                )
+                selections = [
+                    title if field == "book_title"
+                    else author if field == "book_author"
+                    else f"loans.{field}" if field in loan_columns
+                    else "0" if field in {
+                        "fee_paid", "lost", "loss_fee", "loss_paid"
+                    } else "NULL"
+                    for field in fields
+                ]
+                cursor.execute(
+                    "INSERT INTO loans_replacement ("
+                    + ", ".join(fields)
+                    + ") SELECT "
+                    + ", ".join(selections)
+                    + " FROM loans LEFT JOIN books ON books.book_id = loans.book_id"
+                )
+                cursor.execute("DROP TABLE loans")
+                cursor.execute("ALTER TABLE loans_replacement RENAME TO loans")
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS ix_loans_book_id ON loans (book_id)"
+                )
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS ix_loans_patron_id ON loans (patron_id)"
+                )
+
+        if "genres" in tables and "books" in tables:
+            cursor.execute(
+                """
+                UPDATE books SET genre = ''
+                WHERE genre IS NOT NULL
+                  AND lower(trim(genre)) = ?
+                """,
+                (UNCATEGORIZED.casefold(),),
+            )
+            reserved_genre = UNCATEGORIZED.casefold().replace("'", "''")
+            cursor.execute(
+                f"""
+                CREATE TRIGGER IF NOT EXISTS genres_reserved_name_insert
+                BEFORE INSERT ON genres
+                WHEN lower(trim(NEW.name)) = '{reserved_genre}'
+                BEGIN
+                    SELECT RAISE(ABORT, 'reserved virtual genre');
+                END
+                """
+            )
+            cursor.execute(
+                f"""
+                CREATE TRIGGER IF NOT EXISTS genres_reserved_name_update
+                BEFORE UPDATE OF name ON genres
+                WHEN lower(trim(NEW.name)) = '{reserved_genre}'
+                BEGIN
+                    SELECT RAISE(ABORT, 'reserved virtual genre');
+                END
+                """
+            )
+            cursor.execute(
+                """
+                DELETE FROM genres
+                WHERE lower(trim(name)) = ?
+                """,
+                (UNCATEGORIZED.casefold(),),
+            )
+        cursor.execute("COMMIT")
+    except Exception:
+        cursor.execute("ROLLBACK")
+        raise
+    finally:
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+        raw_connection.close()
+    from .models.basket_record import BasketRecord
+
+    BasketRecord.__table__.create(db.engine, checkfirst=True)
 
 
 def _upgrade_fee_payments():

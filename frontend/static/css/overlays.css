@@ -264,6 +264,12 @@ body.is-nav-open .nav-drawer {
   display: none;
 }
 
+.nav-drawer-badge.nav-count--muted {
+  border: 0;
+  background: rgb(67 91 67 / 10%);
+  color: var(--green);
+}
+
 .nav-drawer-genres {
   margin-top: 12px;
   padding-top: 2px;

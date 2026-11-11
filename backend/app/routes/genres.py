@@ -1,6 +1,7 @@
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from ..exceptions import ValidationError
+from ..constants import UNCATEGORIZED
 from ..repositories.genre_repository import GenreRepository
 from ..services.genre_service import GenreService
 from .auth import _signed_in_user
@@ -47,7 +48,7 @@ def remove():
         flash(str(error), "error")
     else:
         flash(
-            f"Genre removed: {name} ({book_count} books uncategorized).",
+            f"Genre removed: {name} ({book_count} books {UNCATEGORIZED.lower()}).",
             "success",
         )
     return redirect(url_for("genres.index"))

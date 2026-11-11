@@ -39,6 +39,7 @@ class NotificationService:
         category="general",
         link=None,
         dedupe_key=None,
+        commit=True,
     ):
         return [
             self.notify(
@@ -50,6 +51,7 @@ class NotificationService:
                 dedupe_key=(
                     f"{dedupe_key}:user:{user_id}" if dedupe_key else None
                 ),
+                commit=commit,
             )
             for user_id in self._notifications.users_with_role(role)
         ]

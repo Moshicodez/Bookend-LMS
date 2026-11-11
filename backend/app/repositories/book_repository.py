@@ -5,16 +5,26 @@ from ..exceptions import NotFoundError, ValidationError
 from ..extensions import db
 from ..models.book import Book
 from ..models.book_record import BookRecord
+from ..models.favorite_record import FavoriteRecord
 from ..models.loan_record import LoanRecord
+from ..models.review_record import ReviewRecord
 from ..models.reservation import Reservation
 from ..models.reservation_record import ReservationRecord
 
 
 class BookRepository:
+    @staticmethod
+    def _trimmed_genre():
+        return db.func.trim(BookRecord.genre, " \t\n\r\f\v")
+
     def list_genres(self):
         saved_names = db.session.execute(
             db.select(BookRecord.genre)
-            .where(BookRecord.catalog.is_(True), BookRecord.genre != "")
+            .where(
+                BookRecord.catalog.is_(True),
+                BookRecord.genre.is_not(None),
+                self._trimmed_genre() != "",
+            )
         ).scalars()
         names = {}
         for name in saved_names:
@@ -24,18 +34,41 @@ class BookRepository:
         return GenreTree(names.values()).in_order()
 
     def genre_counts(self):
-        names = db.session.execute(
-            db.select(BookRecord.genre).where(
-                BookRecord.catalog.is_(True),
-                BookRecord.genre != "",
+        rows = db.session.execute(
+            db.select(
+                db.func.lower(self._trimmed_genre()),
+                db.func.count(BookRecord.book_id),
             )
-        ).scalars()
-        counts = {}
-        for name in names:
-            normalized = (name or "").strip().casefold()
-            if normalized:
-                counts[normalized] = counts.get(normalized, 0) + 1
-        return counts
+            .where(
+                BookRecord.catalog.is_(True),
+                BookRecord.genre.is_not(None),
+                self._trimmed_genre() != "",
+            )
+            .group_by(db.func.lower(self._trimmed_genre()))
+        ).all()
+        return {name: count for name, count in rows}
+
+    def uncategorized_count(self, catalog_only=True):
+        statement = db.select(db.func.count(BookRecord.book_id)).where(
+            db.or_(
+                BookRecord.genre.is_(None),
+                self._trimmed_genre() == "",
+            )
+        )
+        if catalog_only:
+            statement = statement.where(BookRecord.catalog.is_(True))
+        return db.session.scalar(statement) or 0
+
+    def archived_count(self):
+        return db.session.scalar(
+            db.select(db.func.count(BookRecord.book_id)).where(
+                BookRecord.catalog.is_(False),
+                db.or_(
+                    BookRecord.total_copies > 0,
+                    BookRecord.archived_at.is_not(None),
+                ),
+            )
+        ) or 0
 
     @staticmethod
     def _stock_counts():
@@ -154,14 +187,20 @@ class BookRepository:
             )
         normalized_genre = (genre or "").strip().casefold()
         if normalized_genre:
-            matching_ids = [
-                book_id
-                for book_id, book_genre in db.session.execute(
-                    db.select(BookRecord.book_id, BookRecord.genre)
+            from ..constants import UNCATEGORIZED_SLUG
+
+            if normalized_genre == UNCATEGORIZED_SLUG:
+                stmt = stmt.where(
+                    db.or_(
+                        BookRecord.genre.is_(None),
+                        self._trimmed_genre() == "",
+                    )
                 )
-                if (book_genre or "").strip().casefold() == normalized_genre
-            ]
-            stmt = stmt.where(BookRecord.book_id.in_(matching_ids))
+            else:
+                stmt = stmt.where(
+                    db.func.lower(self._trimmed_genre())
+                    == normalized_genre
+                )
 
         order = {
             "title": BookRecord.title.collate("NOCASE"),
@@ -273,6 +312,89 @@ class BookRepository:
             self._to_domain_book(record, on_loan, reserved)
             for record, on_loan, reserved in records
         )
+
+    def delete_archived(self, book_ids):
+        from ..models.basket_record import BasketRecord
+        from ..models.reservation_record import ReservationRecord
+
+        records = list(
+            db.session.execute(
+                db.select(BookRecord)
+                .where(BookRecord.book_id.in_(book_ids))
+                .order_by(BookRecord.book_id)
+            ).scalars()
+        )
+        found_ids = {record.book_id for record in records}
+        if found_ids != set(book_ids):
+            missing_id = next(iter(set(book_ids) - found_ids))
+            raise NotFoundError(f"Book #{missing_id} not found.")
+        by_id = {record.book_id: record for record in records}
+        for book_id in book_ids:
+            record = by_id[book_id]
+            if record.catalog:
+                raise ValidationError(
+                    f"{record.title}: Archive the book first."
+                )
+            active_loan = db.session.scalar(
+                db.select(LoanRecord.loan_id)
+                .where(
+                    LoanRecord.book_id == book_id,
+                    LoanRecord.returned_at.is_(None),
+                )
+                .limit(1)
+            )
+            open_reservation = db.session.scalar(
+                db.select(ReservationRecord.reservation_id)
+                .where(
+                    ReservationRecord.book_id == book_id,
+                    ReservationRecord.status.in_(Reservation.OPEN_STATUSES),
+                )
+                .limit(1)
+            )
+            if active_loan:
+                raise ValidationError(
+                    f"{record.title}: Return the book or cancel the reservations first."
+                )
+            if open_reservation:
+                raise ValidationError(
+                    f"{record.title}: Return the book or cancel the reservations first."
+                )
+
+        covers = {}
+        for record in records:
+            book_id = record.book_id
+            covers[book_id] = record.cover
+            db.session.execute(
+                db.delete(FavoriteRecord).where(FavoriteRecord.book_id == book_id)
+            )
+            db.session.execute(
+                db.delete(ReviewRecord).where(ReviewRecord.book_id == book_id)
+            )
+            db.session.execute(
+                db.delete(BasketRecord).where(BasketRecord.book_id == book_id)
+            )
+            db.session.execute(
+                db.delete(ReservationRecord).where(
+                    ReservationRecord.book_id == book_id
+                )
+            )
+            db.session.delete(record)
+        db.session.flush()
+        return [
+            {"book_id": book_id, "title": by_id[book_id].title,
+             "cover": covers[book_id]}
+            for book_id in book_ids
+        ]
+
+    @staticmethod
+    def cover_is_used(filename):
+        if not filename:
+            return False
+        return db.session.scalar(
+            db.select(BookRecord.book_id)
+            .where(BookRecord.cover == filename)
+            .limit(1)
+        ) is not None
 
     def update_book(self, book):
         book_id = self._valid_id(book.book_id)

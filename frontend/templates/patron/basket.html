@@ -8,8 +8,14 @@
   </section>
   {% if basket.books %}
     <div class="basket-layout">
-      <form class="basket-list" method="post" action="{{ url_for('patron.basket_remove') }}">
+      <form class="basket-list" method="post" action="{{ url_for('patron.basket_remove') }}"
+            data-confirm-title="Remove selected books?" data-confirm-message="Remove the selected books from your borrow basket?"
+            data-confirm-action="Remove selected" data-confirm-danger="true">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="confirm_action" value="">
+        <input type="hidden" name="_confirm_title" value="Remove selected books?">
+        <input type="hidden" name="_confirm_message" value="Remove the selected books from your borrow basket?">
+        <input type="hidden" name="_confirm_action" value="Remove selected">
         <label class="select-all-control">
           <input type="checkbox" data-select-all>
           <span>Select all</span>

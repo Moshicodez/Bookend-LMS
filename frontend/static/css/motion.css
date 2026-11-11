@@ -107,6 +107,25 @@
   display: none;
 }
 
+.confirm-dialog-phrase {
+  display: grid;
+  gap: 7px;
+  margin-top: 16px;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.confirm-dialog-phrase input {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+  color: var(--ink);
+  font: inherit;
+}
+
 .confirm-dialog-actions {
   display: flex;
   justify-content: flex-end;
@@ -117,6 +136,33 @@
 .confirm-dialog-actions .button {
   min-height: 40px;
   border-radius: 8px;
+}
+
+.confirm-dialog-actions .button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.confirm-action-page .confirm-dialog-actions {
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+
+.confirm-action-page form {
+  display: grid;
+  gap: 12px;
+}
+
+.confirm-action-page form > input[type="file"],
+.confirm-action-page form > input[type="text"] {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+  color: var(--ink);
+  font: inherit;
 }
 
 @media (max-width: 680px) {

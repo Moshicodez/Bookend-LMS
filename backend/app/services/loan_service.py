@@ -320,7 +320,8 @@ class LoanService:
             loan_status = self._loan_status(loan, today())
             if status and loan_status.lower().replace(" ", "-") != status:
                 continue
-            haystack = f"{book.title if book else ''} {patron_name}".casefold()
+            display_title = book.title if book else loan.book_title
+            haystack = f"{display_title} {patron_name}".casefold()
             if term and term not in haystack:
                 continue
             cards.append(
@@ -384,7 +385,7 @@ class LoanService:
         if actor.is_patron() and loan.patron_id != actor.user_id:
             raise NotFoundError("Loan not found.")
         actor.require("manage_loans") if actor.is_librarian() else actor.require("view_loans")
-        book = self._get_book(loan.book_id)
+        book = self._book_repo.find_book(loan.book_id)
         current_date = today()
         return {
             "loan": loan,

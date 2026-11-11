@@ -71,7 +71,11 @@ class BorrowBasketTests(unittest.TestCase):
     def _post(self, path, data=None):
         return self.client.post(
             path,
-            data={"csrf_token": self.csrf_token, **(data or {})},
+            data={
+                "csrf_token": self.csrf_token,
+                "confirm_action": "confirmed",
+                **(data or {}),
+            },
         )
 
     def _set_basket(self, book_ids):

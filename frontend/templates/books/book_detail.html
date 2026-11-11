@@ -12,7 +12,7 @@
   <nav class="breadcrumbs" aria-label="Breadcrumb">
     <a href="{{ url_for('books.catalog') }}">Books</a>
     <span aria-hidden="true">/</span>
-    {% if book.genre %}<a href="{{ url_for('books.catalog', genre=book.genre) }}">{{ book.genre }}</a><span aria-hidden="true">/</span>{% endif %}
+    <a href="{{ url_for('books.catalog', genre=book.genre or UNCATEGORIZED_SLUG) }}">{{ book.genre or UNCATEGORIZED }}</a><span aria-hidden="true">/</span>
     <span aria-current="page">{{ book.title }}</span>
   </nav>
 
@@ -29,7 +29,7 @@
     </div>
     <div class="book-detail-copy">
       <p class="eyebrow">BOOK DETAILS</p>
-      {% if book.genre %}<a class="detail-genre-chip" href="{{ url_for('books.catalog', genre=book.genre) }}">{{ book.genre }}</a>{% endif %}
+      <a class="detail-genre-chip" href="{{ url_for('books.catalog', genre=book.genre or UNCATEGORIZED_SLUG) }}">{{ book.genre or UNCATEGORIZED }}</a>
       <h1>{{ book.title }}</h1>
       <p class="detail-author">By {{ book.author }}</p>
       <p class="book-rating detail-rating" aria-label="{{ '%.1f'|format(rating.average) }} out of 5 stars from {{ rating.count }} reviews">
@@ -113,7 +113,7 @@
         <h2 id="about-book-title">About this book</h2>
         <dl>
           <div><dt>Author</dt><dd>{{ book.author }}</dd></div>
-          {% if book.genre %}<div><dt>Genre</dt><dd>{{ book.genre }}</dd></div>{% endif %}
+          <div><dt>Genre</dt><dd>{{ book.genre or UNCATEGORIZED }}</dd></div>
           <div><dt>Availability</dt><dd>{{ "In the catalog" if book.catalog else "Archived" }}</dd></div>
           <div><dt>Copies</dt><dd>{{ book.available_copies }} available of {{ book.total_copies }} total{% if book.on_loan_copies %} · {{ book.on_loan_copies }} on loan{% endif %}{% if book.reserved_copies %} · {{ book.reserved_copies }} reserved{% endif %}</dd></div>
           {% if book.can_borrow() %}<div><dt>Loan period</dt><dd>{{ book.loan_days }} days</dd></div>{% endif %}
@@ -141,8 +141,15 @@
         <textarea id="edit-comment" name="comment" maxlength="2000">{{ own_review.comment }}</textarea>
         <button class="button" type="submit">Update review</button>
       </form>
-      <form class="review-delete-form" method="post" action="{{ url_for('social.delete_review', review_id=own_review.review_id) }}" data-confirm-message="Delete your review?">
+      <form class="review-delete-form" method="post" action="{{ url_for('social.delete_review', review_id=own_review.review_id) }}"
+            data-confirm-title="Delete your review?" data-confirm-message="Your review and rating will be permanently removed."
+            data-confirm-note="This cannot be undone." data-confirm-action="Delete review" data-confirm-danger="true">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="confirm_action" value="">
+        <input type="hidden" name="_confirm_title" value="Delete your review?">
+        <input type="hidden" name="_confirm_message" value="Your review and rating will be permanently removed.">
+        <input type="hidden" name="_confirm_note" value="This cannot be undone.">
+        <input type="hidden" name="_confirm_action" value="Delete review">
         <button class="button button-secondary" type="submit">Delete your review</button>
       </form>
     {% elif user and user.is_patron() %}

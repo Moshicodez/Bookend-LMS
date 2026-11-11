@@ -45,6 +45,7 @@ class BackendRouteTests(unittest.TestCase):
             ).group(1).decode()
         form_data = dict(data or {})
         form_data.setdefault("csrf_token", token)
+        form_data.setdefault("confirm_action", "confirmed")
         return self.client.post(path, data=form_data)
 
     def register_patron(self, username="reader"):
@@ -387,12 +388,14 @@ class BackendRouteTests(unittest.TestCase):
             data={"next": "https://example.com/outside"},
         )
         self.assertEqual(restored.location, "/books/archived")
+        self.post(f"/books/{book.book_id}/archive")
 
         deleted = self.post(
             f"/books/{book.book_id}/delete",
             data={"next": "/%2f%2fevil.example"},
         )
         self.assertEqual(deleted.location, "/books/manage")
+        self.assertIsNone(BookRepository().find_book(book.book_id))
 
     def test_patron_cannot_view_or_restore_archived_books(self):
         self.register_patron()

@@ -1,5 +1,6 @@
 from ..exceptions import NotFoundError, ValidationError
 from ..repositories.notification_repository import NotificationRepository
+from ..constants import UNCATEGORIZED
 from .notification_service import NotificationService
 
 
@@ -24,6 +25,10 @@ class GenreService:
             raise ValidationError("Enter a genre name.")
         if len(name) > 100:
             raise ValidationError("Genre names must be 100 characters or fewer.")
+        if name.casefold() == UNCATEGORIZED.casefold():
+            raise ValidationError(
+                f"'{UNCATEGORIZED}' is reserved for books without a genre."
+            )
         if any(existing.casefold() == name.casefold() for existing in self._genres.list_genres()):
             raise ValidationError("A genre with this name already exists.")
         return self._genres.add(name)
@@ -42,7 +47,7 @@ class GenreService:
         self._notifications.notify_role(
             "librarian",
             "Genre removed",
-            f"Genre removed: {name} ({book_count} books uncategorized).",
+            f"Genre removed: {name} ({book_count} books {UNCATEGORIZED.lower()}).",
             category="genre",
             link="/librarian/genres/",
         )

@@ -6,12 +6,31 @@ from ..exceptions import ValidationError
 from ..repositories.book_repository import BookRepository
 from ..repositories.loan_repository import LoanRepository
 from ..services.basket_service import BasketService
+from ..repositories.basket_repository import BasketRepository
 from ..services.patron_service import PatronService
 from .auth import _signed_in_user
 
 
 patron_bp = Blueprint("patron", __name__)
 basket_service = BasketService(BookRepository(), LoanRepository())
+basket_repository = BasketRepository()
+
+
+def _basket_ids(patron):
+    stored_ids = basket_repository.book_ids_for_user(patron.user_id)
+    if stored_ids:
+        return stored_ids
+    legacy_ids = session.get("basket_book_ids", [])
+    if not isinstance(legacy_ids, list):
+        return []
+    valid_ids = [
+        book_id for book_id in legacy_ids
+        if BookRepository().find_book(book_id) is not None
+    ]
+    if valid_ids:
+        basket_repository.replace_for_user(patron.user_id, valid_ids)
+    session["basket_book_ids"] = valid_ids
+    return valid_ids
 patron_service = PatronService(BookRepository(), LoanRepository())
 
 
@@ -43,7 +62,7 @@ def basket_index():
         return redirect(url_for("auth.login"))
     basket = basket_service.items(
         patron,
-        session.get("basket_book_ids", []),
+        _basket_ids(patron),
     )
     return render_template("patron/basket.html", basket=basket, user=patron)
 
@@ -54,11 +73,13 @@ def basket_add(book_id):
     if patron is None:
         return redirect(url_for("auth.login"))
     try:
-        session["basket_book_ids"] = basket_service.add(
+        basket_ids = basket_service.add(
             patron,
-            session.get("basket_book_ids", []),
+            _basket_ids(patron),
             book_id,
         )
+        basket_repository.replace_for_user(patron.user_id, basket_ids)
+        session["basket_book_ids"] = basket_ids
     except ValidationError as error:
         flash(str(error), "error")
     return redirect(_safe_return_path() or url_for("books.catalog"))
@@ -70,10 +91,10 @@ def basket_remove():
     if patron is None:
         return redirect(url_for("auth.login"))
     selected_ids = request.form.getlist("book_ids")
-    session["basket_book_ids"] = basket_service.remove(
-        session.get("basket_book_ids", []),
-        selected_ids,
-    )
+    basket_ids = basket_service.remove(_basket_ids(patron), selected_ids)
+    basket_repository.replace_for_user(patron.user_id, basket_ids)
+    session["basket_book_ids"] = basket_ids
+    flash("Selected books removed from your borrow basket.", "success")
     return redirect(url_for("patron.basket_index"))
 
 
@@ -82,12 +103,13 @@ def basket_checkout():
     patron = _require_patron()
     if patron is None:
         return redirect(url_for("auth.login"))
-    basket_ids = session.get("basket_book_ids", [])
+    basket_ids = _basket_ids(patron)
     try:
         loans = basket_service.checkout(patron, basket_ids)
     except ValidationError as error:
         flash(str(error), "error")
         return redirect(url_for("patron.basket_index"))
+    basket_repository.clear_for_user(patron.user_id)
     session["basket_book_ids"] = []
     session["last_receipt_loan_ids"] = [loan.loan_id for loan in loans]
     return redirect(url_for("patron.receipt"))

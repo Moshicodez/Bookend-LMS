@@ -40,7 +40,7 @@
               <tr>
                 <td>
                   {% if entry.book %}<a href="{{ url_for('books.detail', book_id=entry.book.book_id) }}">{{ entry.book_title }}</a>
-                  {% else %}{{ entry.book_title }}{% endif %}
+                  {% else %}{{ entry.book_title }} <span class="catalog-status-badge">Deleted book</span>{% endif %}
                 </td>
                 <td>{{ entry.loan.borrowed_at.strftime("%b %d, %Y") }}</td>
                 <td>{{ entry.loan.due_date.strftime("%b %d, %Y") }}</td>

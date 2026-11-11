@@ -78,6 +78,7 @@
                 <article class="fees-line">
                   <div class="fees-line-title">
                     <h3>{{ fee.book_title }}</h3>
+                    {% if fee.deleted_book %}<span class="catalog-status-badge">Deleted book</span>{% endif %}
                     <span class="catalog-status-badge">{{ "Late fee" if fee.fee_type == "late" else "Loss fee" }}</span>
                   </div>
                   <dl class="fees-line-facts">

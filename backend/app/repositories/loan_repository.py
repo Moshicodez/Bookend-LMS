@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from ..exceptions import NotFoundError, ValidationError
 from ..extensions import db
+from ..constants import UNCATEGORIZED
 from ..models.book_record import BookRecord
 from ..models.loan import Loan
 from ..models.loan_record import LoanRecord
@@ -38,6 +39,8 @@ class LoanRepository:
             record = LoanRecord(
                 patron_id=patron_id,
                 book_id=book_id,
+                book_title=book_record.title,
+                book_author=book_record.author,
                 borrowed_at=borrowed_at,
                 due_date=due_date,
             )
@@ -75,6 +78,8 @@ class LoanRepository:
                 record = LoanRecord(
                     patron_id=patron_id,
                     book_id=book.book_id,
+                    book_title=book_record.title,
+                    book_author=book_record.author,
                     borrowed_at=borrowed_at,
                     due_date=due_date,
                 )
@@ -176,15 +181,26 @@ class LoanRepository:
         rows = db.session.execute(
             db.select(
                 LoanRecord.book_id,
+                db.func.max(LoanRecord.book_title).label("book_title"),
+                db.func.max(LoanRecord.book_author).label("book_author"),
                 db.func.count(LoanRecord.loan_id).label("loan_count"),
             )
-            .group_by(LoanRecord.book_id)
+            .group_by(
+                LoanRecord.book_id,
+                LoanRecord.book_title,
+                LoanRecord.book_author,
+            )
             .order_by(db.desc("loan_count"), LoanRecord.book_id)
             .limit(limit)
         ).all()
         return [
-            {"book_id": book_id, "loan_count": loan_count}
-            for book_id, loan_count in rows
+            {
+                "book_id": book_id,
+                "book_title": book_title,
+                "book_author": book_author,
+                "loan_count": loan_count,
+            }
+            for book_id, book_title, book_author, loan_count in rows
         ]
 
     def analytics_counts(self, start_date, end_date):
@@ -216,8 +232,11 @@ class LoanRepository:
         genre_rows = db.session.execute(
             db.select(
                 db.func.coalesce(
-                    db.func.nullif(db.func.trim(BookRecord.genre), ""),
-                    "Uncategorized",
+                    db.func.nullif(
+                        db.func.trim(BookRecord.genre, " \t\n\r\f\v"),
+                        "",
+                    ),
+                    UNCATEGORIZED,
                 ).label("genre"),
                 db.func.count(LoanRecord.loan_id).label("loan_count"),
             )
@@ -228,8 +247,11 @@ class LoanRepository:
             )
             .group_by(
                 db.func.coalesce(
-                    db.func.nullif(db.func.trim(BookRecord.genre), ""),
-                    "Uncategorized",
+                    db.func.nullif(
+                        db.func.trim(BookRecord.genre, " \t\n\r\f\v"),
+                        "",
+                    ),
+                    UNCATEGORIZED,
                 )
             )
             .order_by(db.desc("loan_count"), "genre")
@@ -390,6 +412,8 @@ class LoanRepository:
             lost=record.lost,
             loss_fee=record.loss_fee,
             loss_paid=record.loss_paid,
+            book_title=record.book_title,
+            book_author=record.book_author,
         )
 
     @staticmethod

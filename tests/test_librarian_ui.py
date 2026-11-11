@@ -70,7 +70,10 @@ class LibrarianUiTests(unittest.TestCase):
         return token
 
     def _post(self, path, token):
-        return self.client.post(path, data={"csrf_token": token})
+        return self.client.post(
+            path,
+            data={"csrf_token": token, "confirm_action": "confirmed"},
+        )
 
     def test_dashboard_statistics_recent_loans_and_most_borrowed(self):
         today = date.today()
@@ -159,25 +162,26 @@ class LibrarianUiTests(unittest.TestCase):
         self.assertIn(b"The Old Library", table.data)
         self.assertIn(b"History", table.data)
         self.assertIn(b"Edit", table.data)
-        self.assertIn(b"Delete", table.data)
-        self.assertIn(b"Loan history will be kept.", table.data)
-        self.assertIn(b'data-confirm-title="Delete The Old Library?"', table.data)
+        self.assertIn(b"Archive", table.data)
+        self.assertNotIn(b">Delete</button>", table.data)
+        self.assertIn(b"Loan history is kept", table.data)
+        self.assertIn(b'data-confirm-title="Archive The Old Library?"', table.data)
 
-        deleted = self._post(
-            f"/books/{self.history.book_id}/delete",
+        archived = self._post(
+            f"/books/{self.history.book_id}/archive",
             token,
         )
-        self.assertEqual(deleted.status_code, 302)
+        self.assertEqual(archived.status_code, 302)
         self.assertFalse(self.books.find_book(self.history.book_id).catalog)
         self.assertEqual(
             db.session.scalar(
                 db.select(db.func.count(NotificationRecord.notification_id)).where(
-                    NotificationRecord.title == "Book deleted"
+                    NotificationRecord.title == "Book archived"
                 )
             ),
             1,
         )
-        self.assertIn(b"removed from the catalog", self.client.get("/books/manage").data)
+        self.assertIn(b"Archived", self.client.get("/books/manage").data)
         self.assertIn(b"Archived", self.client.get("/books/manage").data)
         dashboard = self.client.get("/librarian")
         self.assertIn(b"Archived books", dashboard.data)
@@ -251,7 +255,7 @@ class LibrarianUiTests(unittest.TestCase):
         self.assertEqual(backup["format"], "bookend-lms-backup")
         self.assertEqual(
             set(backup["tables"]),
-            {"books", "favorites", "fee_payments", "genres", "loans", "notifications", "reservations", "reviews", "users"},
+            {"basket_items", "books", "favorites", "fee_payments", "genres", "loans", "notifications", "reservations", "reviews", "users"},
         )
 
         temporary_book = self.books.create(
@@ -261,6 +265,7 @@ class LibrarianUiTests(unittest.TestCase):
             "/librarian/backup/import",
             data={
                 "csrf_token": token,
+                "confirm_action": "confirmed",
                 "backup_file": (BytesIO(exported.data), "backup.json"),
             },
             content_type="multipart/form-data",
@@ -288,6 +293,7 @@ class LibrarianUiTests(unittest.TestCase):
             "/librarian/backup/import",
             data={
                 "csrf_token": token,
+                "confirm_action": "confirmed",
                 "backup_file": (BytesIO(json.dumps(backup).encode("utf-8")), "invalid.json"),
             },
             content_type="multipart/form-data",
@@ -379,6 +385,37 @@ class LibrarianUiTests(unittest.TestCase):
             response.data,
         )
         self.assertIn(b"Manage genres", response.data)
+
+    def test_notifications_are_only_in_bell_panel_for_patron_and_librarian(self):
+        for user, page_path in (
+            (self.patron, "/books/"),
+            (self.librarian, "/books/manage"),
+        ):
+            db.session.add(
+                NotificationRecord(
+                    user_id=user.user_id,
+                    category="general",
+                    title="Unread notice",
+                    message="A notification for testing.",
+                )
+            )
+            db.session.commit()
+            self._sign_in(user)
+
+            response = self.client.get(page_path)
+
+            self.assertEqual(response.status_code, 200)
+            drawer = re.search(
+                rb'<aside class="nav-drawer".*?</aside>',
+                response.data,
+                re.DOTALL,
+            )
+            self.assertIsNotNone(drawer)
+            self.assertNotIn(b"notifications.index", drawer.group(0))
+            self.assertNotIn(b'href="/notifications/"', drawer.group(0))
+            self.assertIn(b'data-notification-toggle', response.data)
+            self.assertIn(b'class="nav-count notification-count"', response.data)
+            self.assertIn(b"View all notifications", response.data)
 
 
 if __name__ == "__main__":

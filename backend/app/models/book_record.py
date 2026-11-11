@@ -8,7 +8,7 @@ class BookRecord(db.Model):
     kind = db.Column(db.String(30), nullable=False, default="standard")
     title = db.Column(db.String(250), nullable=False)
     author = db.Column(db.String(160), nullable=False)
-    genre = db.Column(db.String(100), nullable=False, default="")
+    genre = db.Column(db.String(100), nullable=True, default="")
     description = db.Column(db.Text, nullable=False, default="")
     cover = db.Column(db.String(255), nullable=True)
     available = db.Column(db.Boolean, nullable=False, default=True)
@@ -22,4 +22,5 @@ class BookRecord(db.Model):
             name="valid_book_kind",
         ),
         db.CheckConstraint("total_copies >= 0", name="nonnegative_book_copies"),
+        {"sqlite_autoincrement": True},
     )

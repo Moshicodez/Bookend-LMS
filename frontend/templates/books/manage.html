@@ -16,10 +16,18 @@
         <option value="{{ value }}" {{ 'selected' if status == value }}>{{ label }}</option>
       {% endfor %}
     </select>
+    <select name="genre" aria-label="Filter by genre">
+      <option value="">All genres</option>
+      <option value="{{ UNCATEGORIZED_SLUG }}" {{ 'selected' if genre|lower == UNCATEGORIZED_SLUG }}>{{ UNCATEGORIZED }}</option>
+      {% for name in genres %}
+        <option value="{{ name }}" {{ 'selected' if genre|lower == name|lower }}>{{ name }}</option>
+      {% endfor %}
+    </select>
     <button class="button" type="submit">Filter</button>
   </form>
 
   {% if books %}
+    <p class="catalog-count">{{ total }} book{{ "" if total == 1 else "s" }} found · Page {{ page }} of {{ pages }}</p>
     <div class="table-scroll">
       <table class="admin-table books-admin-table" id="book-stock">
         <thead><tr><th>Cover</th><th>Book</th><th>Genre</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead>
@@ -34,27 +42,32 @@
                 {% endif %}
               </td>
               <td><strong>{{ book.title }}</strong><small>by {{ book.author }}</small>              </td>
-              <td>{{ book.genre or "Uncategorized" }}</td>
+              <td>{{ book.genre or UNCATEGORIZED }}</td>
               <td>{{ book.available_copies }} available / {{ book.total_copies }} total</td>
               <td>
-                {{ book.availability_status }}
+                {% if not book.catalog %}<span class="catalog-status-badge is-archived">Archived</span>{% else %}{{ book.availability_status }}{% endif %}
               </td>
               <td class="admin-actions">
                 <a class="button button-secondary" href="{{ url_for('books.edit', book_id=book.book_id) }}">Edit</a>
                 {% if book.catalog %}
                   {% if book.on_loan_copies == 0 and book.reserved_copies == 0 %}
-                    <form method="post" action="{{ url_for('books.delete', book_id=book.book_id) }}"
-                          data-confirm-title="Delete {{ book.title }}?"
-                          data-confirm-message="This book will be removed from the catalog."
-                          data-confirm-note="Loan history will be kept."
-                          data-confirm-action="Delete"
-                          data-confirm-danger="true">
+                    <form method="post" action="{{ url_for('books.archive', book_id=book.book_id) }}"
+                          data-confirm-title="Archive {{ book.title }}?"
+                          data-confirm-message="It will no longer appear in the active catalog. Loan history is kept and you can restore it any time from Archived books"
+                          data-confirm-action="Archive">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
-                      <button class="button button-danger" type="submit">Delete</button>
+                      <button class="button button-secondary" type="submit" aria-label="Archive {{ book.title }}">Archive</button>
                     </form>
                   {% else %}
                     <span class="muted">Unavailable while copies are on loan or reserved</span>
+                  {% endif %}
+                  {% if pages > 1 %}
+                    <nav class="catalog-pagination" aria-label="Manage books pages">
+                      {% if page > 1 %}<a class="button button-secondary" href="{{ url_for('books.manage', q=q, status=status, genre=genre, page=page - 1) }}">Previous</a>{% endif %}
+                      <span>Page {{ page }} of {{ pages }}</span>
+                      {% if page < pages %}<a class="button button-secondary" href="{{ url_for('books.manage', q=q, status=status, genre=genre, page=page + 1) }}">Next</a>{% endif %}
+                    </nav>
                   {% endif %}
                 {% else %}
                   <form method="post" action="{{ url_for('books.restore', book_id=book.book_id) }}">

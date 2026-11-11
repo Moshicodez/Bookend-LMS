@@ -74,9 +74,11 @@ class BrowseUiTests(unittest.TestCase):
         patron_menu = patron_page.data.split(b'id="nav-drawer"', 1)[1].split(b"</aside>", 1)[0]
         self.assertIn(b"Favorites", patron_menu)
         self.assertIn(b"Borrow basket", patron_menu)
-        self.assertIn(b"Notifications", patron_menu)
+        self.assertNotIn(b"Notifications", patron_menu)
         self.assertNotIn(b"Manage books", patron_menu)
         self.assertNotIn(b"Members", patron_menu)
+        self.assertIn(b"View all notifications", patron_page.data)
+        self.assertIn(b"data-notification-toggle", patron_page.data)
 
         self._sign_in(self.librarian)
         librarian_page = self.client.get("/books/")
@@ -94,12 +96,10 @@ class BrowseUiTests(unittest.TestCase):
             b"Overdue loans",
             b"Members",
             b"Archived",
-            b"Notifications",
         ):
             self.assertIn(label, librarian_menu)
         expected_order = (
             b"<span>Home</span>",
-            b"<span>Notifications</span>",
             b"<span>Dashboard</span>",
             b"<span>Books</span>",
             b"<span>Manage books</span>",
@@ -114,7 +114,8 @@ class BrowseUiTests(unittest.TestCase):
         )
         positions = [librarian_menu.index(label) for label in expected_order]
         self.assertEqual(positions, sorted(positions))
-        self.assertEqual(librarian_menu.count(b"<span>Notifications</span>"), 1)
+        self.assertNotIn(b"Notifications", librarian_menu)
+        self.assertIn(b"View all notifications", librarian_page.data)
         self.assertNotIn(b"Stock", librarian_menu)
         self.assertNotIn(b"Favorites", librarian_menu)
 

@@ -23,7 +23,10 @@
       </div>
       <div class="book-editor-field">
         <label for="genre">Genre</label>
-        <input id="genre" name="genre" value="{{ request.form.get('genre', book.genre) }}" maxlength="100">
+        <select id="genre" name="genre">
+          <option value="" {{ 'selected' if request.form.get('genre', book.genre) == '' }}>{{ UNCATEGORIZED }}</option>
+          {% for name in genres %}<option value="{{ name }}" {{ 'selected' if request.form.get('genre', book.genre)|lower == name|lower }}>{{ name }}</option>{% endfor %}
+        </select>
       </div>
       <div class="book-editor-field">
         <label for="kind">Book type</label>

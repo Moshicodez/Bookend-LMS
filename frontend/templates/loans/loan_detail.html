@@ -7,7 +7,7 @@
     <p><a href="{{ url_for('loans.index') }}">Back to loans</a></p>
   </section>
   <article class="loan-detail-card">
-    <h2>{{ card.book.title if card.book else "Book #" ~ card.loan.book_id }}</h2>
+    <h2>{{ card.book.title if card.book else card.loan.book_title }}{% if not card.book %} <span class="catalog-status-badge">Deleted book</span>{% endif %}</h2>
     {% if card.book %}<p>By {{ card.book.author }}</p>{% endif %}
     {% if user.is_librarian() %}<p>Patron: {{ card.patron_name }}</p>{% endif %}
     <p>Status: <span class="loan-status status-{{ card.status|lower|replace(' ', '-') }}">{{ card.status }}</span></p>

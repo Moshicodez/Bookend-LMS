@@ -2,11 +2,13 @@ import json
 import os
 import shutil
 from datetime import date
+from urllib.parse import urlsplit
 
 import click
-from flask import Flask, session
+from flask import Flask, render_template, request, session, url_for
 
 from .config import COVER_COLORS, Config
+from .constants import UNCATEGORIZED, UNCATEGORIZED_SLUG
 from .csrf import CSRFProtect
 from .exceptions import NotFoundError, PermissionDenied, ValidationError
 from .extensions import db, migrate
@@ -51,6 +53,7 @@ def create_app(test_config=None):
     from .services.book_service import BookService
     from .services.catalog_seed_service import CatalogSeedService
     from .repositories.book_repository import BookRepository
+    from .repositories.basket_repository import BasketRepository
     from .repositories.favorite_repository import FavoriteRepository
     from .repositories.genre_repository import GenreRepository
     from .repositories.user_repository import UserRepository
@@ -89,6 +92,103 @@ def create_app(test_config=None):
     app.register_blueprint(patron_bp)
     app.register_blueprint(reservations_bp)
 
+    @app.before_request
+    def confirm_destructive_post():
+        confirmation_endpoints = {
+            "books.delete",
+            "books.delete_selected",
+            "genres.remove",
+            "social.delete_review",
+            "social.delete_review_as_librarian",
+            "patron.basket_remove",
+            "dashboard.import_backup",
+        }
+        if (
+            request.method != "POST"
+            or request.endpoint not in confirmation_endpoints
+            or request.form.get("confirm_action") == "confirmed"
+        ):
+            return None
+        librarian_endpoints = {
+            "books.delete",
+            "books.delete_selected",
+            "genres.remove",
+            "social.delete_review_as_librarian",
+            "dashboard.import_backup",
+        }
+        if (
+            request.endpoint in librarian_endpoints
+            and session.get("role") != "librarian"
+        ):
+            return None
+
+        title = request.form.get("_confirm_title", "Confirm this action")
+        message = request.form.get(
+            "_confirm_message",
+            "Please review this action before continuing.",
+        )
+        note = request.form.get("_confirm_note", "")
+        action = request.form.get("_confirm_action", "Confirm")
+        requires_delete_phrase = request.endpoint == "books.delete_selected"
+        requires_backup_file = request.endpoint == "dashboard.import_backup"
+
+        if request.endpoint == "books.delete_selected":
+            selected_ids = request.form.getlist("ids[]")
+            titles = []
+            for value in selected_ids:
+                try:
+                    book_id = int(value)
+                except (TypeError, ValueError):
+                    continue
+                book_record = db.session.get(models.BookRecord, book_id)
+                if book_record is not None:
+                    titles.append(book_record.title)
+            title = "Delete selected books permanently?"
+            count = len(selected_ids)
+            message = (
+                f"{count} book{'s' if count != 1 else ''} selected: "
+                f"{', '.join(titles[:5])}"
+            )
+            if len(titles) > 5:
+                message += f", and {len(titles) - 5} more"
+            message += ". Loan history is kept; favorites and reviews are removed."
+            note = "This cannot be undone."
+            action = "Delete selected"
+
+        parsed_referrer = urlsplit(request.referrer or "")
+        cancel_url = (
+            f"{parsed_referrer.path}?{parsed_referrer.query}"
+            if parsed_referrer.netloc in {"", request.host}
+            and parsed_referrer.path.startswith("/")
+            and not parsed_referrer.path.startswith("//")
+            else url_for("landing.index")
+        )
+        form_values = [
+            (key, value)
+            for key, value in request.form.items(multi=True)
+            if key not in {
+                "csrf_token",
+                "confirm_action",
+                "confirm_text",
+                "_confirm_title",
+                "_confirm_message",
+                "_confirm_note",
+                "_confirm_action",
+            }
+        ]
+        return render_template(
+            "confirm_action.html",
+            confirm_title=title,
+            confirm_message=message,
+            confirm_note=note,
+            confirm_action=action,
+            csrf_token_value=request.form.get("csrf_token", ""),
+            form_values=form_values,
+            requires_delete_phrase=requires_delete_phrase,
+            requires_backup_file=requires_backup_file,
+            cancel_url=cancel_url,
+        )
+
     @app.template_filter("peso")
     def format_peso(amount):
         return f"₱{amount:,.2f}"
@@ -116,8 +216,16 @@ def create_app(test_config=None):
                 FavoriteRepository().book_ids_for_user(current_user.user_id)
             )
             favorite_count = len(favorite_ids)
-            basket_ids = session.get("basket_book_ids", [])
-            basket_count = len(set(basket_ids)) if isinstance(basket_ids, list) else 0
+            basket_repository = BasketRepository()
+            basket_ids = basket_repository.book_ids_for_user(current_user.user_id)
+            if not basket_ids:
+                legacy_ids = session.get("basket_book_ids", [])
+                if isinstance(legacy_ids, list):
+                    basket_ids = [
+                        book_id for book_id in legacy_ids
+                        if BookRepository().find_book(book_id) is not None
+                    ]
+            basket_count = len(set(basket_ids))
             loan_repository = LoanRepository()
             active_book_ids = loan_repository.active_book_ids(current_user.user_id)
             notification_repository = NotificationRepository()
@@ -163,6 +271,10 @@ def create_app(test_config=None):
             "ready_reservation_count": ready_reservation_count,
             "active_book_ids": active_book_ids,
             "navigation_genres": GenreRepository().list_genres(),
+            "uncategorized_count": BookRepository().uncategorized_count(),
+            "archived_book_count": BookRepository().archived_count(),
+            "UNCATEGORIZED": UNCATEGORIZED,
+            "UNCATEGORIZED_SLUG": UNCATEGORIZED_SLUG,
             "cover_colors": COVER_COLORS,
             "site_year": date.today().year,
         }

@@ -119,7 +119,8 @@ class LibrarianService:
             recent_loans.append(
                 {
                     "loan": loan,
-                    "book_title": book.title if book else f"Book #{loan.book_id}",
+                    "book_title": book.title if book else loan.book_title,
+                    "book_deleted": book is None,
                     "patron_name": patron.username if patron else "Unknown patron",
                     "status": self._loan_status(loan),
                 }
@@ -130,13 +131,15 @@ class LibrarianService:
             book = book_by_id.get(item["book_id"]) or self._book_repo.find_book(
                 item["book_id"]
             )
-            if book is not None:
-                most_borrowed.append(
-                    {
-                        "book": book,
-                        "loan_count": item["loan_count"],
-                    }
-                )
+            most_borrowed.append(
+                {
+                    "book": book,
+                    "book_title": book.title if book else item["book_title"],
+                    "book_author": book.author if book else item["book_author"],
+                    "deleted": book is None,
+                    "loan_count": item["loan_count"],
+                }
+            )
 
         fees_collected = self._fee_repository.collected_total()
         reservation_counts = self._reservations.open_counts()
@@ -239,7 +242,8 @@ class LibrarianService:
             history.append({
                 "loan": loan,
                 "book": book,
-                "book_title": book.title if book else f"Book #{loan.book_id}",
+                "book_title": book.title if book else loan.book_title,
+                "book_deleted": book is None,
                 "status": self._loan_status(loan),
                 "fees": loan.fee_breakdown(),
                 "outstanding": loan.outstanding(),

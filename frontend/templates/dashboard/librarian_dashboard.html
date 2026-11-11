@@ -143,7 +143,7 @@
             <tbody>
               {% for item in dashboard.recent_loans %}
                 <tr>
-                  <td>{{ item.book_title }}</td>
+                  <td>{{ item.book_title }}{% if item.book_deleted %} <span class="catalog-status-badge">Deleted book</span>{% endif %}</td>
                   <td>{{ item.patron_name }}</td>
                   <td>{{ item.loan.due_date.strftime("%b %d, %Y") }}</td>
                   <td><span class="loan-status status-{{ item.status|lower|replace(' ', '-') }}">{{ item.status }}</span></td>
@@ -165,12 +165,12 @@
         <ol class="most-borrowed-list">
           {% for item in dashboard.most_borrowed %}
             <li>
-              {% if item.book.cover %}
+              {% if item.book and item.book.cover %}
                 <img src="{{ url_for('static', filename='uploads/' ~ item.book.cover) }}" alt="">
               {% else %}
-                <span class="mini-cover" aria-hidden="true">{{ item.book.title[:1] }}</span>
+                <span class="mini-cover" aria-hidden="true">{{ item.book_title[:1] }}</span>
               {% endif %}
-              <span><strong>{{ item.book.title }}</strong><small>{{ item.book.author }}</small></span>
+              <span><strong>{{ item.book_title }}{% if item.deleted %} <span class="catalog-status-badge">Deleted book</span>{% endif %}</strong><small>{{ item.book_author }}</small></span>
               <b>{{ item.loan_count }} loans</b>
             </li>
           {% endfor %}
@@ -242,8 +242,15 @@
       <a href="{{ url_for('dashboard.export_backup') }}">Download backup</a>
     </div>
     <p class="muted">A backup contains account and library records. Store downloaded files securely.</p>
-    <form method="post" action="{{ url_for('dashboard.import_backup') }}" enctype="multipart/form-data" data-confirm-message="Restore this backup? It will replace all current library data, including accounts and loan history.">
+    <form method="post" action="{{ url_for('dashboard.import_backup') }}" enctype="multipart/form-data"
+          data-confirm-title="Restore this backup?" data-confirm-message="It will replace all current library data, including accounts and loan history."
+          data-confirm-note="This cannot be undone." data-confirm-action="Restore backup" data-confirm-danger="true">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="confirm_action" value="">
+      <input type="hidden" name="_confirm_title" value="Restore this backup?">
+      <input type="hidden" name="_confirm_message" value="It will replace all current library data, including accounts and loan history.">
+      <input type="hidden" name="_confirm_note" value="This cannot be undone.">
+      <input type="hidden" name="_confirm_action" value="Restore backup">
       <label for="backup-file">Restore from backup file</label>
       <input id="backup-file" name="backup_file" type="file" accept=".json,application/json" required>
       <button class="button" type="submit">Restore backup</button>

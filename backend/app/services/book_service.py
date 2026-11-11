@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from ..exceptions import NotFoundError, ValidationError
+from ..extensions import db
 from ..models.book import Book
 from ..repositories.notification_repository import NotificationRepository
 from ..repositories.reservation_repository import ReservationRepository
@@ -55,6 +56,18 @@ class BookService:
             status = "all"
         books, _ = self._book_repo.search(term, "", status, "title", 1, 500)
         return books
+
+    def management_search_page(
+        self, librarian, term="", genre="", status="all", page=1, per_page=24
+    ):
+        librarian.require("edit_book")
+        if status not in {
+            "all", "available", "on_loan", "out_of_stock", "archived"
+        }:
+            status = "all"
+        return self._book_repo.search(
+            term, genre, status, "title", page, per_page
+        )
 
     def archived_books(self, librarian):
         librarian.require("archive_book")
@@ -203,12 +216,42 @@ class BookService:
         return book
 
     def archive_book(self, librarian, book_id):
-        return self._archive_book(librarian, book_id, "Book archived")
+        return self._archive_book(librarian, book_id)
 
     def delete_book(self, librarian, book_id):
-        return self._archive_book(librarian, book_id, "Book deleted")
+        deleted = self.delete_books(librarian, [book_id])
+        return deleted[0]
 
-    def _archive_book(self, librarian, book_id, notification_title):
+    def delete_books(self, librarian, book_ids):
+        librarian.require("archive_book")
+        normalized_ids = list(dict.fromkeys(int(book_id) for book_id in book_ids))
+        if not normalized_ids:
+            raise ValidationError("Select at least one archived book.")
+        try:
+            deleted = self._book_repo.delete_archived(normalized_ids)
+            for book in deleted:
+                self._notifications.notify_role(
+                    "librarian",
+                    "Book permanently deleted",
+                    f"Book permanently deleted: {book['title']}",
+                    category="book",
+                    dedupe_key=f"book:{book['book_id']}:permanently-deleted",
+                    commit=False,
+                )
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
+
+        for book in deleted:
+            if (
+                book["cover"]
+                and not self._book_repo.cover_is_used(book["cover"])
+            ):
+                self._covers.delete(book["cover"])
+        return deleted
+
+    def _archive_book(self, librarian, book_id):
         librarian.require("archive_book")
         book = self._get_book(book_id)
         if self._reservations.find_ready_for_book(book_id):
@@ -220,10 +263,8 @@ class BookService:
         self._book_repo.update_book(book)
         self._notifications.notify_role(
             "librarian",
-            notification_title,
-            f"{notification_title}: {book.title} was removed from the catalog."
-            if notification_title == "Book deleted"
-            else f"{book.title} was archived from the catalog.",
+            "Book archived",
+            f"{book.title} was archived from the catalog.",
             category="book",
             link="/books/archived",
         )

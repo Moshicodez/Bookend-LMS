@@ -29,6 +29,7 @@
           <thead><tr><th>Genre</th><th>Books</th><th>Actions</th></tr></thead>
           <tbody>
             {% for genre in genres %}
+              {% if not genre.system %}
               <tr>
                 <td>{{ genre.name }}</td>
                 <td>{{ genre.book_count }}</td>
@@ -36,16 +37,26 @@
                   <form method="post" action="{{ url_for('genres.remove') }}"
                         data-confirm-title="Remove {{ genre.name }}?"
                         data-confirm-message="Remove this genre from Browse the stacks?"
-                        data-confirm-note="{{ genre.book_count }} book{{ '' if genre.book_count == 1 else 's' }} will be set to Uncategorized."
-                        data-confirm-action="Remove"
-                        data-confirm-danger="true">
+                        data-confirm-note="{{ genre.book_count }} book{{ '' if genre.book_count == 1 else 's' }} will be set to {{ UNCATEGORIZED }}."
+                        data-confirm-action="Remove genre" data-confirm-danger="true">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="name" value="{{ genre.name }}">
+                    <input type="hidden" name="confirm_action" value="">
+                    <input type="hidden" name="_confirm_title" value="Remove {{ genre.name }}?">
+                    <input type="hidden" name="_confirm_message" value="Remove this genre from Browse the stacks?">
+                    <input type="hidden" name="_confirm_note" value="{{ genre.book_count }} book{{ '' if genre.book_count == 1 else 's' }} will be set to {{ UNCATEGORIZED }}.">
+                    <input type="hidden" name="_confirm_action" value="Remove genre">
                     <button class="button button-danger" type="submit">Remove</button>
                   </form>
                 </td>
               </tr>
+              {% endif %}
             {% endfor %}
+            <tr>
+              <td>{{ UNCATEGORIZED }} <span class="catalog-status-badge">System</span></td>
+              <td>{{ genres[-1].book_count }}</td>
+              <td><a class="button button-secondary" href="{{ url_for('books.manage', genre=UNCATEGORIZED_SLUG) }}">View books</a></td>
+            </tr>
           </tbody>
         </table>
       </div>

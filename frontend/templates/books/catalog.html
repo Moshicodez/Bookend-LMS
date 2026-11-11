@@ -38,6 +38,7 @@
       <label class="visually-hidden" for="catalog-genre">Filter by genre</label>
       <select id="catalog-genre" name="genre">
         <option value="">All genres</option>
+        <option value="{{ UNCATEGORIZED_SLUG }}" {% if selected_genre|lower == UNCATEGORIZED_SLUG %}selected{% endif %}>{{ UNCATEGORIZED }} ({{ uncategorized_count }})</option>
         {% for genre in genres %}
           <option value="{{ genre }}" {% if selected_genre|lower == genre|lower %}selected{% endif %}>{{ genre }} ({{ genre_counts.get(genre|lower, 0) }})</option>
         {% endfor %}

@@ -1,11 +1,14 @@
 import re
 import unittest
 
+from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash
 
 from backend.app import create_app
 from backend.app.extensions import db
 from backend.app.models.book import Book
+from backend.app.models.book_record import BookRecord
+from backend.app.models.genre_record import GenreRecord
 from backend.app.models.notification_record import NotificationRecord
 from backend.app.repositories.book_repository import BookRepository
 from backend.app.repositories.genre_repository import GenreRepository
@@ -78,7 +81,11 @@ class GenreManagementTests(unittest.TestCase):
 
         removed = self.client.post(
             "/librarian/genres/remove",
-            data={"csrf_token": token, "name": "Fantasy"},
+            data={
+                "csrf_token": token,
+                "name": "Fantasy",
+                "confirm_action": "confirmed",
+            },
             follow_redirects=True,
         )
         self.assertIn(b"Genre removed:", removed.data)
@@ -92,11 +99,15 @@ class GenreManagementTests(unittest.TestCase):
 
         page = self.client.get("/librarian/genres/")
         self.assertIn(b">1</td>", page.data)
-        self.assertIn(b'data-confirm-action="Remove"', page.data)
+        self.assertIn(b'data-confirm-action="Remove genre"', page.data)
 
         response = self.client.post(
             "/librarian/genres/remove",
-            data={"csrf_token": token, "name": "History"},
+            data={
+                "csrf_token": token,
+                "name": "History",
+                "confirm_action": "confirmed",
+            },
             follow_redirects=True,
         )
 
@@ -131,6 +142,68 @@ class GenreManagementTests(unittest.TestCase):
         response = self.client.get("/librarian/genres/")
 
         self.assertEqual(response.status_code, 403)
+
+    def test_virtual_uncategorized_filter_counts_and_role_visibility(self):
+        blank = self.books.create(Book(None, "Blank genre", "Writer", "", ""))
+        null_genre = self.books.create(Book(None, "Null genre", "Writer", "", ""))
+        whitespace = self.books.create(Book(None, "Whitespace genre", "Writer", "", ""))
+        archived = self.books.create(Book(None, "Archived blank", "Writer", "", ""))
+        db.session.get(BookRecord, null_genre.book_id).genre = None
+        db.session.get(BookRecord, whitespace.book_id).genre = " \t\n "
+        archived_record = db.session.get(BookRecord, archived.book_id)
+        archived_record.genre = None
+        archived_record.catalog = False
+        db.session.commit()
+        self.genres.add("History")
+        self.books.create(Book(None, "History book", "Writer", "History", ""))
+
+        token = self._sign_in()
+        catalog = self.client.get("/books/?genre=%20UnCaTeGoRiZeD%20")
+        self.assertIn(b"Blank genre", catalog.data)
+        self.assertIn(b"Null genre", catalog.data)
+        self.assertIn(b"Whitespace genre", catalog.data)
+        self.assertNotIn(b"Archived blank", catalog.data)
+        self.assertIn(b"Uncategorized (3)", catalog.data)
+        manage = self.client.get("/books/manage?genre=UNCATEGORIZED")
+        self.assertIn(b"Blank genre", manage.data)
+        self.assertIn(b"Null genre", manage.data)
+        self.assertIn(b"Whitespace genre", manage.data)
+        self.assertIn(b"Archived blank", manage.data)
+        self.assertIn(b"Uncategorized", manage.data)
+        self.assertIn(b">3</span>", manage.data)
+
+        injection = self.client.get("/books/?genre=%27%20OR%201%3D1%20--")
+        self.assertEqual(injection.status_code, 200)
+        self.assertIn(b"No books found", injection.data)
+        self.assertNotIn(b"Blank genre", injection.data)
+
+        patron = self.users.create(
+            "reader@example.com",
+            "reader",
+            generate_password_hash("StrongPass1!"),
+            "patron",
+        )
+        self._sign_in(patron)
+        patron_page = self.client.get("/books/?genre=uncategorized")
+        self.assertNotIn(b'href="/books/manage?genre=uncategorized"', patron_page.data)
+        self.assertEqual(
+            self.client.get("/books/manage?genre=uncategorized").status_code,
+            403,
+        )
+
+    def test_reserved_virtual_genre_cannot_be_created(self):
+        token = self._sign_in()
+        response = self.client.post(
+            "/librarian/genres/add",
+            data={"csrf_token": token, "name": "  unCATEGORIZED  "},
+            follow_redirects=True,
+        )
+        self.assertIn(b"reserved for books without a genre", response.data)
+        self.assertNotIn("Uncategorized", self.genres.list_genres())
+        db.session.add(GenreRecord(name=" unCATEGORIZED "))
+        with self.assertRaises(IntegrityError):
+            db.session.commit()
+        db.session.rollback()
 
 
 if __name__ == "__main__":

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ confirm_title }} | Bookend Library{% endblock %}
+{% block content %}
+  <section class="form-panel confirm-action-page" aria-labelledby="confirm-action-heading">
+    <p class="eyebrow">PLEASE CONFIRM</p>
+    <h1 id="confirm-action-heading">{{ confirm_title }}</h1>
+    <p>{{ confirm_message }}</p>
+    {% if confirm_note %}<p class="confirm-dialog-note">{{ confirm_note }}</p>{% endif %}
+    <form method="post" action="{{ request.path }}" {% if requires_backup_file %}enctype="multipart/form-data"{% endif %}>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token_value }}">
+      <input type="hidden" name="confirm_action" value="confirmed">
+      {% for name, value in form_values %}
+        <input type="hidden" name="{{ name }}" value="{{ value }}">
+      {% endfor %}
+      {% if requires_delete_phrase %}
+        <label for="confirm-delete-phrase">Type DELETE to continue</label>
+        <input id="confirm-delete-phrase" name="confirm_text" type="text" autocomplete="off" required pattern="DELETE">
+      {% endif %}
+      {% if requires_backup_file %}
+        <label for="confirm-backup-file">Select the backup file again</label>
+        <input id="confirm-backup-file" name="backup_file" type="file" accept=".json,application/json" required>
+      {% endif %}
+      <div class="confirm-dialog-actions">
+        <a class="button button-secondary" href="{{ cancel_url }}">Cancel</a>
+        <button class="button button-danger" type="submit">{{ confirm_action }}</button>
+      </div>
+    </form>
+  </section>
+{% endblock %}

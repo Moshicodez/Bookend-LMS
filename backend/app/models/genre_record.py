@@ -1,4 +1,5 @@
 from ..extensions import db
+from ..constants import UNCATEGORIZED
 
 
 class GenreRecord(db.Model):
@@ -9,4 +10,8 @@ class GenreRecord(db.Model):
 
     __table_args__ = (
         db.Index("uq_genres_name_casefold", db.func.lower(name), unique=True),
+        db.CheckConstraint(
+            db.func.lower(db.func.trim(name)) != UNCATEGORIZED.casefold(),
+            name="reserved_virtual_genre",
+        ),
     )

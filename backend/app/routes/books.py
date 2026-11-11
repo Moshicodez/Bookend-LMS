@@ -4,14 +4,17 @@ from urllib.parse import unquote, urlsplit
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from ..config import COVER_COLORS
+from ..exceptions import NotFoundError, ValidationError
 from ..models.book import Book
 from ..repositories.book_repository import BookRepository
 from ..repositories.loan_repository import LoanRepository
 from ..repositories.favorite_repository import FavoriteRepository
+from ..repositories.genre_repository import GenreRepository
 from ..repositories.review_repository import ReviewRepository
 from ..services.book_service import BookService
 from ..services.loan_service import LoanService
 from ..services.review_service import ReviewService
+from ..constants import UNCATEGORIZED, UNCATEGORIZED_SLUG
 from .auth import _signed_in_user
 
 
@@ -58,8 +61,8 @@ def catalog():
     user = _signed_in_user()
     search_term = request.args.get("q", "")
     requested_genre = request.args.get("genre", "").strip()
-    genres = BookRepository().list_genres()
-    genre = next(
+    genres = GenreRepository().list_genres()
+    genre = UNCATEGORIZED if requested_genre.casefold() == UNCATEGORIZED_SLUG else next(
         (
             name
             for name in genres
@@ -111,6 +114,7 @@ def catalog():
         selected_genre=genre,
         genres=genres,
         genre_counts=book_service.catalog_genre_counts(),
+        uncategorized_count=BookRepository().uncategorized_count(),
         user=user,
         current_year=date.today().year,
         cover_colors=COVER_COLORS,
@@ -171,7 +175,11 @@ def add():
         return response
     user.require("add_book")
     if request.method == "GET":
-        return render_template("books/add_book.html", user=user)
+        return render_template(
+            "books/add_book.html",
+            user=user,
+            genres=GenreRepository().list_genres(),
+        )
 
     book = book_service.add_book(
         user,
@@ -193,13 +201,36 @@ def manage():
         return response
     q = request.args.get("q", "")
     status = request.args.get("status", "all")
-    books = book_service.management_search(user, q, status)
+    requested_genre = request.args.get("genre", "").strip()
+    genres = GenreRepository().list_genres()
+    genre = UNCATEGORIZED if requested_genre.casefold() == UNCATEGORIZED_SLUG else next(
+        (
+            name for name in genres
+            if name.casefold() == requested_genre.casefold()
+        ),
+        requested_genre,
+    )
+    page = max(request.args.get("page", 1, type=int), 1)
+    books, total = book_service.management_search_page(
+        user, q, genre, status, page, PER_PAGE
+    )
+    pages = max(1, -(-total // PER_PAGE))
+    if page > pages:
+        page = pages
+        books, total = book_service.management_search_page(
+            user, q, genre, status, page, PER_PAGE
+        )
     return render_template(
         "books/manage.html",
         books=books,
         user=user,
         q=q,
         status=status,
+        genre=genre,
+        total=total,
+        page=page,
+        pages=pages,
+        genres=genres,
     )
 
 
@@ -211,7 +242,12 @@ def edit(book_id):
     user.require("edit_book")
     book = book_service.get_book(book_id)
     if request.method == "GET":
-        return render_template("books/edit_book.html", book=book, user=user)
+        return render_template(
+            "books/edit_book.html",
+            book=book,
+            user=user,
+            genres=GenreRepository().list_genres(),
+        )
 
     book = book_service.edit_book(
         user,
@@ -232,10 +268,15 @@ def archive(book_id):
     user, response = _require_user()
     if response:
         return response
-    book_service.archive_book(user, book_id)
+    try:
+        book = book_service.archive_book(user, book_id)
+    except (NotFoundError, ValidationError) as error:
+        flash(str(error), "error")
+    else:
+        flash(f"Book archived: {book.title}.", "success")
     return redirect(
         _safe_local_next(request.values.get("next"))
-        or url_for("books.catalog")
+        or url_for("books.manage")
     )
 
 
@@ -244,11 +285,67 @@ def delete(book_id):
     user, response = _require_user()
     if response:
         return response
-    book = book_service.delete_book(user, book_id)
-    flash(f"{book.title} was removed from the catalog. Loan history will be kept.", "success")
+    try:
+        book = book_service.delete_book(user, book_id)
+    except (NotFoundError, ValidationError) as error:
+        flash(str(error), "error")
+    else:
+        flash(f"Book permanently deleted: {book['title']}", "success")
     return redirect(
         _safe_local_next(request.values.get("next"))
         or url_for("books.manage")
+    )
+
+
+@books_bp.route("/delete-selected", methods=["POST"])
+def delete_selected():
+    user, response = _require_user()
+    if response:
+        return response
+    user.require("archive_book")
+    if request.form.get("confirm_text") != "DELETE":
+        flash("Type DELETE to confirm permanent deletion.", "error")
+        return redirect(
+            _safe_local_next(request.values.get("next"))
+            or url_for("books.archived")
+        )
+    raw_ids = request.form.getlist("ids[]")
+    try:
+        book_ids = [int(value) for value in raw_ids]
+        deleted = book_service.delete_books(user, book_ids)
+    except (NotFoundError, ValueError, ValidationError) as error:
+        flash(str(error) or "Select valid archived books.", "error")
+    else:
+        count = len(deleted)
+        flash(
+            f"{count} book{'s' if count != 1 else ''} permanently deleted.",
+            "success",
+        )
+    return redirect(
+        _safe_local_next(request.values.get("next"))
+        or url_for("books.archived")
+    )
+
+
+@books_bp.route("/restore-selected", methods=["POST"])
+def restore_selected():
+    user, response = _require_user()
+    if response:
+        return response
+    user.require("archive_book")
+    try:
+        book_ids = list(dict.fromkeys(int(value) for value in request.form.getlist("ids[]")))
+        if not book_ids:
+            raise ValidationError("Select at least one archived book.")
+        for book_id in book_ids:
+            book_service.restore_book(user, book_id)
+    except (NotFoundError, ValueError, ValidationError) as error:
+        flash(str(error) or "Select valid archived books.", "error")
+    else:
+        flash(f"{len(book_ids)} books restored.", "success")
+    return redirect(
+        _safe_local_next(request.values.get("next"))
+        or url_for("books.archived")
     )
 
 
@@ -258,8 +355,18 @@ def archived():
     if response:
         return response
     user.require("archive_book")
-    books = book_service.archived_books(user)
-    return render_template("books/archived_books.html", books=books)
+    all_books = list(book_service.archived_books(user))
+    page = max(request.args.get("page", 1, type=int), 1)
+    per_page = 20
+    pages = max(1, -(-len(all_books) // per_page))
+    page = min(page, pages)
+    books = all_books[(page - 1) * per_page:page * per_page]
+    return render_template(
+        "books/archived_books.html",
+        books=books,
+        page=page,
+        pages=pages,
+    )
 
 
 @books_bp.route("/<int:book_id>/restore", methods=["POST"])

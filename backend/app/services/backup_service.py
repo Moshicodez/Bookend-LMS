@@ -9,6 +9,7 @@ from ..exceptions import ValidationError
 from ..extensions import db
 from ..models import (
     BookRecord,
+    BasketRecord,
     FavoriteRecord,
     FeePaymentRecord,
     GenreRecord,
@@ -25,6 +26,7 @@ BACKUP_VERSION = 1
 MAX_BACKUP_BYTES = 20 * 1024 * 1024
 BACKUP_RECORDS = (
     BookRecord,
+    BasketRecord,
     FavoriteRecord,
     FeePaymentRecord,
     GenreRecord,
@@ -91,9 +93,16 @@ class BackupService:
         table_data = backup.get("tables")
         expected_names = {table.name for table in tables}
         legacy_names = expected_names - {"fee_payments"}
+        oldest_names = legacy_names - {"basket_items"}
+        pre_basket_names = expected_names - {"basket_items"}
         if (
             not isinstance(table_data, dict)
-            or set(table_data) not in (expected_names, legacy_names)
+            or set(table_data) not in (
+                expected_names,
+                legacy_names,
+                oldest_names,
+                pre_basket_names,
+            )
         ):
             raise ValidationError("The backup does not match this database schema.")
 
@@ -101,9 +110,17 @@ class BackupService:
             table.name: BackupService._validated_rows(
                 table,
                 table_data.get(table.name, []),
+                allow_legacy_columns=table.name == "loans",
             )
             for table in tables
         }
+        books_by_id = {
+            row["book_id"]: row for row in rows_by_table.get("books", [])
+        }
+        for loan in rows_by_table.get("loans", []):
+            book = books_by_id.get(loan.get("book_id"))
+            loan.setdefault("book_title", book.get("title", "") if book else "")
+            loan.setdefault("book_author", book.get("author", "") if book else "")
 
         try:
             for table in reversed(tables):
@@ -128,20 +145,30 @@ class BackupService:
         return tables
 
     @staticmethod
-    def _validated_rows(table, rows):
+    def _validated_rows(table, rows, allow_legacy_columns=False):
         if not isinstance(rows, list):
             raise ValidationError("The backup contains invalid table data.")
 
         expected_columns = {column.name for column in table.columns}
         validated = []
         for row in rows:
-            if not isinstance(row, dict) or set(row) != expected_columns:
+            if (
+                not isinstance(row, dict)
+                or not set(row).issubset(expected_columns)
+                or (
+                    set(row) != expected_columns
+                    and not (
+                        allow_legacy_columns
+                        and expected_columns - set(row) <= {"book_title", "book_author"}
+                    )
+                )
+            ):
                 raise ValidationError("The backup contains invalid table data.")
             validated.append(
                 {
                     column.name: BackupService._deserialize_value(
                         column,
-                        row[column.name],
+                        row.get(column.name, ""),
                     )
                     for column in table.columns
                 }

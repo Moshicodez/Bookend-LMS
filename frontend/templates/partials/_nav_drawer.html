@@ -19,12 +19,6 @@
       <a class="nav-drawer-row" href="{{ url_for('landing.index') }}"{% if request.endpoint == "landing.index" %} aria-current="page"{% endif %}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7"></path><path d="M5.5 9v11h13V9M9.5 20v-6h5v6"></path></svg><span>Home</span>
       </a>
-      {% if current_user and current_user.is_librarian() %}
-        <a class="nav-drawer-row" href="{{ url_for('notifications.index') }}"{% if request.endpoint == "notifications.index" %} aria-current="page"{% endif %}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M10 21h4"></path></svg><span>Notifications</span>
-          <span class="nav-drawer-badge" data-nav-notification-count {% if not notification_count %}hidden{% endif %}>{{ notification_count if notification_count < 10 else "9+" }}</span>
-        </a>
-      {% endif %}
       {% if not current_user or not current_user.is_librarian() %}
         <a class="nav-drawer-row" href="{{ url_for('books.catalog') }}"{% if request.endpoint in ["books.catalog", "books.detail"] and not request.args.get("genre") %} aria-current="page"{% endif %}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6.5v14m0-14C10.7 5 8.8 4 6.7 4 5.3 4.4 4 4.4 3 5.2v13c1-.8 2.3-1.2 3.7-1.2 2.1 0 4 .9 5.3 2.5m0-13C13.3 5 15.2 4 17.3 4c1.4 0 2.7.4 3.7 1.2v13c-1-.8-2.3-1.2-3.7-1.2-2.1 0-4 .9-5.3 2.5"></path></svg><span>Books</span>
@@ -51,10 +45,6 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16l-1.5 11h-13L4 9Z"></path><path d="m8 9 4-6 4 6"></path></svg><span>Borrow basket</span>
           {% if basket_count %}<span class="nav-drawer-badge">{{ basket_count }}</span>{% endif %}
         </a>
-        <a class="nav-drawer-row" href="{{ url_for('notifications.index') }}"{% if request.endpoint == "notifications.index" %} aria-current="page"{% endif %}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M10 21h4"></path></svg><span>Notifications</span>
-          <span class="nav-drawer-badge" data-nav-notification-count {% if not notification_count %}hidden{% endif %}>{{ notification_count if notification_count < 10 else "9+" }}</span>
-        </a>
       {% elif current_user and current_user.is_librarian() %}
         <a class="nav-drawer-row" href="{{ url_for('dashboard.librarian_dashboard') }}"{% if request.endpoint == "dashboard.librarian_dashboard" %} aria-current="page"{% endif %}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"></rect><rect x="13" y="3" width="8" height="5" rx="1.5"></rect><rect x="13" y="10" width="8" height="11" rx="1.5"></rect><rect x="3" y="13" width="8" height="8" rx="1.5"></rect></svg><span>Dashboard</span>
@@ -69,6 +59,12 @@
         <a class="nav-drawer-row" href="{{ url_for('genres.index') }}"{% if request.endpoint == "genres.index" %} aria-current="page"{% endif %}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"></path></svg><span>Manage genres</span>
         </a>
+        {% if uncategorized_count or (request.endpoint == "books.manage" and request.args.get("genre", "").strip().lower() == UNCATEGORIZED_SLUG) %}
+          <a class="nav-drawer-row" href="{{ url_for('books.manage', genre=UNCATEGORIZED_SLUG) }}"{% if request.endpoint == "books.manage" and request.args.get("genre", "").strip().lower() == UNCATEGORIZED_SLUG %} aria-current="page"{% endif %}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM8 9h8M8 13h5"></path></svg><span>{{ UNCATEGORIZED }}</span>
+            <span class="nav-drawer-badge nav-count--muted">{{ uncategorized_count }}</span>
+          </a>
+        {% endif %}
         <a class="nav-drawer-row" href="{{ url_for('social.moderate_reviews') }}"{% if request.endpoint == "social.moderate_reviews" %} aria-current="page"{% endif %}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"></path></svg><span>Reviews</span>
         </a>
@@ -90,6 +86,7 @@
         </a>
         <a class="nav-drawer-row" href="{{ url_for('books.archived') }}"{% if request.endpoint == "books.archived" %} aria-current="page"{% endif %}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v4H4zM5 8v12h14V8m-9 4h4"></path></svg><span>Archived</span>
+          {% if archived_book_count %}<span class="nav-drawer-badge nav-count--muted">{{ archived_book_count }}</span>{% endif %}
         </a>
       {% endif %}
     </nav>
@@ -110,6 +107,9 @@
             {% endfor %}
           </div>
         </details>
+      {% endif %}
+      {% if current_user and current_user.is_librarian() %}
+        <a href="{{ url_for('books.catalog', genre=UNCATEGORIZED_SLUG) }}">{{ UNCATEGORIZED }}</a>
       {% endif %}
       <a class="nav-drawer-all-genres" href="{{ url_for('books.catalog') }}">View all genres <span aria-hidden="true">→</span></a>
     </section>

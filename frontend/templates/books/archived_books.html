@@ -10,9 +10,11 @@
     <a class="button button-secondary" href="{{ url_for('books.manage') }}">← Back to manage books</a>
   </section>
   {% if books %}
+    <label class="archived-select-all"><input type="checkbox" data-select-all> Select all</label>
     <section class="archived-book-list" aria-label="Archived books">
       {% for book in books %}
         <article class="archived-book-card">
+          <label class="archived-book-select"><input type="checkbox" name="ids[]" value="{{ book.book_id }}" data-book-select data-book-title="{{ book.title }}" form="archived-bulk-form" aria-label="Select {{ book.title }}"></label>
           {% if book.cover %}
             <img class="archived-book-cover" src="{{ url_for('static', filename='uploads/' ~ book.cover) }}" alt="Cover of {{ book.title }}">
           {% else %}
@@ -21,7 +23,7 @@
           <div class="archived-book-details">
             <h2>{{ book.title }}</h2>
             <p class="archived-book-author">by {{ book.author }}</p>
-            <span class="archived-book-genre">{{ book.genre or "Uncategorized" }}</span>
+            <span class="archived-book-genre">{{ book.genre or UNCATEGORIZED }}</span>
             <p class="archived-book-date">
               Archived
               {% if book.archived_at %}on {{ book.archived_at.strftime("%b %d, %Y") }}{% else %}date unavailable{% endif %}
@@ -32,9 +34,50 @@
             <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
             <button class="button archived-book-restore" type="submit">Restore</button>
           </form>
+          <form method="post" action="{{ url_for('books.delete', book_id=book.book_id) }}"
+                data-confirm-title="Delete {{ book.title }} permanently?"
+                data-confirm-message="This permanently removes the book and its reviews and favorites. Loan and fee history is retained."
+                data-confirm-note="This cannot be undone. Loan history is kept; favorites and reviews are removed."
+                data-confirm-action="Delete permanently" data-confirm-danger="true">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+            <input type="hidden" name="confirm_action" value="">
+            <input type="hidden" name="_confirm_title" value="Delete {{ book.title }} permanently?">
+            <input type="hidden" name="_confirm_message" value="This permanently removes the book and its reviews and favorites. Loan and fee history is retained.">
+            <input type="hidden" name="_confirm_note" value="This cannot be undone. Loan history is kept; favorites and reviews are removed.">
+            <input type="hidden" name="_confirm_action" value="Delete permanently">
+            <button class="button button-danger" type="submit">Delete permanently</button>
+          </form>
         </article>
       {% endfor %}
     </section>
+    <form method="post" action="{{ url_for('books.delete_selected') }}" id="archived-bulk-form"
+          data-confirm-title="Delete selected books permanently?"
+          data-confirm-message="This permanently removes the selected books and their reviews and favorites. Loan and fee history is retained."
+          data-confirm-note="This cannot be undone. Loan history is kept; favorites and reviews are removed."
+          data-confirm-action="Delete selected"
+          data-confirm-danger="true" data-confirm-phrase="DELETE">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+      <input type="hidden" name="confirm_action" value="">
+      <input type="hidden" name="confirm_text" value="">
+      <input type="hidden" name="_confirm_title" value="Delete selected books permanently?">
+      <input type="hidden" name="_confirm_message" value="Selected books will be permanently removed.">
+      <input type="hidden" name="_confirm_note" value="This cannot be undone.">
+      <input type="hidden" name="_confirm_action" value="Delete selected">
+      <div class="archived-bulk-bar" data-bulk-bar hidden>
+        <span><strong data-selected-count>0</strong> selected</span>
+        <button class="button button-secondary" type="submit" formaction="{{ url_for('books.restore_selected') }}" formmethod="post" data-confirm-skip>Restore selected</button>
+        <button class="button button-danger" type="submit" data-delete-selected>Delete selected</button>
+      </div>
+    </form>
+    {% if pages > 1 %}
+      <nav class="catalog-pagination" aria-label="Archived books pages">
+        {% if page > 1 %}<a class="button button-secondary" href="{{ url_for('books.archived', page=page - 1) }}">Previous</a>{% endif %}
+        <span>Page {{ page }} of {{ pages }}</span>
+        {% if page < pages %}<a class="button button-secondary" href="{{ url_for('books.archived', page=page + 1) }}">Next</a>{% endif %}
+      </nav>
+    {% endif %}
   {% else %}
     <section class="empty-state archived-books-empty">
       <span class="archived-empty-icon" aria-hidden="true">▤</span>

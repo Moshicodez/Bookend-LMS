@@ -13,10 +13,12 @@ class LoanRecord(db.Model):
     )
     book_id = db.Column(
         db.Integer,
-        db.ForeignKey("books.book_id", ondelete="RESTRICT"),
-        nullable=False,
+        db.ForeignKey("books.book_id", ondelete="SET NULL"),
+        nullable=True,
         index=True,
     )
+    book_title = db.Column(db.String(250), nullable=False, default="")
+    book_author = db.Column(db.String(160), nullable=False, default="")
     borrowed_at = db.Column(db.Date, nullable=False)
     due_date = db.Column(db.Date, nullable=False)
     returned_at = db.Column(db.Date, nullable=True)

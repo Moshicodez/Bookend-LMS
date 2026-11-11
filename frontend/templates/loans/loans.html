@@ -31,17 +31,17 @@
           <div class="loan-card-grid">
             {% for card in cards %}
               <article class="loan-card">
-                <a class="loan-card-cover" href="{{ url_for('books.detail', book_id=card.loan.book_id) }}">
+                {% if card.book %}<a class="loan-card-cover" href="{{ url_for('books.detail', book_id=card.loan.book_id) }}">{% else %}<span class="loan-card-cover">{% endif %}
                   {% if card.book and card.book.cover %}
                     <img src="{{ url_for('static', filename='uploads/' ~ card.book.cover) }}" alt="Cover of {{ card.book.title }}">
                   {% else %}
                     <span aria-hidden="true">{{ card.book.title[:1]|upper if card.book else "B" }}</span>
                   {% endif %}
-                </a>
+                {% if card.book %}</a>{% else %}</span>{% endif %}
                 <div class="loan-card-content">
                   <span class="loan-status status-{{ card.status|lower|replace(' ', '-') }}">{{ card.status }}</span>
-                  <h3>{{ card.book.title if card.book else "Book" }}</h3>
-                  <p class="muted">By {{ card.book.author if card.book else "Unknown author" }}</p>
+                  <h3>{{ card.book.title if card.book else card.loan.book_title }}{% if not card.book %} <span class="catalog-status-badge">Deleted book</span>{% endif %}</h3>
+                  <p class="muted">By {{ card.book.author if card.book else card.loan.book_author }}</p>
                   <dl class="loan-card-dates">
                     <div><dt>Borrowed</dt><dd>{{ card.loan.borrowed_at.strftime("%b %d, %Y") }}</dd></div>
                     <div><dt>Due date</dt><dd>{{ card.loan.due_date.strftime("%b %d, %Y") }}</dd></div>
@@ -128,7 +128,7 @@
           <tbody>
             {% for card in loan_cards %}
               <tr>
-                <td>{{ card.book.title if card.book else "Book #" ~ card.loan.book_id }}</td>
+                <td>{{ card.book.title if card.book else card.loan.book_title }}{% if not card.book %} <span class="catalog-status-badge">Deleted book</span>{% endif %}</td>
                 <td>{{ card.patron_name }}</td>
                 <td>{{ card.loan.borrowed_at.strftime("%b %d, %Y") }}</td>
                 <td>{{ card.loan.due_date.strftime("%b %d, %Y") }}</td>
