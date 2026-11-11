@@ -81,20 +81,21 @@ class UserRepository:
         return [self._to_domain_user(record) for record in records]
 
     def find_patron_summaries(self, search_term="", status=""):
+        active_loans = (
+            db.select(
+                LoanRecord.patron_id.label("user_id"),
+                db.func.count(LoanRecord.loan_id).label("active_loans"),
+            )
+            .where(LoanRecord.returned_at.is_(None), LoanRecord.lost.is_(False))
+            .group_by(LoanRecord.patron_id)
+            .subquery()
+        )
         statement = (
             db.select(
                 UserRecord,
-                db.func.coalesce(
-                    db.func.sum(
-                        db.case(
-                            (LoanRecord.returned_at.is_(None), 1),
-                            else_=0,
-                        )
-                    ),
-                    0,
-                ).label("active_loans"),
+                db.func.coalesce(active_loans.c.active_loans, 0).label("active_loans"),
             )
-            .outerjoin(LoanRecord, LoanRecord.patron_id == UserRecord.user_id)
+            .outerjoin(active_loans, active_loans.c.user_id == UserRecord.user_id)
             .where(UserRecord.role == "patron")
             .group_by(UserRecord.user_id)
         )

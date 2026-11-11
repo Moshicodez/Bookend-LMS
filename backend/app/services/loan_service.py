@@ -281,7 +281,15 @@ class LoanService:
             return "Overdue"
         return "On loan"
 
-    def management_cards(self, librarian, overdue_only=False, search="", status=""):
+    def management_cards(
+        self,
+        librarian,
+        overdue_only=False,
+        search="",
+        status="",
+        member_id=None,
+        book_id=None,
+    ):
         librarian.require("manage_loans")
         loans = (
             self._loan_repo.find_overdue()
@@ -292,6 +300,10 @@ class LoanService:
         term = (search or "").strip().casefold()
         cards = []
         for loan in loans:
+            if member_id is not None and loan.patron_id != member_id:
+                continue
+            if book_id is not None and loan.book_id != book_id:
+                continue
             book = self._book_repo.find_book(loan.book_id)
             patron = users.find_by_id(loan.patron_id)
             patron_name = patron.username if patron else f"#{loan.patron_id}"
@@ -308,9 +320,81 @@ class LoanService:
                     "patron_name": patron_name,
                     "status": loan_status,
                     "outstanding": loan.outstanding(today()),
+                    "days_overdue": max(0, (today() - loan.due_date).days),
                 }
             )
         return cards
+
+    def issue_for_patron(
+        self,
+        librarian,
+        patron_id,
+        book_id,
+        borrowed_at=None,
+        due_date=None,
+    ):
+        librarian.require("manage_loans")
+        patron = UserRepository().find_by_id(patron_id)
+        if patron is None:
+            raise NotFoundError("Patron not found.")
+        if not patron.is_patron():
+            raise ValidationError("Only patrons can be issued loans.")
+
+        book = self._get_book(book_id)
+        if not book.catalog:
+            raise ValidationError("This book is no longer in the catalog.")
+        if book.kind == "reference":
+            raise ValidationError("Reference books can only be read in the library.")
+        if book.available_copies <= 0:
+            raise ValidationError("No copies in stock.")
+
+        borrowed_date = today() if borrowed_at is None else getattr(__import__("datetime"), "date").fromisoformat(str(borrowed_at)) if isinstance(borrowed_at, str) else borrowed_at
+        due_date_value = add_days(borrowed_date, book.loan_days) if due_date is None else (
+            getattr(__import__("datetime"), "date").fromisoformat(str(due_date))
+            if isinstance(due_date, str)
+            else due_date
+        )
+        if due_date_value <= borrowed_date:
+            raise ValidationError("due date must be after the borrowed date")
+
+        return self._loan_repo.create_loan(
+            patron.user_id,
+            book.book_id,
+            borrowed_date,
+            due_date_value,
+        )
+
+    def process_return_loan(self, librarian, loan_id, lost=False):
+        return self.process_return(librarian, loan_id, lost=lost)
+
+    def loan_detail_card(self, actor, loan_id):
+        loan = self._loan_repo.find_loan(loan_id)
+        if loan is None:
+            raise NotFoundError("Loan not found.")
+        if actor.is_patron() and loan.patron_id != actor.user_id:
+            raise NotFoundError("Loan not found.")
+        actor.require("manage_loans") if actor.is_librarian() else actor.require("view_loans")
+        book = self._get_book(loan.book_id)
+        current_date = today()
+        return {
+            "loan": loan,
+            "book": book,
+            "status": self._loan_status(loan, current_date),
+            "days_overdue": max(0, (current_date - loan.due_date).days),
+            "outstanding": loan.outstanding(current_date),
+        }
+
+    def management_summary(self, librarian):
+        librarian.require("manage_loans")
+        summary = {"overdue": 0, "on_loan": 0, "returned": 0}
+        for loan in self._loan_repo.find_all():
+            if loan.is_returned():
+                summary["returned"] += 1
+            elif loan.due_date < today():
+                summary["overdue"] += 1
+            else:
+                summary["on_loan"] += 1
+        return summary
 
     def return_book(self, patron, book_id):
         patron.require("return_book")

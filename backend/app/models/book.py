@@ -29,7 +29,20 @@ class Book:
         available_copies=None,
         on_loan_copies=None,
         reserved_copies=0,
+        **legacy_kwargs,
     ):
+        if "total_stock" in legacy_kwargs:
+            total_copies = legacy_kwargs.pop("total_stock")
+        if "available_stock" in legacy_kwargs:
+            available_copies = legacy_kwargs.pop("available_stock")
+        if "borrowed_stock" in legacy_kwargs:
+            on_loan_copies = legacy_kwargs.pop("borrowed_stock")
+        if "reserved_stock" in legacy_kwargs:
+            reserved_copies = legacy_kwargs.pop("reserved_stock")
+        if legacy_kwargs:
+            unexpected = ", ".join(sorted(legacy_kwargs))
+            raise TypeError(f"Unexpected keyword argument(s): {unexpected}")
+
         self._book_id = book_id
         self._total_copies = self._normalize_copy_count(total_copies)
         if on_loan_copies is None:
@@ -103,7 +116,19 @@ class Book:
         return self._total_copies
 
     @property
+    def total_stock(self):
+        return self._total_copies
+
+    @total_stock.setter
+    def total_stock(self, value):
+        self.set_total_copies(value)
+
+    @property
     def available_copies(self):
+        return self._available_copies
+
+    @property
+    def available_stock(self):
         return self._available_copies
 
     @property
@@ -111,7 +136,15 @@ class Book:
         return self._on_loan_copies
 
     @property
+    def borrowed_stock(self):
+        return self._on_loan_copies
+
+    @property
     def reserved_copies(self):
+        return self._reserved_copies
+
+    @property
+    def reserved_stock(self):
         return self._reserved_copies
 
     @property
@@ -182,7 +215,7 @@ class Book:
         if not self._catalog:
             raise ValidationError("This book is no longer in the catalog.")
         if not reserved and not self._available_copies:
-            raise ValidationError("This book is already on loan.")
+            raise ValidationError("no copies in stock")
         if self.KIND == "reference":
             raise ValidationError("Reference books can only be read in the library.")
         if reserved:
@@ -223,11 +256,20 @@ class Book:
         )
 
     def set_total_copies(self, total_copies):
-        self._total_copies = self._normalize_copy_count(total_copies)
+        new_total = self._normalize_copy_count(total_copies)
+        required = self._on_loan_copies + self._reserved_copies
+        if new_total < required:
+            raise ValidationError(
+                f"{self._on_loan_copies} copies are on loan or reserved, so the total cannot be lower than {required}"
+            )
+        self._total_copies = new_total
         self._available_copies = max(
             self._total_copies - self._on_loan_copies - self._reserved_copies,
             0,
         )
+
+    def set_total_stock(self, total_copies):
+        self.set_total_copies(total_copies)
 
     @staticmethod
     def _normalize_copy_count(value):
