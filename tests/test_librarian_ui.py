@@ -166,6 +166,8 @@ class LibrarianUiTests(unittest.TestCase):
         self.assertNotIn(b">Delete</button>", table.data)
         self.assertIn(b"Loan history is kept", table.data)
         self.assertIn(b'data-confirm-title="Archive The Old Library?"', table.data)
+        self.assertNotIn(b'href="/books/manage?genre=uncategorized"', table.data)
+        self.assertNotIn(b'href="/books/?genre=uncategorized"', table.data)
 
         archived = self._post(
             f"/books/{self.history.book_id}/archive",
@@ -187,6 +189,24 @@ class LibrarianUiTests(unittest.TestCase):
         self.assertIn(b"Archived books", dashboard.data)
         self.assertIn(b"The Old Library", dashboard.data)
         self.assertIn(date.today().strftime("%b %d, %Y").encode(), dashboard.data)
+
+    def test_book_management_pagination_appears_once_after_the_table(self):
+        self._sign_in(self.librarian)
+        for index in range(25):
+            self.books.create(
+                Book(None, f"Extra book {index}", "Writer", "Fiction", "")
+            )
+
+        response = self.client.get("/books/manage")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data.count(b'class="catalog-pagination"'), 1)
+        self.assertEqual(response.data.count(b"Page 1 of 2"), 1)
+        self.assertGreater(
+            response.data.index(b'class="catalog-pagination"'),
+            response.data.index(b"</table>"),
+        )
+        self.assertIn(b"page=2", response.data)
 
     def test_librarian_can_search_and_filter_reservations(self):
         db.session.add_all(
@@ -324,6 +344,7 @@ class LibrarianUiTests(unittest.TestCase):
         moderation = self.client.get("/librarian/reviews")
         self.assertEqual(moderation.status_code, 200)
         self.assertIn(b"A lovely book.", moderation.data)
+        self.assertNotIn(b'class="button button-danger" type="submit">Delete</button>', moderation.data)
         review = db.session.query(ReviewRecord).one()
         deleted = self._post(
             f"/librarian/reviews/{review.review_id}/delete",

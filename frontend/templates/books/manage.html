@@ -27,7 +27,7 @@
   </form>
 
   {% if books %}
-    <p class="catalog-count">{{ total }} book{{ "" if total == 1 else "s" }} found · Page {{ page }} of {{ pages }}</p>
+    <p class="catalog-count">{{ total }} book{{ "" if total == 1 else "s" }} found</p>
     <div class="table-scroll">
       <table class="admin-table books-admin-table" id="book-stock">
         <thead><tr><th>Cover</th><th>Book</th><th>Genre</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead>
@@ -62,13 +62,6 @@
                   {% else %}
                     <span class="muted">Unavailable while copies are on loan or reserved</span>
                   {% endif %}
-                  {% if pages > 1 %}
-                    <nav class="catalog-pagination" aria-label="Manage books pages">
-                      {% if page > 1 %}<a class="button button-secondary" href="{{ url_for('books.manage', q=q, status=status, genre=genre, page=page - 1) }}">Previous</a>{% endif %}
-                      <span>Page {{ page }} of {{ pages }}</span>
-                      {% if page < pages %}<a class="button button-secondary" href="{{ url_for('books.manage', q=q, status=status, genre=genre, page=page + 1) }}">Next</a>{% endif %}
-                    </nav>
-                  {% endif %}
                 {% else %}
                   <form method="post" action="{{ url_for('books.restore', book_id=book.book_id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -82,6 +75,13 @@
         </tbody>
       </table>
     </div>
+    {% if pages > 1 %}
+      <nav class="catalog-pagination" aria-label="Manage books pages">
+        {% if page > 1 %}<a class="button button-secondary" href="{{ url_for('books.manage', q=q, status=status, genre=genre, page=page - 1) }}">Previous</a>{% endif %}
+        <span>Page {{ page }} of {{ pages }}</span>
+        {% if page < pages %}<a class="button button-secondary" href="{{ url_for('books.manage', q=q, status=status, genre=genre, page=page + 1) }}">Next</a>{% endif %}
+      </nav>
+    {% endif %}
   {% else %}
     <section class="empty-state">
       <h2>No books found</h2>

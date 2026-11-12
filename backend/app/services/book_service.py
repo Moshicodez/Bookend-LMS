@@ -122,6 +122,9 @@ class BookService:
             description,
             total_copies=self._copy_count(total_copies),
         )
+        if self._book_repo.find_by_title(book.title):
+            raise ValidationError("A book with this title already exists.")
+
         filename = self._covers.save(cover_file)
         book.set_cover(filename)
         saved = False

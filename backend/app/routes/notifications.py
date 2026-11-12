@@ -1,7 +1,16 @@
 from datetime import timezone
 from urllib.parse import urlsplit
 
-from flask import Blueprint, abort, jsonify, redirect, render_template, request, url_for
+from flask import (
+    Blueprint,
+    abort,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 
 from ..repositories.book_repository import BookRepository
 from ..repositories.loan_repository import LoanRepository
@@ -61,6 +70,36 @@ def index():
         notifications=notifications,
         user=user,
     )
+
+
+@notifications_bp.route("/announcement", methods=["GET", "POST"])
+def announcement():
+    librarian = _signed_in_user()
+    if librarian is None:
+        return redirect(url_for("auth.login"))
+    librarian.require("manage_notifications")
+
+    if request.method == "GET":
+        return render_template("notifications/announcement.html", user=librarian)
+
+    title = request.form.get("title", "").strip()
+    message = request.form.get("message", "").strip()
+    if not title or len(title) > 160 or not message or len(message) > 500:
+        flash(
+            "Enter a title of up to 160 characters and a message of up to 500 characters.",
+            "error",
+        )
+        return render_template("notifications/announcement.html", user=librarian), 400
+
+    notifications = NotificationService(notification_repository).notify_role(
+        "patron",
+        title,
+        message,
+        category="announcement",
+        link=url_for("notifications.index"),
+    )
+    flash(f"Announcement sent to {len(notifications)} patrons.", "success")
+    return redirect(url_for("notifications.index"))
 
 
 @notifications_bp.route("/recent")

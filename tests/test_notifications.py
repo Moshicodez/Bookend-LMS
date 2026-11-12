@@ -143,6 +143,72 @@ class NotificationRouteTests(unittest.TestCase):
         self.assertEqual(response.location, "/loans/")
         self.assertEqual(NotificationRepository().unread_count(self.user.user_id), 0)
 
+    def test_librarian_can_open_announcement_form_and_send_to_active_patrons(self):
+        self._sign_in_as(self.librarian)
+        inactive_patron = UserRepository().create(
+            "inactive@example.com",
+            "inactive",
+            generate_password_hash("StrongPass1!"),
+            "patron",
+        )
+        UserRepository().set_active(inactive_patron.user_id, False)
+
+        form = self.client.get("/notifications/announcement")
+
+        self.assertEqual(form.status_code, 200)
+        self.assertIn(b"Library announcement", form.data)
+        token = re.search(
+            rb'name="csrf_token" value="([^"]+)"', form.data
+        ).group(1).decode()
+        response = self.client.post(
+            "/notifications/announcement",
+            data={
+                "csrf_token": token,
+                "title": "Library hours",
+                "message": "The library closes early on Friday.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.location, "/notifications/")
+        active_updates = NotificationRepository().for_user(self.user.user_id)
+        inactive_updates = NotificationRepository().for_user(inactive_patron.user_id)
+        self.assertEqual(len(active_updates), 1)
+        self.assertEqual(active_updates[0].title, "Library hours")
+        self.assertEqual(active_updates[0].message, "The library closes early on Friday.")
+        self.assertEqual(active_updates[0].category, "announcement")
+        self.assertEqual(inactive_updates, [])
+        inbox = self.client.get(response.location)
+        self.assertIn(b"Announcement sent to 1 patrons.", inbox.data)
+
+    def test_patron_cannot_access_announcement_form_or_submit(self):
+        self._sign_in()
+
+        self.assertEqual(
+            self.client.get("/notifications/announcement").status_code,
+            403,
+        )
+
+    def test_announcement_rejects_invalid_lengths(self):
+        self._sign_in_as(self.librarian)
+        form = self.client.get("/notifications/announcement")
+        token = re.search(
+            rb'name="csrf_token" value="([^"]+)"', form.data
+        ).group(1).decode()
+
+        response = self.client.post(
+            "/notifications/announcement",
+            data={
+                "csrf_token": token,
+                "title": "x" * 161,
+                "message": "Announcement",
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b"up to 160 characters", response.data)
+        self.assertEqual(NotificationRepository().for_user(self.user.user_id), [])
+
     def test_recent_endpoint_is_authenticated_limited_and_user_scoped(self):
         self._sign_in()
         other = UserRepository().create(

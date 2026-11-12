@@ -170,7 +170,8 @@ class GenreManagementTests(unittest.TestCase):
         self.assertIn(b"Whitespace genre", manage.data)
         self.assertIn(b"Archived blank", manage.data)
         self.assertIn(b"Uncategorized", manage.data)
-        self.assertIn(b">3</span>", manage.data)
+        self.assertNotIn(b'href="/books/manage?genre=uncategorized"', manage.data)
+        self.assertNotIn(b'href="/books/?genre=uncategorized"', manage.data)
 
         injection = self.client.get("/books/?genre=%27%20OR%201%3D1%20--")
         self.assertEqual(injection.status_code, 200)

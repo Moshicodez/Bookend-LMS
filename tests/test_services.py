@@ -86,6 +86,24 @@ class BackendServiceTests(unittest.TestCase):
         )
         self.assertEqual(self.book_service.search_books(), [])
 
+    def test_add_book_rejects_duplicate_title_ignoring_case_and_whitespace(self):
+        existing = self.book_service.add_book(
+            self.librarian, "The Archive", "A. Author", "History", ""
+        )
+
+        with self.assertRaisesRegex(
+            ValidationError, "A book with this title already exists"
+        ):
+            self.book_service.add_book(
+                self.librarian, "  the ARCHIVE  ", "Another Author", "Fiction", ""
+            )
+
+        self.assertEqual(
+            len(list(self.books.find_all(include_archived=True))),
+            1,
+        )
+        self.assertEqual(self.books.find_book(existing.book_id).title, "The Archive")
+
     def test_book_cover_upload_is_saved_and_replaced_safely(self):
         upload_directory = tempfile.TemporaryDirectory()
         self.addCleanup(upload_directory.cleanup)

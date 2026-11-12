@@ -240,6 +240,38 @@ class BackendRouteTests(unittest.TestCase):
         updated = db.session.get(UserRecord, patron.user_id)
         self.assertFalse(updated.active)
 
+    def test_add_book_form_rejects_duplicate_title_and_keeps_single_record(self):
+        self.create_librarian()
+        self.post(
+            "/login",
+            data={"username": "staff", "password": "StrongPass1!"},
+        )
+        existing = BookRepository().create(
+            Book(None, "The Duplicate Title", "First Writer", "Fiction", "")
+        )
+
+        response = self.post(
+            "/books/new",
+            data={
+                "title": "  the duplicate title ",
+                "author": "Different Writer",
+                "genre": "History",
+                "description": "",
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b"A book with this title already exists.", response.data)
+        self.assertEqual(
+            db.session.scalar(
+                db.select(db.func.count(BookRecord.book_id)).where(
+                    db.func.lower(BookRecord.title) == "the duplicate title"
+                )
+            ),
+            1,
+        )
+        self.assertEqual(existing.title, "The Duplicate Title")
+
     def test_librarian_can_view_and_update_book_type(self):
         self.create_librarian()
         self.post(

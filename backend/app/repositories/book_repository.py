@@ -278,6 +278,16 @@ class BookRepository:
         ).first()
         return self._to_domain_book(*record) if record else None
 
+    def find_by_title(self, title):
+        statement, _, _ = self._book_select()
+        normalized_title = (title or "").strip().lower()
+        record = db.session.execute(
+            statement.where(
+                db.func.lower(db.func.trim(BookRecord.title)) == normalized_title
+            )
+        ).first()
+        return self._to_domain_book(*record) if record else None
+
     def find_all(self, include_archived=False):
         statement, _, _ = self._book_select()
         statement = statement.order_by(

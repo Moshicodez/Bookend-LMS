@@ -137,3 +137,10 @@ Run the project tests from this directory with:
 ```powershell
 python -m unittest discover -s tests -v
 ```
+
+Run the isolated browser simulation (Playwright and Chromium required):
+
+```powershell
+pip install -r requirements-dev.txt
+python tests/simulation/run_simulation.py
+```

@@ -181,16 +181,24 @@ def add():
             genres=GenreRepository().list_genres(),
         )
 
-    book = book_service.add_book(
-        user,
-        request.form.get("title"),
-        request.form.get("author"),
-        request.form.get("genre"),
-        request.form.get("description"),
-        request.form.get("kind", Book.KIND),
-        request.files.get("cover"),
-        total_copies=request.form.get("total_copies", "1"),
-    )
+    try:
+        book = book_service.add_book(
+            user,
+            request.form.get("title"),
+            request.form.get("author"),
+            request.form.get("genre"),
+            request.form.get("description"),
+            request.form.get("kind", Book.KIND),
+            request.files.get("cover"),
+            total_copies=request.form.get("total_copies", "1"),
+        )
+    except ValidationError as error:
+        flash(str(error), "error")
+        return render_template(
+            "books/add_book.html",
+            user=user,
+            genres=GenreRepository().list_genres(),
+        ), 400
     return redirect(url_for("books.detail", book_id=book.book_id))
 
 

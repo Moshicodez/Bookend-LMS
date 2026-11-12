@@ -16,17 +16,6 @@
             <p>{{ entry.review.comment }}</p>
             <p class="muted">By {{ entry.username }} · {{ entry.review.created_at.strftime("%b %d, %Y") }}</p>
           </div>
-          <form method="post" action="{{ url_for('social.delete_review_as_librarian', review_id=entry.review.review_id) }}"
-                data-confirm-title="Delete this review?" data-confirm-message="Permanently remove this review of {{ entry.book_title }}?"
-                data-confirm-note="This cannot be undone." data-confirm-action="Delete review" data-confirm-danger="true">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="confirm_action" value="">
-            <input type="hidden" name="_confirm_title" value="Delete this review?">
-            <input type="hidden" name="_confirm_message" value="Permanently remove this review of {{ entry.book_title }}?">
-            <input type="hidden" name="_confirm_note" value="This cannot be undone.">
-            <input type="hidden" name="_confirm_action" value="Delete review">
-            <button class="button button-danger" type="submit">Delete</button>
-          </form>
         </article>
       {% endfor %}
     </div>
