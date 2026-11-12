@@ -38,6 +38,19 @@ class LandingRouteTests(unittest.TestCase):
         db.drop_all()
         self.context.pop()
 
+    def test_shared_layout_uses_bookend_favicon(self):
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            b'<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">',
+            response.data,
+        )
+
+        icon = self.client.get("/static/favicon.svg")
+        self.assertEqual(icon.status_code, 200)
+        self.assertIn(b'fill="#435b43"', icon.data)
+
     def test_guest_landing_uses_empty_states_when_catalog_is_empty(self):
         response = self.client.get("/")
 

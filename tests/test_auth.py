@@ -117,6 +117,28 @@ class AuthRouteTests(unittest.TestCase):
             ).scalar_one_or_none()
         )
 
+    def test_registration_rejects_email_longer_than_254_characters(self):
+        long_email = f"{'a' * 64}@{'b' * 63}.{'c' * 63}.{'d' * 63}.com"
+
+        response = self.post(
+            "/register",
+            data={
+                "email": long_email,
+                "username": "longemail",
+                "password": "StrongPass1!",
+                "confirm_password": "StrongPass1!",
+            },
+        )
+
+        self.assertEqual(len(long_email), 260)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b"Please enter a valid email address.", response.data)
+        self.assertIsNone(
+            db.session.execute(
+                db.select(UserRecord).where(UserRecord.username == "longemail")
+            ).scalar_one_or_none()
+        )
+
     def test_registration_does_not_allow_role_escalation(self):
         response = self.post(
             "/register",

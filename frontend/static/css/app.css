@@ -1869,6 +1869,21 @@ body:not(.login-page) :is(h1, h2, h3, h4, h5, h6) {
   min-width: 110px;
 }
 
+.archived-book-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.archived-book-actions form {
+  margin: 0;
+}
+
+.archived-book-actions .button {
+  white-space: nowrap;
+}
+
 .archived-book-select,
 .archived-select-all {
   display: inline-flex;
@@ -1960,11 +1975,20 @@ body:not(.login-page) :is(h1, h2, h3, h4, h5, h6) {
     font-size: 19px;
   }
 
-  .archived-book-card form {
+  .archived-book-actions {
     grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+
+  .archived-book-actions form {
+    flex: 1 1 140px;
   }
 
   .archived-book-restore {
+    width: 100%;
+  }
+
+  .archived-book-actions .button {
     width: 100%;
   }
 

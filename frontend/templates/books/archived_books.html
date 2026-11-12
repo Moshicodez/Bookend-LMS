@@ -29,25 +29,27 @@
               {% if book.archived_at %}on {{ book.archived_at.strftime("%b %d, %Y") }}{% else %}date unavailable{% endif %}
             </p>
           </div>
-          <form method="post" action="{{ url_for('books.restore', book_id=book.book_id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
-            <button class="button archived-book-restore" type="submit">Restore</button>
-          </form>
-          <form method="post" action="{{ url_for('books.delete', book_id=book.book_id) }}"
-                data-confirm-title="Delete {{ book.title }} permanently?"
-                data-confirm-message="This permanently removes the book and its reviews and favorites. Loan and fee history is retained."
-                data-confirm-note="This cannot be undone. Loan history is kept; favorites and reviews are removed."
-                data-confirm-action="Delete permanently" data-confirm-danger="true">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
-            <input type="hidden" name="confirm_action" value="">
-            <input type="hidden" name="_confirm_title" value="Delete {{ book.title }} permanently?">
-            <input type="hidden" name="_confirm_message" value="This permanently removes the book and its reviews and favorites. Loan and fee history is retained.">
-            <input type="hidden" name="_confirm_note" value="This cannot be undone. Loan history is kept; favorites and reviews are removed.">
-            <input type="hidden" name="_confirm_action" value="Delete permanently">
-            <button class="button button-danger" type="submit">Delete permanently</button>
-          </form>
+          <div class="archived-book-actions">
+            <form method="post" action="{{ url_for('books.restore', book_id=book.book_id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+              <button class="button button-secondary archived-book-restore" type="submit">Restore</button>
+            </form>
+            <form method="post" action="{{ url_for('books.delete', book_id=book.book_id) }}"
+                  data-confirm-title="Delete {{ book.title }} permanently?"
+                  data-confirm-message="This permanently removes the book and its reviews and favorites. Loan and fee history is retained."
+                  data-confirm-note="This cannot be undone. Loan history is kept; favorites and reviews are removed."
+                  data-confirm-action="Delete permanently" data-confirm-danger="true">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+              <input type="hidden" name="confirm_action" value="">
+              <input type="hidden" name="_confirm_title" value="Delete {{ book.title }} permanently?">
+              <input type="hidden" name="_confirm_message" value="This permanently removes the book and its reviews and favorites. Loan and fee history is retained.">
+              <input type="hidden" name="_confirm_note" value="This cannot be undone. Loan history is kept; favorites and reviews are removed.">
+              <input type="hidden" name="_confirm_action" value="Delete permanently">
+              <button class="button button-danger" type="submit">Delete permanently</button>
+            </form>
+          </div>
         </article>
       {% endfor %}
     </section>

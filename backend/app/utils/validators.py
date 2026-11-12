@@ -7,7 +7,7 @@ USERNAME_RE = re.compile(r"^[A-Za-z0-9_.-]{3,30}$")
 
 
 def is_valid_email(email):
-    return bool(EMAIL_RE.match(email))
+    return len(email) <= 254 and bool(EMAIL_RE.match(email))
 
 
 def is_valid_username(username):
